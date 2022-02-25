@@ -1,0 +1,36 @@
+
+#pragma once
+
+#include "NeuralNetwork.h"
+
+
+struct TrainingConfig { int epochs = 20; int batchSize = -1; float learningRate = 0.1f; float momentumRate = 0.1f; float errorExit = 0.0f; int logLevel = 0; };
+
+
+class SupervisedNetwork : public NeuralNetwork {
+
+private:
+	// Private variables
+	static const int MAX_ITERATIONS = 1'000'000;
+	Matrix pdOutCache;
+	std::vector<Matrix> pdNeuronInCache;
+	std::vector<std::vector<Matrix>> pdWeightsCache;
+	std::vector<std::vector<Matrix>> pdBiasCache;
+	std::vector<Matrix> pdWeightsMomentum;
+	std::vector<Matrix> pdBiasMomentum;
+	float (*activatorPd)(float);
+
+	// Private functions
+	float calculateError(Matrix predicted, Matrix expected);
+	void calculateDerivates(Matrix predicted, Matrix expected);
+	void calculatePdErrorToIn(size_t layer);
+	Matrix pdErrorToOut(size_t layer);
+
+public:
+	// Public constructors
+	SupervisedNetwork(std::vector<int> layerSizes_);
+	SupervisedNetwork(std::vector<int> layerSizes_, float (*activator_)(float), float (*activatorPd_)(float));
+
+	// Public functions
+	void train(Matrix input, Matrix expected, TrainingConfig config);
+};

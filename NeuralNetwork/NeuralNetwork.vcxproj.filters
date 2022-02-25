@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Driver">
+      <UniqueIdentifier>{a700efa0-7fd0-4b4e-a2c1-e475ccf184ef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Main">
+      <UniqueIdentifier>{48e95dc1-988c-4c6f-86be-7d84f369c650}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utility">
+      <UniqueIdentifier>{f9ce07c2-62e8-4ae8-a57a-7777827f0978}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data">
+      <UniqueIdentifier>{fc23bdab-1d4e-4fc0-9153-f82e0b6cb472}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Driver</Filter>
+    </ClCompile>
+    <ClCompile Include="NeuralNetwork.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="Matrix.cpp">
+      <Filter>Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="SupervisedNetwork.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="Activators.cpp">
+      <Filter>Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="MNIST.cpp">
+      <Filter>Data</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NeuralNetwork.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="Matrix.h">
+      <Filter>Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="SupervisedNetwork.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="Activators.h">
+      <Filter>Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="MNIST.h">
+      <Filter>Data</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
