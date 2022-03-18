@@ -2,6 +2,7 @@
 #include <iostream>
 #include <chrono>
 #include "SupervisedNetwork.h"
+#include "Activators.h"
 #include "MNIST.h"
 
 
@@ -52,8 +53,8 @@ void testTime() {
 
 
 void testBackprop() {
-	// Create network, inputs, and run
-	SupervisedNetwork network(std::vector<int>({ 2, 2, 1 }));
+	// Create network and setup training data
+	SupervisedNetwork network(std::vector<int>({ 2, 2, 1 }), actTanh, actTanhPd);
 	Matrix input = Matrix({
 		{ 1.0f, 1.0f },
 		{ 1.0f, -1.0f },
@@ -64,12 +65,12 @@ void testBackprop() {
 		{ 1.0f },
 		{ 1.0f },
 		{ -1.0f } });
-	
+
 	// Print values and train
 	input.printValues("Input:");
 	expected.printValues("Expected:");
 	network.propogate(input).printValues("Initial: ");
-	network.train(input, expected, { -1, -1, 0.1f, 0.2f, 0.01f, 1 });
+	network.train(input, expected, { -1, 2, 0.1f, 0.2f, 0.01f, 2 }); // { epochs, batchSize, learningRate, momentumRate, errorExit, logLevel }
 	network.propogate(input).printValues("Trained: ");
 }
 
@@ -100,8 +101,15 @@ void testMNIST() {
 	std::cout << std::endl;
 
 	// Create network and train
-	SupervisedNetwork network(std::vector<int>({ imageSize, 100, 10 }));
-	network.train(input, expected, { 10, 128, 0.1f, 0.2f, 0.01f, 2 });
+	SupervisedNetwork network(std::vector<int>({ imageSize, 100, 10 }), actTanh, actTanhPd);
+	network.train(input, expected, { 10, 128, 0.1f, 0.2f, 0.01f, 2 }); // { epochs, batchSize, learningRate, momentumRate, errorExit, logLevel }
+
+	// -- Overview --
+	// 
+	// For this to work in reasonable time will need:
+	//	- GPU Parallelism
+	//	- Small optimizations in Matrix class
+	//	- More complex architecture involving convolutions
 }
 
 

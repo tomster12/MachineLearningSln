@@ -246,6 +246,30 @@ void Matrix::printDims(std::string tag) {
 }
 
 
+std::vector<Matrix> Matrix::splitRows(size_t splitSize) {
+	// Initialize variables
+	std::vector<std::vector<float>>* data = getData();
+	size_t splitCount = (int)(rows / splitSize);
+	std::vector<Matrix> splits = std::vector<Matrix>(splitCount + ((rows % splitSize == 0) ? 0 : 1));
+
+	// Loop over each split and copy rows
+	for (size_t i = 0; i < splitCount; i++) {
+		std::vector<std::vector<float>> splitData = std::vector<std::vector<float>>(splitSize);
+		for (size_t o = 0; o < splitSize; o++) splitData[o] = (*data)[i * splitSize + o];
+		splits[i] = Matrix(splitData);
+	}
+
+	// Copy rows for last split
+	if ((rows % splitSize) != 0) {
+		std::vector<std::vector<float>> splitData = std::vector<std::vector<float>>(rows % splitSize);
+		for (size_t o = 0; o < rows % splitSize; o++) splitData[o] = (*data)[splitCount * splitSize + o];
+		splits[splitCount] = Matrix(splitData);
+	}
+
+	// Return splits
+	return splits;
+}
+
 size_t Matrix::getRows() { return rows; }
 
 size_t Matrix::getCols() { return cols; }

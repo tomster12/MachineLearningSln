@@ -45,6 +45,7 @@ public:
 	void printValues(std::string tag="Matrix:");
 	void printDims(std::string tag="Dimensions: ");
 	
+	std::vector<Matrix> splitRows(size_t splitSize);
 	size_t getRows();
 	size_t getCols();
 	std::vector<std::vector<float>>* getData();

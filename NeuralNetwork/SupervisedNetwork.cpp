@@ -5,9 +5,6 @@
 #include "Activators.h"
 
 
-// Change activators to instead be a vector for each layer
-
-
 SupervisedNetwork::SupervisedNetwork(std::vector<int> layerSizes_)
 	: SupervisedNetwork(layerSizes_, actTanh, actTanhPd) { }
 
@@ -26,48 +23,71 @@ void SupervisedNetwork::train(Matrix input, Matrix expected, TrainingConfig conf
 	int maxEpochs = (config.epochs == -1 && config.errorExit > 0.0f) ? MAX_ITERATIONS : config.epochs;
 	int epoch = 0;
 	float error = -1;
+
+	// Split input and expected
+	size_t batchCount = 1;
+	std::vector<Matrix> splitInput, splitExpected;
+	if (config.batchSize == -1) {
+		splitInput = std::vector<Matrix>(1);
+		splitInput[0] = input;
+		splitExpected = std::vector<Matrix>(1);
+		splitExpected[0] = expected;
+	} else {
+		splitInput = input.splitRows(config.batchSize);
+		splitExpected = expected.splitRows(config.batchSize);
+		batchCount = splitInput.size();
+	}
+
+	// Start timer
 	std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
+
 
 	// Loop over and run training
 	for (; epoch < maxEpochs; epoch++) {
 
-		// Forward propogation
-		Matrix predicted = propogate(input);
-		error = calculateError(predicted, expected);
-		if (config.logLevel >= 2) std::cout << "Epoch: " << epoch << " | Error: " << error << std::endl;
-		return;
+		// Forward / backwards propogate for current batch
+		for (size_t batch = 0; batch < batchCount; batch++) {
 
-		// Backwards propogate using stochastic gradient descent
-		// TODO: Change to use batch descent instead
-		calculateDerivates(predicted, expected);
-		for (size_t layer = 0; layer < layerCount - 1; layer++) {
+			// Forward propogation current batch
+			Matrix predicted = propogate(splitInput[batch]);
+			error = calculateError(predicted, splitExpected[batch]);
+			if (config.logLevel >= 2) std::cout << "Epoch: " << epoch << ", batch: " << batch << " | Error: " << error << std::endl;
 
-			// Calculate average derivative
-			Matrix derivativeSum = pdWeightsCache[layer][0];
-			Matrix biasSum = pdBiasCache[layer][0];
-			for (size_t input = 1; input < predicted.getRows(); input++) {
-				derivativeSum.iadd(pdWeightsCache[layer][input]);
-				biasSum.iadd(pdBiasCache[layer][input]);
+			// Backwards propogate using batch gradient descent
+			calculateDerivates(predicted, splitExpected[batch]);
+			for (size_t layer = 0; layer < layerCount - 1; layer++) {
+
+				// Calculate average derivative for weight / bias
+				Matrix derivativeSum = pdWeightsCache[layer][0];
+				Matrix biasSum = pdBiasCache[layer][0];
+				for (size_t input = 1; input < predicted.getRows(); input++) {
+					derivativeSum.iadd(pdWeightsCache[layer][input]);
+					biasSum.iadd(pdBiasCache[layer][input]);
+				}
+				derivativeSum.iscale(1.0f / predicted.getRows());
+				biasSum.iscale(1.0f / predicted.getRows());
+
+				// Update weight / bias values
+				weights[layer].iadd(derivativeSum.scale(-config.learningRate));
+				bias[layer].iadd(biasSum.scale(-config.learningRate));
+				if (epoch > 0) {
+					pdWeightsMomentum[layer].iscale(-config.momentumRate);
+					pdBiasMomentum[layer].iscale(-config.momentumRate);
+					weights[layer].iadd(pdWeightsMomentum[layer]);
+					bias[layer].iadd(pdBiasMomentum[layer]);
+				}
+				pdWeightsMomentum[layer] = derivativeSum;
+				pdBiasMomentum[layer] = biasSum;
 			}
-			derivativeSum.iscale(1.0f / predicted.getRows());
-			biasSum.iscale(1.0f / predicted.getRows());
 
-			// Update values
-			weights[layer].iadd(derivativeSum.scale(-config.learningRate));
-			bias[layer].iadd(biasSum.scale(-config.learningRate));
-			if (epoch > 0) {
-				pdWeightsMomentum[layer].iscale(-config.momentumRate);
-				pdBiasMomentum[layer].iscale(-config.momentumRate);
-				weights[layer].iadd(pdWeightsMomentum[layer]);
-				bias[layer].iadd(pdBiasMomentum[layer]);
-			}
-			pdWeightsMomentum[layer] = derivativeSum;
-			pdBiasMomentum[layer] = biasSum;
+			// Exit early if error below certain amount
+			if (error < config.errorExit) break;
 		}
-
+	
 		// Exit early if error below certain amount
 		if (error < config.errorExit) break;
 	}
+
 
 	// Print training outcome
 	if (config.logLevel >= 1) {
@@ -82,7 +102,7 @@ void SupervisedNetwork::train(Matrix input, Matrix expected, TrainingConfig conf
 
 
 float SupervisedNetwork::calculateError(Matrix predicted, Matrix expected) {
-	// Calculate squared sum error
+	// Calculate squared sum error TODO: Unhardcode
 	std::vector<std::vector<float>>* pData = predicted.getData();
 	std::vector<std::vector<float>>* eData = expected.getData();
 	float error = 0;
@@ -98,25 +118,29 @@ float SupervisedNetwork::calculateError(Matrix predicted, Matrix expected) {
 
 void SupervisedNetwork::calculateDerivates(Matrix predicted, Matrix expected) {
 	// Reinitialize partial derivatives
-	pdOutCache = Matrix();
-	pdWeightsCache = std::vector<std::vector<Matrix>>(layerCount - 1);
-	pdBiasCache = std::vector<std::vector<Matrix>>(layerCount - 1);
-	pdNeuronInCache = std::vector<Matrix>(layerCount);
+	pdOutCache = Matrix(); // row = input, column = neuron
+	pdNeuronInCache = std::vector<Matrix>(layerCount); // element = layer, row = input, column = neuron
+	pdWeightsCache = std::vector<std::vector<Matrix>>(layerCount - 1); // element^1 = layer, element^2 = input, matrix = weights
+	pdBiasCache = std::vector<std::vector<Matrix>>(layerCount - 1); // element^1 = layer, element^2 = input, matrix = weights
 
-	// Partial derivative of error w.r.t. to neuron out
+	// Partial derivative of error w.r.t. to neuron out TODO: Unhardcode
 	// (δE / δoⱼ) = (δE / δy)
 	pdOutCache = predicted.sub(expected);
 
 	// Partial derivative of error w.r.t. to weight
 	// (δE / δWᵢⱼ) = (δE / δnetⱼ) * (δnetⱼ / δWᵢⱼ)
+	// - Loop over layers
 	for (size_t layer = 0; layer < layerCount - 1; layer++) {
 		calculatePdErrorToIn(layer + 1);
 		Matrix neuronOut = neuronOutCache[layer];
 		Matrix pdNeuronIn = pdNeuronInCache[layer + 1];
 
-		// Calculate all weight derivatives for each input
+		// - Loop over each input
 		pdWeightsCache[layer] = std::vector<Matrix>();
+		pdBiasCache[layer] = std::vector<Matrix>();
 		for (size_t input = 0; input < expected.getRows(); input++) {
+			
+			// - Calculate weight derivatives
 			std::vector<std::vector<float>> pdWeightData;
 			for (size_t row = 0; row < layerSizes[layer]; row++) {
 				pdWeightData.push_back(std::vector<float>());
@@ -126,11 +150,8 @@ void SupervisedNetwork::calculateDerivates(Matrix predicted, Matrix expected) {
 				}
 			}
 			pdWeightsCache[layer].push_back(Matrix(pdWeightData));
-		}
 
-		// Calculate all bias derivatives
-		pdBiasCache[layer] = std::vector<Matrix>();
-		for (size_t input = 0; input < expected.getRows(); input++) {
+			// - Calculate bias derivatives
 			std::vector<std::vector<float>> pdBiasData;
 			pdBiasData.push_back(std::vector<float>());
 			for (size_t col = 0; col < layerSizes[layer + 1]; col++) {
@@ -164,6 +185,6 @@ Matrix SupervisedNetwork::pdErrorToOut(size_t layer) {
 	// (δE / δoⱼ) = Σ(δWᵢⱼ * δₗ)
 	else {
 		calculatePdErrorToIn(layer + 1);
-		return pdNeuronInCache[layer + 1].cross(weights[layer].transpose());;
+		return pdNeuronInCache[layer + 1].cross(weights[layer].transpose());
 	}
 }
