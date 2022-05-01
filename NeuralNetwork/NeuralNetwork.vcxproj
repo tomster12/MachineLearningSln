@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Activators.cpp" />
+    <ClCompile Include="Functions.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Matrix.cpp" />
     <ClCompile Include="MNIST.cpp" />
@@ -27,7 +27,7 @@
     <ClCompile Include="SupervisedNetwork.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Activators.h" />
+    <ClInclude Include="Functions.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="MNIST.h" />
     <ClInclude Include="NeuralNetwork.h" />

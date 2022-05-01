@@ -42,7 +42,7 @@ Matrix::Matrix(size_t rows_, size_t cols_) {
 
 #pragma region Arithmetic
 
-Matrix Matrix::cross(Matrix other) {
+Matrix Matrix::cross(Matrix& other) {
 	// Get variables and check dimensions compatible
 	std::vector<std::vector<float>> newData;
 	size_t oRows = other.getRows();
@@ -63,7 +63,7 @@ Matrix Matrix::cross(Matrix other) {
 	return Matrix(newData);
 }
 
-Matrix* Matrix::icross(Matrix other) {
+Matrix* Matrix::icross(Matrix& other) {
 	// Get variables and check dimensions compatible
 	size_t oRows = other.getRows();
 	size_t oCols = other.getCols();
@@ -130,6 +130,7 @@ float Matrix::acc(float (*func)(float, float), float initial) {
 	return current;
 }
 
+
 Matrix Matrix::map(float (*func)(float)) {
 	// Apply function to matrix
 	std::vector<std::vector<float>> newData;
@@ -176,7 +177,7 @@ Matrix* Matrix::iscale(float val) {
 }
 
 
-Matrix Matrix::ewise(Matrix other, float (*func)(float, float)) {
+Matrix Matrix::ewise(Matrix& other, float (*func)(float, float)) {
 	// Get variables
 	std::vector<std::vector<float>> newData;
 	size_t oRows = other.getRows();
@@ -195,7 +196,7 @@ Matrix Matrix::ewise(Matrix other, float (*func)(float, float)) {
 	return Matrix(newData);
 }
 
-Matrix* Matrix::iewise(Matrix other, float (*func)(float, float)) {
+Matrix* Matrix::iewise(Matrix& other, float (*func)(float, float)) {
 	// Get variables
 	size_t oRows = other.getRows();
 	size_t oCols = other.getCols();
@@ -212,14 +213,18 @@ Matrix* Matrix::iewise(Matrix other, float (*func)(float, float)) {
 	return this;
 }
 
-Matrix Matrix::sub(Matrix other) { return ewise(other, [](float x, float y){ return x - y; }); }
-Matrix* Matrix::isub(Matrix other) { return iewise(other, [](float x, float y) { return x - y; }); }
 
-Matrix Matrix::add(Matrix other) { return ewise(other, [](float x, float y) { return x + y; }); }
-Matrix* Matrix::iadd(Matrix other) { return iewise(other, [](float x, float y) { return x + y; }); }
+Matrix Matrix::sub(Matrix& other) { return ewise(other, [](float x, float y){ return x - y; }); }
+Matrix* Matrix::isub(Matrix& other) { return iewise(other, [](float x, float y) { return x - y; }); }
 
-Matrix Matrix::times(Matrix other) { return ewise(other, [](float x, float y) { return x * y; }); }
-Matrix* Matrix::itimes(Matrix other) { return iewise(other, [](float x, float y) { return x * y; }); }
+Matrix Matrix::add(Matrix& other) { return ewise(other, [](float x, float y) { return x + y; }); }
+Matrix* Matrix::iadd(Matrix& other) { return iewise(other, [](float x, float y) { return x + y; }); }
+
+Matrix Matrix::times(Matrix& other) { return ewise(other, [](float x, float y) { return x * y; }); }
+Matrix* Matrix::itimes(Matrix& other) { return iewise(other, [](float x, float y) { return x * y; }); }
+
+Matrix Matrix::div(Matrix& other) { return ewise(other, [](float x, float y) { return x / y; }); }
+Matrix* Matrix::idiv(Matrix& other) { return iewise(other, [](float x, float y) { return x / y; }); }
 
 #pragma endregion
 
@@ -233,7 +238,7 @@ void Matrix::printValues(std::string tag) {
 		std::cout << "  ";
 		for (size_t col = 0; col < cols; col++) {
 			char prefix = (data[row][col] >= 0) ? ' ' : '\0';
-			std::cout << prefix << std::fixed << std::setprecision(2) << data[row][col] << " ";
+			std::cout << prefix << std::fixed << std::setprecision(4) << data[row][col] << " ";
 		}
 		std::cout << std::endl;
 	}
@@ -284,6 +289,13 @@ float Matrix::get(size_t row, size_t col) {
 
 bool Matrix::getEmpty() { return rows == 0 || cols == 0; }
 
+
+void Matrix::clear() {
+	// Clear out matrix
+	data.clear();
+	rows = 0;
+	cols = 0;
+}
 
 Matrix Matrix::copy() {
 	// Return new matrix with same data

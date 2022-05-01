@@ -27,7 +27,7 @@
     <ClCompile Include="SupervisedNetwork.cpp">
       <Filter>Main</Filter>
     </ClCompile>
-    <ClCompile Include="Activators.cpp">
+    <ClCompile Include="Functions.cpp">
       <Filter>Utility</Filter>
     </ClCompile>
     <ClCompile Include="MNIST.cpp">
@@ -44,7 +44,7 @@
     <ClInclude Include="SupervisedNetwork.h">
       <Filter>Main</Filter>
     </ClInclude>
-    <ClInclude Include="Activators.h">
+    <ClInclude Include="Functions.h">
       <Filter>Utility</Filter>
     </ClInclude>
     <ClInclude Include="MNIST.h">

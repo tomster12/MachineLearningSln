@@ -2,7 +2,7 @@
 #include <iostream>
 #include <chrono>
 #include "SupervisedNetwork.h"
-#include "Activators.h"
+#include "Functions.h"
 #include "MNIST.h"
 
 
@@ -35,12 +35,14 @@ void testTime() {
 	// Create network and inputs
 	NeuralNetwork network(std::vector<int>({ 8, 8, 8, 1 }));
 	Matrix input = Matrix({ { 1, 0, -1, 0.2f, 0.7f, -0.3f, -1, -1 } });
-	size_t epoch = 1'000'000;
+	size_t epoch = 50'000;
 
 	// Time n epoch of propogation
+	// Pre			50,000		~3000ms
+	// Vec			50,000		~2450ms
+	// Vec+ref		50,000		~850ms
 	std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
-	for (int i = 0; i < epoch; i++)
-		Matrix output = network.propogate(input);
+	for (int i = 0; i < epoch; i++) network.propogate(input);
 	std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 	auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0);
 
@@ -54,23 +56,26 @@ void testTime() {
 
 void testBackprop() {
 	// Create network and setup training data
-	SupervisedNetwork network(std::vector<int>({ 2, 2, 1 }), actTanh, actTanhPd);
+	SupervisedNetwork network(std::vector<int>({ 2, 2, 1 }), actTanh, actTanhPd, calcErrSqDiff, calcErrSqDiffPd);
+	float l = -1.0f;
+	float h = 1.0f;
 	Matrix input = Matrix({
-		{ 1.0f, 1.0f },
-		{ 1.0f, -1.0f },
-		{ -1.0f, 1.0f },
-		{ -1.0f, -1.0f } });
+		{ l, l },
+		{ l, h },
+		{ h, l },
+		{ h, h } });
 	Matrix expected = Matrix({
-		{ -1.0f },
-		{ 1.0f },
-		{ 1.0f },
-		{ -1.0f } });
+		{ l },
+		{ h },
+		{ h },
+		{ l } });
 
 	// Print values and train
+	// { epochs, batchSize, learningRate, momentumRate, errorExit, logLevel }
 	input.printValues("Input:");
 	expected.printValues("Expected:");
 	network.propogate(input).printValues("Initial: ");
-	network.train(input, expected, { -1, 2, 0.1f, 0.2f, 0.01f, 2 }); // { epochs, batchSize, learningRate, momentumRate, errorExit, logLevel }
+	network.train(input, expected, { -1, -1, 0.2f, 0.85f, 0.01f, 2 }); 
 	network.propogate(input).printValues("Trained: ");
 }
 
@@ -101,8 +106,10 @@ void testMNIST() {
 	std::cout << std::endl;
 
 	// Create network and train
+	// Pre			128			~3000ms
+	// Vec			128			~1300ms
 	SupervisedNetwork network(std::vector<int>({ imageSize, 100, 10 }), actTanh, actTanhPd);
-	network.train(input, expected, { 10, 128, 0.1f, 0.2f, 0.01f, 2 }); // { epochs, batchSize, learningRate, momentumRate, errorExit, logLevel }
+	network.train(input, expected, { 10, 128, 0.15f, 0.8f, 0.01f, 2 }); // { epochs, batchSize, learningRate, momentumRate, errorExit, logLevel }
 
 	// -- Overview --
 	// 

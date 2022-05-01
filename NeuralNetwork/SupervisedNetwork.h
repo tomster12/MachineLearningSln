@@ -19,10 +19,11 @@ private:
 	std::vector<Matrix> pdWeightsMomentum;
 	std::vector<Matrix> pdBiasMomentum;
 	float (*activatorPd)(float);
+	float (*calcError)(Matrix, Matrix);
+	Matrix (*calcErrorPd)(Matrix, Matrix);
 
 	// Private functions
-	float calculateError(Matrix predicted, Matrix expected);
-	void calculateDerivates(Matrix predicted, Matrix expected);
+	void calculateDerivates(Matrix& predicted, Matrix& expected);
 	void calculatePdErrorToIn(size_t layer);
 	Matrix pdErrorToOut(size_t layer);
 
@@ -30,6 +31,8 @@ public:
 	// Public constructors
 	SupervisedNetwork(std::vector<int> layerSizes_);
 	SupervisedNetwork(std::vector<int> layerSizes_, float (*activator_)(float), float (*activatorPd_)(float));
+	SupervisedNetwork(std::vector<int> layerSizes_, float (*calcError)(Matrix, Matrix), Matrix (*calcErrorPd)(Matrix, Matrix));
+	SupervisedNetwork(std::vector<int> layerSizes_, float (*activator_)(float), float (*activatorPd_)(float), float (*calcError_)(Matrix, Matrix), Matrix (*calcErrorPd_)(Matrix, Matrix));
 
 	// Public functions
 	void train(Matrix input, Matrix expected, TrainingConfig config);
