@@ -1,54 +1,51 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Driver">
-      <UniqueIdentifier>{a700efa0-7fd0-4b4e-a2c1-e475ccf184ef}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Main">
+    <Filter Include="Library">
       <UniqueIdentifier>{48e95dc1-988c-4c6f-86be-7d84f369c650}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Utility">
+    <Filter Include="Library\Utility">
       <UniqueIdentifier>{f9ce07c2-62e8-4ae8-a57a-7777827f0978}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Data">
-      <UniqueIdentifier>{fc23bdab-1d4e-4fc0-9153-f82e0b6cb472}</UniqueIdentifier>
+    <Filter Include="Usage">
+      <UniqueIdentifier>{a700efa0-7fd0-4b4e-a2c1-e475ccf184ef}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>Driver</Filter>
-    </ClCompile>
     <ClCompile Include="NeuralNetwork.cpp">
-      <Filter>Main</Filter>
+      <Filter>Library</Filter>
     </ClCompile>
     <ClCompile Include="Matrix.cpp">
-      <Filter>Utility</Filter>
+      <Filter>Library\Utility</Filter>
     </ClCompile>
     <ClCompile Include="SupervisedNetwork.cpp">
-      <Filter>Main</Filter>
+      <Filter>Library</Filter>
     </ClCompile>
     <ClCompile Include="Functions.cpp">
-      <Filter>Utility</Filter>
+      <Filter>Library\Utility</Filter>
     </ClCompile>
     <ClCompile Include="MNIST.cpp">
-      <Filter>Data</Filter>
+      <Filter>Usage</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Usage</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="NeuralNetwork.h">
-      <Filter>Main</Filter>
+      <Filter>Library</Filter>
     </ClInclude>
     <ClInclude Include="Matrix.h">
-      <Filter>Utility</Filter>
+      <Filter>Library\Utility</Filter>
     </ClInclude>
     <ClInclude Include="SupervisedNetwork.h">
-      <Filter>Main</Filter>
+      <Filter>Library</Filter>
     </ClInclude>
     <ClInclude Include="Functions.h">
-      <Filter>Utility</Filter>
+      <Filter>Library\Utility</Filter>
     </ClInclude>
     <ClInclude Include="MNIST.h">
-      <Filter>Data</Filter>
+      <Filter>Usage</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

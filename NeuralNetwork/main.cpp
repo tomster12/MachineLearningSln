@@ -20,7 +20,7 @@ int main() {
 
 void testBasic() {
 	// Create network, inputs, and run
-	NeuralNetwork network(std::vector<int>({ 3, 3, 1 }));
+	NeuralNetwork network(std::vector<int>( { 3, 3, 1 } ));
 	Matrix input = Matrix( { { 1.0f, -1.0f, 1.0f } });
 	Matrix output = network.propogate(input);
 
@@ -71,7 +71,6 @@ void testBackprop() {
 		{ l } });
 
 	// Print values and train
-	// { epochs, batchSize, learningRate, momentumRate, errorExit, logLevel }
 	input.printValues("Input:");
 	expected.printValues("Expected:");
 	network.propogate(input).printValues("Initial: ");
@@ -108,15 +107,13 @@ void testMNIST() {
 	// Create network and train
 	// Pre			128			~3000ms
 	// Vec			128			~1300ms
-	SupervisedNetwork network(std::vector<int>({ imageSize, 100, 10 }), actTanh, actTanhPd);
-	network.train(input, expected, { 10, 128, 0.15f, 0.8f, 0.01f, 2 }); // { epochs, batchSize, learningRate, momentumRate, errorExit, logLevel }
-
-	// -- Overview --
 	// 
 	// For this to work in reasonable time will need:
 	//	- GPU Parallelism
 	//	- Small optimizations in Matrix class
 	//	- More complex architecture involving convolutions
+	SupervisedNetwork network(std::vector<int>({ imageSize, 100, 10 }), actTanh, actTanhPd);
+	network.train(input, expected, { 10, 128, 0.15f, 0.8f, 0.01f, 2 });
 }
 
 

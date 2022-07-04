@@ -1,28 +1,29 @@
 
 #pragma once
 
+#include "UIManager.h"
+#include "VectorGenepoolSimulation.h"
+
 
 class Game {
 
 private:
-	// Private variables
 	sf::RenderWindow* window;
 	sf::Event sfEvent;
 	sf::Clock dtClock;
 	float dt;
 
-	sf::CircleShape testCircle;
+	VectorGenepoolSimulation genepool;
+	UIManager uiManager;
 
-	// Private functions
 	void initVariables();
 	void update();
 	void render();
 
+
 public:
-	// Public constructors
 	Game();
 	~Game();
 
-	// Public functions
 	void run();
 };
