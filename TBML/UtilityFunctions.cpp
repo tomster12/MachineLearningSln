@@ -19,12 +19,12 @@ namespace tbml {
 	//float actSoftmaxPd(float x) { return 0; }
 
 	float calcErrSqDiff(Matrix predicted, Matrix expected) {
-		std::vector<std::vector<float>>* pData = predicted.getData();
-		std::vector<std::vector<float>>* eData = expected.getData();
+		std::vector<std::vector<float>>& pData = predicted.getData();
+		std::vector<std::vector<float>>& eData = expected.getData();
 		float error = 0;
 		for (size_t row = 0; row < predicted.getRows(); row++) {
 			for (size_t col = 0; col < predicted.getCols(); col++) {
-				float diff = (*eData)[row][col] - (*pData)[row][col];
+				float diff = eData[row][col] - pData[row][col];
 				error += diff * diff;
 			}
 		}

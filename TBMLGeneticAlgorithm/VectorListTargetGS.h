@@ -4,7 +4,7 @@
 #include "GenepoolSimulation.h"
 
 
-class Vector2fData : public tbml::GeneticData<Vector2fData> {
+class VectorListGD : public tbml::GeneticData<VectorListGD> {
 
 private:
 	std::vector<sf::Vector2f> values;
@@ -12,9 +12,9 @@ private:
 
 
 public:
-	Vector2fData() {}
-	Vector2fData(int dataSize);
-	Vector2fData(std::vector<sf::Vector2f> values);
+	VectorListGD() {}
+	VectorListGD(int dataSize);
+	VectorListGD(std::vector<sf::Vector2f> values);
 
 
 	std::vector<sf::Vector2f>& getValues();
@@ -24,15 +24,15 @@ public:
 
 	void randomize() override;
 	void mutate(float chance) override;
-	Vector2fData* crossover(Vector2fData* otherData) override;
+	VectorListGD* crossover(VectorListGD* otherData) override;
 };
 
 
-class VectorGenepoolSimulation;
-class VectorInstance : public tbml::GeneticInstance<Vector2fData> {
+class VectorListTargetGS;
+class VectorListTargetGI : public tbml::GeneticInstance<VectorListGD> {
 
 private:
-	VectorGenepoolSimulation* sim;
+	VectorListTargetGS* sim;
 	sf::CircleShape shape;
 
 	sf::Vector2f startPos;
@@ -43,8 +43,8 @@ private:
 
 
 public:
-	VectorInstance(Vector2fData* data) : GeneticInstance(data) {};
-	VectorInstance(VectorGenepoolSimulation* sim, sf::Vector2f startPos, float radius, float moveSpeed, Vector2fData* data);
+	VectorListTargetGI(VectorListGD* geneticData) : GeneticInstance(geneticData) {};
+	VectorListTargetGI(VectorListTargetGS* sim, sf::Vector2f startPos, float radius, float moveSpeed, VectorListGD* geneticData);
 	void initVisual();
 
 	void step() override;
@@ -58,7 +58,7 @@ public:
 };
 
 
-class VectorGenepoolSimulation : public tbml::GenepoolSimulation<Vector2fData, VectorInstance> {
+class VectorListTargetGS : public tbml::GenepoolSimulation<VectorListGD, VectorListTargetGI> {
 
 protected:
 	sf::CircleShape target;
@@ -69,12 +69,15 @@ protected:
 	float instanceMoveSpeed;
 	int dataSize;
 
-	Vector2fData* createData() override;
-	VectorInstance* createInstance(Vector2fData* data) override;
+	VectorListGD* createData() override;
+	VectorListTargetGI* createInstance(VectorListGD* data) override;
 
 public:
-	VectorGenepoolSimulation() {};
-	VectorGenepoolSimulation(sf::Vector2f instanceStartPos, float instanceRadius, sf::Vector2f targetPos, float targetRadius, float instanceMoveSpeed, int dataSize);
+	VectorListTargetGS() {};
+	VectorListTargetGS(
+		sf::Vector2f instanceStartPos, float instanceRadius,
+		float instanceMoveSpeed, int dataSize,
+		sf::Vector2f targetPos, float targetRadius);
 
 	void render(sf::RenderWindow* window) override;
 

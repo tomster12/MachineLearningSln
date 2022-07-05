@@ -30,7 +30,7 @@ namespace tbml {
 		// Setup variables
 		pdWeightsMomentum = std::vector<Matrix>(layerCount);
 		pdBiasMomentum = std::vector<Matrix>(layerCount);
-		int maxEpochs = (config.epochs == -1 && config.errorExit > 0.0f) ? MAX_ITERATIONS : config.epochs;
+		int maxEpochs = (config.epochs == -1 && config.errorExit > 0.0f) ? MAX_maxIterations : config.epochs;
 		int epoch = 0;
 		float error = 0;
 

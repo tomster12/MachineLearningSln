@@ -44,7 +44,7 @@ namespace tbml {
 		std::vector<std::vector<float>> newData;
 		size_t oRows = other.getRows();
 		size_t oCols = other.getCols();
-		std::vector<std::vector<float>>* oData = other.getData();
+		std::vector<std::vector<float>>& oData = other.getData();
 		if (cols != oRows) throw std::invalid_argument("Matrix dimensions do not match.");
 
 		// Matrix multiply
@@ -53,7 +53,7 @@ namespace tbml {
 			for (size_t newCol = 0; newCol < oCols; newCol++) {
 				float sum = 0;
 				for (size_t i = 0; i < cols; i++)
-					sum += data[newRow][i] * (*oData)[i][newCol];
+					sum += data[newRow][i] * oData[i][newCol];
 				newData[newRow].push_back(sum);
 			}
 		}
@@ -64,7 +64,7 @@ namespace tbml {
 		// Get variables and check dimensions compatible
 		size_t oRows = other.getRows();
 		size_t oCols = other.getCols();
-		std::vector<std::vector<float>>* oData = other.getData();
+		std::vector<std::vector<float>>& oData = other.getData();
 		if (cols != oRows) throw std::invalid_argument("Matrix dimensions do not match.");
 
 		// Inplace matrix multiply
@@ -73,7 +73,7 @@ namespace tbml {
 			for (size_t col = 0; col < oCols; col++) {
 				float sum = 0;
 				for (size_t i = 0; i < cols; i++)
-					sum += data[row][i] * (*oData)[i][col];
+					sum += data[row][i] * oData[i][col];
 				newRow.push_back(sum);
 			}
 			data[row] = newRow;
@@ -179,14 +179,14 @@ namespace tbml {
 		std::vector<std::vector<float>> newData;
 		size_t oRows = other.getRows();
 		size_t oCols = other.getCols();
-		std::vector<std::vector<float>>* oData = other.getData();
+		std::vector<std::vector<float>>& oData = other.getData();
 
 		// Add to other matrix
 		for (size_t newRow = 0; newRow < rows; newRow++) {
 			newData.push_back(std::vector<float>());
 			for (size_t newCol = 0; newCol < cols; newCol++) {
 				float value = data[newRow][newCol];
-				float oValue = (*oData)[newRow < oRows ? newRow : oRows - 1][newCol < oCols ? newCol : oCols - 1];
+				float oValue = oData[newRow < oRows ? newRow : oRows - 1][newCol < oCols ? newCol : oCols - 1];
 				newData[newRow].push_back(func(value, oValue));
 			}
 		}
@@ -197,13 +197,13 @@ namespace tbml {
 		// Get variables
 		size_t oRows = other.getRows();
 		size_t oCols = other.getCols();
-		std::vector<std::vector<float>>* oData = other.getData();
+		std::vector<std::vector<float>>& oData = other.getData();
 
 		// Inplace add to other matrix
 		for (size_t row = 0; row < rows; row++) {
 			for (size_t col = 0; col < cols; col++) {
 				float value = data[row][col];
-				float oValue = (*oData)[row < oRows ? row : oRows - 1][col < oCols ? col : oCols - 1];
+				float oValue = oData[row < oRows ? row : oRows - 1][col < oCols ? col : oCols - 1];
 				data[row][col] = func(value, oValue);
 			}
 		}
@@ -250,21 +250,21 @@ namespace tbml {
 
 	std::vector<Matrix> Matrix::splitRows(size_t splitSize) {
 		// Initialize variables
-		std::vector<std::vector<float>>* data = getData();
+		std::vector<std::vector<float>>& data = getData();
 		size_t splitCount = (int)(rows / splitSize);
 		std::vector<Matrix> splits = std::vector<Matrix>(splitCount + ((rows % splitSize == 0) ? 0 : 1));
 
 		// Loop over each split and copy rows
 		for (size_t i = 0; i < splitCount; i++) {
 			std::vector<std::vector<float>> splitData = std::vector<std::vector<float>>(splitSize);
-			for (size_t o = 0; o < splitSize; o++) splitData[o] = (*data)[i * splitSize + o];
+			for (size_t o = 0; o < splitSize; o++) splitData[o] = data[i * splitSize + o];
 			splits[i] = Matrix(splitData);
 		}
 
 		// Copy rows for last split
 		if ((rows % splitSize) != 0) {
 			std::vector<std::vector<float>> splitData = std::vector<std::vector<float>>(rows % splitSize);
-			for (size_t o = 0; o < rows % splitSize; o++) splitData[o] = (*data)[splitCount * splitSize + o];
+			for (size_t o = 0; o < rows % splitSize; o++) splitData[o] = data[splitCount * splitSize + o];
 			splits[splitCount] = Matrix(splitData);
 		}
 
@@ -276,7 +276,7 @@ namespace tbml {
 
 	size_t Matrix::getCols() { return cols; }
 
-	std::vector<std::vector<float>>* Matrix::getData() { return &data; }
+	std::vector<std::vector<float>>& Matrix::getData() { return data; }
 
 	float Matrix::get(size_t row, size_t col) {
 		// Return data, and check if indices are inbound

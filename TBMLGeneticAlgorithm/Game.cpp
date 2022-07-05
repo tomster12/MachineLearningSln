@@ -2,6 +2,9 @@
 #include "stdafx.h"
 #include "Game.h"
 #include "UtilityFunctions.h"
+//#include "VectorListTargetGS.h"
+//#include "NeuralTargetGS.h"
+#include "NeuralRocketGS.h"
 
 
 Game::Game() {
@@ -31,8 +34,12 @@ void Game::initVariables() {
     this->window->setVerticalSyncEnabled(verticalSyncEnabled);
 
     // Initialize genepool
-    this->genepool = VectorGenepoolSimulation({ 700.0f, 600.0f }, 4.0f, { 700.0f, 100.0f }, 20.0f, 4.0f, 500);
-    this->genepool.initGenepool(1000, 0.01f);
+    //this->genepool = VectorListTargetGS({ 700.0f, 600.0f }, 4.0f, 4.0f, 500, { 700.0f, 100.0f }, 20.0f);
+    //this->genepool = NeuralTargetGS({ 700.0f, 850.0f }, 2.0f, 2.0f, 1000, { 2, 2 }, 20.0f, { 700.0f, 150.0f }, 500.0f);
+    this->genepool = NeuralRocketGS({ 700.0f, 850.0f }, 5.0f, 1500, { 4, 4, 2 }, {
+        { 150.0f, 150.0f }, { 920.0f, 400.0f }, { 300.0f, 850.0f }, { 550.0f, 320.0f }
+    }, 20.0f);
+    this->genepool.initGenepool(2000, 0.02f);
     
     // Initialize UI
     this->uiManager = UIManager();

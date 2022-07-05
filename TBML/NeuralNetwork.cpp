@@ -7,34 +7,49 @@
 
 namespace tbml {
 
-	NeuralNetwork::NeuralNetwork(std::vector<size_t> layerSizes_) : NeuralNetwork(layerSizes_, sigmoid) {}
+	NeuralNetwork::NeuralNetwork(std::vector<size_t> layerSizes) : NeuralNetwork(layerSizes, sigmoid) {}
 
-	NeuralNetwork::NeuralNetwork(std::vector<size_t> layerSizes_, float (*activator_)(float)) {
-		// Initialize variables
-		layerCount = layerSizes_.size();
-		layerSizes = layerSizes_;
-		activator = activator_;
-		weights = std::vector<Matrix>();
-		bias = std::vector<Matrix>();
+	NeuralNetwork::NeuralNetwork(std::vector<size_t> layerSizes, float (*activator)(float), bool randomize)
+		: layerCount(layerSizes.size()), layerSizes(layerSizes), activator(activator), weights(), bias() {
 
-		// Initialize weights as random within a range
+		// Initialize weights / bias
 		for (size_t layer = 0; layer < layerCount - 1; layer++) {
-
-			// Initialize weights
-			Matrix layerWeights = Matrix(layerSizes[layer], layerSizes[layer + 1]);
-			weights.push_back(layerWeights.map([](float v) {
-				return -1.0f + 2.0f * float(rand()) / float(RAND_MAX);
-				}));
-
-			// Initialize bias
-			srand(static_cast<unsigned int>(time(NULL)));
-			Matrix layerBias = Matrix(1, layerSizes[layer + 1]);
-			bias.push_back(layerBias.map([](float v) {
-				return -1.0f + 2.0f * float(rand()) / float(RAND_MAX);
-				}));
+			weights.push_back(Matrix(layerSizes[layer], layerSizes[layer + 1]));
+			bias.push_back(Matrix(1, layerSizes[layer + 1]));
 		}
+
+		// Randomize if needed
+		if (randomize) this->randomize();
 	}
 
+	NeuralNetwork::NeuralNetwork(std::vector<Matrix> weights, std::vector<Matrix> bias)
+		: NeuralNetwork(weights, bias, sigmoid) {}
+
+	NeuralNetwork::NeuralNetwork(std::vector<Matrix> weights, std::vector<Matrix> bias, float (*activator)(float))
+		: layerCount(weights.size() + 1), weights(weights), bias(bias), activator(activator) {
+		
+		// Initialize variables
+		this->layerSizes = std::vector<size_t>();
+		for (int i = 0; i < this->layerCount - 1; i++) this->layerSizes.push_back(this->weights[i].getRows());
+		this->layerSizes.push_back(this->weights[this->layerCount - 2].getCols());
+	}
+
+
+	void NeuralNetwork::randomize() {
+		// Randomize all weights
+		for (auto& layer : this->weights) {
+			layer.imap([](float v) {
+				return -1.0f + 2.0f * getRandomFloat();
+			});
+		}
+
+		// Randomize all bias
+		for (auto& layer : this->bias) {
+			layer.imap([](float v) {
+				return -1.0f + 2.0f * getRandomFloat();
+			});
+		}
+	}
 
 	Matrix NeuralNetwork::propogate(Matrix current) {
 		// Intialize previous neuron outputs with current

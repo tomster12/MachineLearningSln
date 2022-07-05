@@ -2,7 +2,9 @@
 #pragma once
 
 #include "UIManager.h"
-#include "VectorGenepoolSimulation.h"
+//#include "VectorListTargetGS.h"
+//#include "NeuralTargetGS.h"
+#include "NeuralRocketGS.h"
 
 
 class Game {
@@ -13,7 +15,9 @@ private:
 	sf::Clock dtClock;
 	float dt;
 
-	VectorGenepoolSimulation genepool;
+	//VectorListTargetGS genepool;
+	//NeuralTargetGS genepool;
+	NeuralRocketGS genepool;
 	UIManager uiManager;
 
 	void initVariables();

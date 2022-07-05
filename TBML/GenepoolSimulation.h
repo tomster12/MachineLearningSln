@@ -28,12 +28,8 @@ namespace tbml {
 
 
 	public:
-		GeneticInstance(D* data) {
-			// Initialize variables
-			this->geneticData = data;
-			instanceFinished = false;
-			instanceFitness = 0.0f;
-		};
+		GeneticInstance(D* geneticData)
+			: geneticData(geneticData), instanceFinished(false), instanceFitness(0.0f) {};
 
 
 		virtual void step() = 0;
@@ -99,6 +95,15 @@ namespace tbml {
 		}
 
 		void initGenepool(int generationCount, float mutationRate) {
+			// Delete previous
+			if (this->isInitialized) {
+				// Delete all data / instances
+				for (int i = 0; i < this->generationCount; i++) {
+					delete this->currentGeneration[i].data;
+					delete this->currentGeneration[i].instance;
+				}
+			}
+
 			// Initialize variables
 			this->generationCount = generationCount;
 			this->mutationRate = mutationRate;

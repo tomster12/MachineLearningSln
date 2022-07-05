@@ -17,9 +17,13 @@ namespace tbml {
 		std::vector<Matrix> neuronOutCache;
 
 	public:
-		NeuralNetwork(std::vector<size_t> layerSizes_);
-		NeuralNetwork(std::vector<size_t> layerSizes_, float (*activator_)(float));
+		NeuralNetwork() {}
+		NeuralNetwork(std::vector<size_t> layerSizes);
+		NeuralNetwork(std::vector<size_t> layerSizes, float (*activator)(float), bool randomize = true);
+		NeuralNetwork(std::vector<Matrix> weights, std::vector<Matrix> bias);
+		NeuralNetwork(std::vector<Matrix> weights, std::vector<Matrix> bias, float (*activator)(float));
 
+		void randomize();
 		Matrix propogate(Matrix input);
 		void printLayers();
 

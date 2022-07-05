@@ -47,7 +47,7 @@ namespace tbml {
 		std::vector<Matrix> splitRows(size_t splitSize);
 		size_t getRows();
 		size_t getCols();
-		std::vector<std::vector<float>>* getData();
+		std::vector<std::vector<float>>& getData();
 		float get(size_t row, size_t col);
 		bool getEmpty();
 

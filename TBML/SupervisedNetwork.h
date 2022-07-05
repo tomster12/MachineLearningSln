@@ -14,7 +14,7 @@ namespace tbml {
 
 	private:
 		// Private variables
-		static const int MAX_ITERATIONS = 1'000'000;
+		static const int MAX_maxIterations = 1'000'000;
 		Matrix pdOutCache;
 		std::vector<Matrix> pdNeuronInCache;
 		std::vector<std::vector<Matrix>> pdWeightsCache;
