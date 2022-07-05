@@ -5,7 +5,7 @@
 
 int main() {
 	Game game;
-	INIT_GLOBALS();
+	global::initGlobal();
 	game.run();
 	return 0;
 }

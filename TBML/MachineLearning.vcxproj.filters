@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Library">
+      <UniqueIdentifier>{e7fa3b8a-c46a-42f8-afb6-c869f39178d1}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="UtilityFunctions.h">
+      <Filter>Library</Filter>
+    </ClInclude>
+    <ClInclude Include="Matrix.h">
+      <Filter>Library</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>Library</Filter>
+    </ClInclude>
+    <ClInclude Include="NeuralNetwork.h">
+      <Filter>Library</Filter>
+    </ClInclude>
+    <ClInclude Include="SupervisedNetwork.h">
+      <Filter>Library</Filter>
+    </ClInclude>
+    <ClInclude Include="GenepoolSimulation.h">
+      <Filter>Library</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="UtilityFunctions.cpp">
+      <Filter>Library</Filter>
+    </ClCompile>
+    <ClCompile Include="Matrix.cpp">
+      <Filter>Library</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Library</Filter>
+    </ClCompile>
+    <ClCompile Include="NeuralNetwork.cpp">
+      <Filter>Library</Filter>
+    </ClCompile>
+    <ClCompile Include="SupervisedNetwork.cpp">
+      <Filter>Library</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

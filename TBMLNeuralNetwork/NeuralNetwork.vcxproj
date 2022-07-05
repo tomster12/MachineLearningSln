@@ -19,19 +19,15 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Functions.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Matrix.cpp" />
-    <ClCompile Include="MNIST.cpp" />
-    <ClCompile Include="NeuralNetwork.cpp" />
-    <ClCompile Include="SupervisedNetwork.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Functions.h" />
-    <ClInclude Include="Matrix.h" />
+    <ProjectReference Include="..\TBML\MachineLearning.vcxproj">
+      <Project>{55c5ea16-0f23-47bd-9c28-5aaaa4a9a9f7}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
     <ClInclude Include="MNIST.h" />
-    <ClInclude Include="NeuralNetwork.h" />
-    <ClInclude Include="SupervisedNetwork.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -39,6 +35,7 @@
     <ProjectGuid>{29421366-bcd8-451a-8951-c8e8f7dd2cdb}</ProjectGuid>
     <RootNamespace>NeuralNetwork</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>TBMLNeuralNetwork</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -87,23 +84,23 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)\bin\output\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\bin\intermediates\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)\bin\$(ProjectName)\output\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)\bin\$(ProjectName)\intermediates\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)\bin\output\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\bin\intermediates\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)\bin\$(ProjectName)\output\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)\bin\$(ProjectName)\intermediates\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)\bin\output\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\bin\intermediates\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)\bin\$(ProjectName)\output\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)\bin\$(ProjectName)\intermediates\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)\bin\output\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\bin\intermediates\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)\bin\$(ProjectName)\output\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)\bin\$(ProjectName)\intermediates\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -111,6 +108,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir)\TBML;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -125,12 +123,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir)\TBML;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)\bin\TBML\output\Release\</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -139,6 +139,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir)\TBML;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -153,6 +154,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir)\TBML;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

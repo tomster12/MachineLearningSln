@@ -4,7 +4,7 @@
 #include "GenepoolSimulation.h"
 
 
-class Vector2fData : public GeneticData<Vector2fData> {
+class Vector2fData : public tbml::GeneticData<Vector2fData> {
 
 private:
 	std::vector<sf::Vector2f> values;
@@ -29,7 +29,7 @@ public:
 
 
 class VectorGenepoolSimulation;
-class VectorInstance : public GeneticInstance<Vector2fData> {
+class VectorInstance : public tbml::GeneticInstance<Vector2fData> {
 
 private:
 	VectorGenepoolSimulation* sim;
@@ -46,7 +46,6 @@ public:
 	VectorInstance(Vector2fData* data) : GeneticInstance(data) {};
 	VectorInstance(VectorGenepoolSimulation* sim, sf::Vector2f startPos, float radius, float moveSpeed, Vector2fData* data);
 	void initVisual();
-	void resetInstance();
 
 	void step() override;
 	void render(sf::RenderWindow* window) override;
@@ -59,7 +58,7 @@ public:
 };
 
 
-class VectorGenepoolSimulation : public GenepoolSimulation<Vector2fData, VectorInstance> {
+class VectorGenepoolSimulation : public tbml::GenepoolSimulation<Vector2fData, VectorInstance> {
 
 protected:
 	sf::CircleShape target;

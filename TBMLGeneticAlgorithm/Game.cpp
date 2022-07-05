@@ -1,6 +1,7 @@
 
 #include "stdafx.h"
 #include "Game.h"
+#include "UtilityFunctions.h"
 
 
 Game::Game() {
@@ -32,33 +33,33 @@ void Game::initVariables() {
     // Initialize genepool
     this->genepool = VectorGenepoolSimulation({ 700.0f, 600.0f }, 4.0f, { 700.0f, 100.0f }, 20.0f, 4.0f, 500);
     this->genepool.initGenepool(1000, 0.01f);
-
+    
     // Initialize UI
     this->uiManager = UIManager();
     float spacing = 6.0f;
     float size = 30.0f;
-    this->uiManager.addElement(new UIButton(this->window, { spacing + 0 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "play.png",
+    this->uiManager.addElement(new UIButton(this->window, { spacing + 0 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "assets/play.png",
         [this]() { this->genepool.startGeneration(); }
     ));
-    this->uiManager.addElement(new UIButton(this->window, { spacing + 1 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "pause.png",
+    this->uiManager.addElement(new UIButton(this->window, { spacing + 1 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "assets/pause.png",
         [this]() { this->genepool.pauseGeneration(); }
     ));
-    this->uiManager.addElement(new UIButton(this->window, { spacing + 2 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "complete.png",
+    this->uiManager.addElement(new UIButton(this->window, { spacing + 2 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "assets/complete.png",
         [this]() { this->genepool.fullStepGeneration(); }
     ));
-    this->uiManager.addElement(new UIButton(this->window, { spacing + 3 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "finish.png",
+    this->uiManager.addElement(new UIButton(this->window, { spacing + 3 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "assets/finish.png",
         [this]() { this->genepool.finishGeneration(); }
     ));
-    this->uiManager.addElement(new UIToggleButton(this->window, { spacing + 4 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "hide.png", false,
-        [this](bool toggled) { Globals::SHOW_VISUALS = !toggled; }
+    this->uiManager.addElement(new UIToggleButton(this->window, { spacing + 4 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "assets/hide.png", false,
+        [this](bool toggled) { global::showVisuals = !toggled; }
     ));
-    this->uiManager.addElement(new UIToggleButton(this->window, { spacing + 0 * (spacing + size), spacing + 1 * (spacing + size) }, { size, size }, "autoplay.png", false,
+    this->uiManager.addElement(new UIToggleButton(this->window, { spacing + 0 * (spacing + size), spacing + 1 * (spacing + size) }, { size, size }, "assets/autoplay.png", false,
         [this](bool toggled) { this->genepool.setAutoStart(toggled); }
     ));
-    this->uiManager.addElement(new UIToggleButton(this->window, { spacing + 2 * (spacing + size), spacing + 1 * (spacing + size) }, { size, size }, "autocomplete.png", false,
+    this->uiManager.addElement(new UIToggleButton(this->window, { spacing + 2 * (spacing + size), spacing + 1 * (spacing + size) }, { size, size }, "assets/autocomplete.png", false,
         [this](bool toggled) { this->genepool.setAutoComplete(toggled); }
     ));
-    this->uiManager.addElement(new UIToggleButton(this->window, { spacing + 3 * (spacing + size), spacing + 1 * (spacing + size) }, { size, size }, "autofinish.png", false,
+    this->uiManager.addElement(new UIToggleButton(this->window, { spacing + 3 * (spacing + size), spacing + 1 * (spacing + size) }, { size, size }, "assets/autofinish.png", false,
         [this](bool toggled) { this->genepool.setAutoFinish(toggled); }
     ));
 }
@@ -102,7 +103,7 @@ void Game::render() {
     window->clear();
 
     // Render genepool
-    if (Globals::SHOW_VISUALS) this->genepool.render(window);
+    if (global::showVisuals) this->genepool.render(window);
     this->uiManager.render(window);
 
     // Display current draw window

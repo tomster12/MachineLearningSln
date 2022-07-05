@@ -1,7 +1,7 @@
 
 #include "stdafx.h"
-#include "Utility.h"
 #include "VectorGenepoolSimulation.h"
+#include "UtilityFunctions.h"
 
 
 #pragma region - Vector2fData
@@ -29,17 +29,17 @@ size_t Vector2fData::getSize() { return this->dataSize; }
 void Vector2fData::randomize() {
 	// Randomize each data point in the list
 	for (int i = 0; i < this->dataSize; i++) {
-		this->values[i].x = getRandomFloat() * 2 - 1;
-		this->values[i].y = getRandomFloat() * 2 - 1;
+		this->values[i].x = tbml::getRandomFloat() * 2 - 1;
+		this->values[i].y = tbml::getRandomFloat() * 2 - 1;
 	}
 };
 
 void Vector2fData::mutate(float chance) {
 	// Randomly mutate each data point in the list
 	for (int i = 0; i < this->dataSize; i++) {
-		if (getRandomFloat() < chance) {
-			this->values[i].x = getRandomFloat() * 2 - 1;
-			this->values[i].y = getRandomFloat() * 2 - 1;
+		if (tbml::getRandomFloat() < chance) {
+			this->values[i].x = tbml::getRandomFloat() * 2 - 1;
+			this->values[i].y = tbml::getRandomFloat() * 2 - 1;
 		}
 	}
 };
@@ -65,11 +65,10 @@ Vector2fData* Vector2fData::crossover(Vector2fData* otherData) {
 #pragma region - VectorInstance
 
 VectorInstance::VectorInstance(VectorGenepoolSimulation* sim, sf::Vector2f startPos, float radius, float moveSpeed, Vector2fData* data)
-	: GeneticInstance(data), sim(sim), startPos(startPos), radius(radius), moveSpeed(moveSpeed) {
+	: GeneticInstance(data), sim(sim), pos(startPos), radius(radius), moveSpeed(moveSpeed), currentIndex(0) {
 
 	// Initialize variables
-	if (Globals::SHOW_VISUALS) initVisual();
-	resetInstance();
+	if (global::showVisuals) initVisual();
 }
 
 void VectorInstance::initVisual() {
@@ -80,12 +79,6 @@ void VectorInstance::initVisual() {
 	this->shape.setOutlineColor(sf::Color::White);
 	this->shape.setOutlineThickness(1.0f);
 }
-
-void VectorInstance::resetInstance() {
-	// Reset variables
-	this->pos = startPos;
-	this->currentIndex = 0;
-};
 
 
 void VectorInstance::step() {

@@ -17,4 +17,4 @@
 #include <SFML/Audio.hpp>
 #include <SFML/Network.hpp>
 
-#include "Globals.h"
+#include "global.h"
