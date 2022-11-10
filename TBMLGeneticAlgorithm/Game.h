@@ -2,8 +2,8 @@
 #pragma once
 
 #include "UIManager.h"
-//#include "VectorListTargetGS.h"
-//#include "NeuralTargetGS.h"
+#include "VectorListTargetGS.h"
+#include "NeuralTargetGS.h"
 #include "NeuralRocketGS.h"
 
 
@@ -15,9 +15,9 @@ private:
 	sf::Clock dtClock;
 	float dt;
 
-	//VectorListTargetGS genepool;
+	VectorListTargetGS genepool;
 	//NeuralTargetGS genepool;
-	NeuralRocketGS genepool;
+	//NeuralRocketGS genepool;
 	UIManager uiManager;
 
 	void initVariables();
