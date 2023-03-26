@@ -39,12 +39,14 @@ void Game::initVariables() {
     //this->genepool = NeuralRocketGS({ 700.0f, 850.0f }, 5.0f, 1500, { 4, 4, 2 }, {
     //    { 150.0f, 150.0f }, { 920.0f, 400.0f }, { 300.0f, 850.0f }, { 550.0f, 320.0f }
     //}, 20.0f);
+
     this->genepool.initGenepool(500, 0.02f);
     
     // Initialize UI
     this->uiManager = UIManager();
     float spacing = 6.0f;
     float size = 30.0f;
+
     this->uiManager.addElement(new UIButton(this->window, { spacing + 0 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "assets/play.png",
         [this]() { this->genepool.startGeneration(); }
     ));

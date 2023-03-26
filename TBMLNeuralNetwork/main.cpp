@@ -16,7 +16,7 @@ void testMNIST();
 
 
 int main() {
-	testBackprop();
+	testMNIST();
 	return 0;
 }
 
