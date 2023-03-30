@@ -2,22 +2,20 @@
 #pragma once
 
 
-namespace tbml {
+namespace tbml
+{
 
-	class Matrix {
-
+	class Matrix
+	{
 	private:
-		// Private variables
 		std::vector<std::vector<float>> data;
 		size_t rows, cols;
 
 	public:
-		// Public constructor
 		Matrix();
 		Matrix(std::vector<std::vector<float>> data_);
 		Matrix(size_t rows_, size_t cols_);
 
-		// Public arithmetic
 		Matrix cross(Matrix& other);
 		Matrix* icross(Matrix& other);
 		Matrix transpose();
@@ -40,14 +38,13 @@ namespace tbml {
 		Matrix div(Matrix& other);
 		Matrix* idiv(Matrix& other);
 
-		// Public functions
 		void printValues(std::string tag = "Matrix:");
 		void printDims(std::string tag = "Dimensions: ");
 
 		std::vector<Matrix> splitRows(size_t splitSize);
+		std::vector<std::vector<float>>& getData();
 		size_t getRows();
 		size_t getCols();
-		std::vector<std::vector<float>>& getData();
 		float get(size_t row, size_t col);
 		bool getEmpty();
 

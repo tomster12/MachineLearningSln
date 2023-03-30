@@ -6,13 +6,15 @@
 
 #pragma region - VectorListGD
 
-VectorListGD::VectorListGD(int dataSize) {
+VectorListGD::VectorListGD(int dataSize)
+{
 	// Initialize variables
 	this->dataSize = dataSize;
 	this->values = std::vector<sf::Vector2f>(dataSize);
 }
 
-VectorListGD::VectorListGD(std::vector<sf::Vector2f> values) {
+VectorListGD::VectorListGD(std::vector<sf::Vector2f> values)
+{
 	// Initialize variables
 	this->dataSize = values.size();
 	this->values = values;
@@ -26,32 +28,39 @@ sf::Vector2f VectorListGD::getValue(int index) { return this->values[index]; }
 size_t VectorListGD::getSize() { return this->dataSize; }
 
 
-void VectorListGD::randomize() {
+void VectorListGD::randomize()
+{
 	// Randomize each data point in the list
-	for (int i = 0; i < this->dataSize; i++) {
+	for (int i = 0; i < this->dataSize; i++)
+	{
 		this->values[i].x = tbml::getRandomFloat() * 2 - 1;
 		this->values[i].y = tbml::getRandomFloat() * 2 - 1;
 	}
 };
 
-void VectorListGD::mutate(float chance) {
+void VectorListGD::mutate(float chance)
+{
 	// Randomly mutate each data point in the list
-	for (int i = 0; i < this->dataSize; i++) {
-		if (tbml::getRandomFloat() < chance) {
+	for (int i = 0; i < this->dataSize; i++)
+	{
+		if (tbml::getRandomFloat() < chance)
+		{
 			this->values[i].x = tbml::getRandomFloat() * 2 - 1;
 			this->values[i].y = tbml::getRandomFloat() * 2 - 1;
 		}
 	}
 };
 
-VectorListGD* VectorListGD::crossover(VectorListGD* otherData) {
+VectorListGD* VectorListGD::crossover(VectorListGD* otherData)
+{
 	// Constructa new vector data
 	std::vector<sf::Vector2f>& thisValues = this->getValues();
 	std::vector<sf::Vector2f>& otherValues = otherData->getValues();
 	std::vector<sf::Vector2f> newValues;
 	newValues.reserve(this->getSize());
 
-	for (size_t i = 0; i < this->getSize(); i++) {
+	for (size_t i = 0; i < this->getSize(); i++)
+	{
 		if (i % 2 == 0) newValues.push_back(thisValues[i]);
 		else newValues.push_back(otherValues[i]);
 	}
@@ -65,13 +74,14 @@ VectorListGD* VectorListGD::crossover(VectorListGD* otherData) {
 #pragma region - VectorListTargetGI
 
 VectorListTargetGI::VectorListTargetGI(VectorListTargetGS* sim, sf::Vector2f startPos, float radius, float moveSpeed, VectorListGD* geneticData)
-	: GeneticInstance(geneticData), sim(sim), pos(startPos), radius(radius), moveSpeed(moveSpeed), currentIndex(0) {
-
+	: GeneticInstance(geneticData), sim(sim), pos(startPos), radius(radius), moveSpeed(moveSpeed), currentIndex(0)
+{
 	// Initialize variables
 	if (global::showVisuals) initVisual();
 }
 
-void VectorListTargetGI::initVisual() {
+void VectorListTargetGI::initVisual()
+{
 	// Initialize all visual variables
 	this->shape.setRadius(this->radius);
 	this->shape.setOrigin(this->radius, this->radius);
@@ -81,8 +91,9 @@ void VectorListTargetGI::initVisual() {
 }
 
 
-void VectorListTargetGI::step() {
-	if (this->instanceFinished) return;
+bool VectorListTargetGI::step()
+{
+	if (this->instanceFinished) return true;
 
 	// Move position by current vector
 	sf::Vector2f nextDir = this->geneticData->getValue(this->currentIndex);
@@ -92,13 +103,16 @@ void VectorListTargetGI::step() {
 
 	// Check finish conditions
 	float dist = calculateDist();
-	if (this->currentIndex == this->geneticData->getSize() || dist < 0.0f) {
+	if (this->currentIndex == this->geneticData->getSize() || dist < 0.0f)
+	{
 		this->calculateFitness();
 		this->instanceFinished = true;
 	}
+	return this->instanceFinished;
 };
 
-void VectorListTargetGI::render(sf::RenderWindow* window) {
+void VectorListTargetGI::render(sf::RenderWindow* window)
+{
 	// Update shape position and colour
 	this->shape.setPosition(this->pos.x, this->pos.y);
 
@@ -107,7 +121,8 @@ void VectorListTargetGI::render(sf::RenderWindow* window) {
 };
 
 
-float VectorListTargetGI::calculateDist() {
+float VectorListTargetGI::calculateDist()
+{
 	// Calculate distance to target
 	float dx = this->sim->getTargetPos().x - pos.x;
 	float dy = this->sim->getTargetPos().y - pos.y;
@@ -116,7 +131,8 @@ float VectorListTargetGI::calculateDist() {
 	return fullDistSq - radii;
 }
 
-float VectorListTargetGI::calculateFitness() {
+float VectorListTargetGI::calculateFitness()
+{
 	// Dont calculate once finished
 	if (this->instanceFinished) return this->instanceFitness;
 
@@ -124,11 +140,13 @@ float VectorListTargetGI::calculateFitness() {
 	float dist = calculateDist();
 	float fitness = 0.0f;
 
-	if (dist > 0.0f) {
+	if (dist > 0.0f)
+	{
 		fitness = 0.5f * (1.0f - dist / 500.0f);
 		fitness = fitness < 0.0f ? 0.0f : fitness;
 
-	} else {
+	} else
+	{
 		float dataPct = static_cast<float>(this->currentIndex) / static_cast<float>(this->geneticData->getSize());
 		fitness = 1.0f - 0.5f * dataPct;
 	}
@@ -152,11 +170,10 @@ VectorListTargetGS::VectorListTargetGS(
 	sf::Vector2f instanceStartPos, float instanceRadius,
 	float instanceMoveSpeed, int dataSize,
 	sf::Vector2f targetPos, float targetRadius)
-
 	: instanceStartPos(instanceStartPos), instanceRadius(instanceRadius),
 	instanceMoveSpeed(instanceMoveSpeed), dataSize(dataSize),
-	targetPos(targetPos), targetRadius(targetRadius) {
-
+	targetPos(targetPos), targetRadius(targetRadius)
+{
 	// Initialize variables
 	this->target.setRadius(this->targetRadius);
 	this->target.setOrigin(this->targetRadius, this->targetRadius);
@@ -167,21 +184,24 @@ VectorListTargetGS::VectorListTargetGS(
 };
 
 
-VectorListGD* VectorListTargetGS::createData() {
+VectorListGD* VectorListTargetGS::createData()
+{
 	// Create, randomize and return data
 	VectorListGD* data = new VectorListGD(this->dataSize);
 	data->randomize();
 	return data;
 };
 
-VectorListTargetGI* VectorListTargetGS::createInstance(VectorListGD* data) {
+VectorListTargetGI* VectorListTargetGS::createInstance(VectorListGD* data)
+{
 	// Create and return instance
 	VectorListTargetGI* inst = new VectorListTargetGI(this, this->instanceStartPos, this->instanceRadius, this->instanceMoveSpeed, data);
 	return inst;
 };
 
 
-void VectorListTargetGS::render(sf::RenderWindow* window) {
+void VectorListTargetGS::render(sf::RenderWindow* window)
+{
 	GenepoolSimulation::render(window);
 
 	// Draw target

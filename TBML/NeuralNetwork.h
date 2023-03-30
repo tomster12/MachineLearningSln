@@ -4,10 +4,10 @@
 #include "Matrix.h"
 
 
-namespace tbml {
-
-	class NeuralNetwork {
-
+namespace tbml
+{
+	class NeuralNetwork
+	{
 	protected:
 		size_t layerCount;
 		std::vector<size_t> layerSizes;

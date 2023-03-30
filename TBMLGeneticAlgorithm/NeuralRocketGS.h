@@ -8,28 +8,27 @@
 
 
 class NeuralRocketGS;
-class NeuralRocketGI : public tbml::GeneticInstance<NeuralGD> {
-
+class NeuralRocketGI : public tbml::GeneticInstance<NeuralGD>
+{
 private:
-	NeuralRocketGS* sim;
+	NeuralRocketGS* sim = nullptr;
 	sf::CircleShape shape;
 
 	sf::Vector2f startPos;
-	float moveSpeed;
-	int maxIterations;
+	float moveSpeed = 0;
+	int maxIterations = 0;
 
 	sf::Vector2f pos;
 	sf::Vector2f vel;
-	int currentIteration;
-	int currentTarget;
-
+	int currentIteration = 0;
+	int currentTarget = 0;
 
 public:
 	NeuralRocketGI(NeuralGD* geneticData) : tbml::GeneticInstance<NeuralGD>(geneticData) {};
 	NeuralRocketGI(NeuralRocketGS* sim, sf::Vector2f startPos, float moveSpeed, int maxIterations, NeuralGD* geneticData);
 	void initVisual();
 
-	void step() override;
+	bool step() override;
 	void render(sf::RenderWindow* window) override;
 
 	float calculateDist();
@@ -40,16 +39,16 @@ public:
 };
 
 
-class NeuralRocketGS : public tbml::GenepoolSimulation<NeuralGD, NeuralRocketGI> {
-
+class NeuralRocketGS : public tbml::GenepoolSimulation<NeuralGD, NeuralRocketGI>
+{
 protected:
 	std::vector<sf::CircleShape> targetShapes;
 	sf::Vector2f instanceStartPos;
-	float instanceMoveSpeed;
-	int instancemaxIterations;
+	float instanceMoveSpeed = 0.0f;
+	int instancemaxIterations = 0;
 	std::vector<size_t> dataLayerSizes;
 	std::vector<sf::Vector2f> targetPos;
-	float targetRadius;
+	float targetRadius = 0.0f;
 
 	NeuralGD* createData() override;
 	NeuralRocketGI* createInstance(NeuralGD* data) override;
@@ -64,6 +63,6 @@ public:
 	void render(sf::RenderWindow* window) override;
 
 	sf::Vector2f getTarget(int index);
-	float getTargetCount();
+	size_t getTargetCount();
 	float getTargetRadius();
 };

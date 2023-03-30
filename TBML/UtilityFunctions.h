@@ -4,17 +4,14 @@
 #include "Matrix.h"
 
 
-namespace tbml {
-
+namespace tbml
+{
 	float sigmoid(float x);
 	float sigmoidPd(float x);
-
 	float tanh(float x);
 	float tanhPd(float x);
-
 	float relu(float x);
 	float reluPd(float x);
-
 	//float softmax(float x);
 	//float softmaxPd(float x);
 

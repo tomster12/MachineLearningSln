@@ -10,13 +10,13 @@
 #pragma region - NeuralRocketGI
 
 NeuralRocketGI::NeuralRocketGI(NeuralRocketGS* sim, sf::Vector2f startPos, float moveSpeed, int maxIterations, NeuralGD* geneticData)
-	: GeneticInstance(geneticData), sim(sim), pos(startPos), moveSpeed(moveSpeed), maxIterations(maxIterations), currentIteration(0), currentTarget(0), vel() {
-
-	// Initialize variables
+	: GeneticInstance(geneticData), sim(sim), pos(startPos), moveSpeed(moveSpeed), maxIterations(maxIterations), currentIteration(0), currentTarget(0), vel()
+{
 	if (global::showVisuals) initVisual();
 }
 
-void NeuralRocketGI::initVisual() {
+void NeuralRocketGI::initVisual()
+{
 	// Initialize all visual variables
 	this->shape.setRadius(5.0f);
 	this->shape.setOrigin(5.0f, 5.0f);
@@ -26,8 +26,9 @@ void NeuralRocketGI::initVisual() {
 }
 
 
-void NeuralRocketGI::step() {
-	if (this->instanceFinished) return;
+bool NeuralRocketGI::step()
+{
+	if (this->instanceFinished) return true;
 
 	// Move position by current vector
 	sf::Vector2f targetPos = this->sim->getTarget(this->currentTarget);
@@ -50,13 +51,16 @@ void NeuralRocketGI::step() {
 	// Check finish conditions
 	float dist = calculateDist();
 	if (dist <= 0.0f) this->currentTarget++;
-	if (currentIteration == maxIterations || this->currentTarget == this->sim->getTargetCount()) {
+	if (currentIteration == maxIterations || this->currentTarget == this->sim->getTargetCount())
+	{
 		this->calculateFitness();
 		this->instanceFinished = true;
 	}
+	return this->instanceFinished;
 };
 
-void NeuralRocketGI::render(sf::RenderWindow* window) {
+void NeuralRocketGI::render(sf::RenderWindow* window)
+{
 	// Update shape position and colour
 	this->shape.setPosition(this->pos.x, this->pos.y);
 
@@ -65,7 +69,8 @@ void NeuralRocketGI::render(sf::RenderWindow* window) {
 };
 
 
-float NeuralRocketGI::calculateDist() {
+float NeuralRocketGI::calculateDist()
+{
 	// Calculate distance to target
 	if (this->currentTarget == this->sim->getTargetCount()) return 0.0f;
 	sf::Vector2f targetPos = this->sim->getTarget(this->currentTarget);
@@ -76,7 +81,8 @@ float NeuralRocketGI::calculateDist() {
 	return fullDistSq - radii;
 }
 
-float NeuralRocketGI::calculateFitness() {
+float NeuralRocketGI::calculateFitness()
+{
 	// Dont calculate once finished
 	if (this->instanceFinished) return this->instanceFitness;
 
@@ -107,11 +113,13 @@ NeuralRocketGS::NeuralRocketGS(
 
 	: instanceStartPos(instanceStartPos), instanceMoveSpeed(instanceMoveSpeed),
 	instancemaxIterations(instancemaxIterations), dataLayerSizes(dataLayerSizes),
-	targetPos(targets), targetRadius(targetRadius) {
+	targetPos(targets), targetRadius(targetRadius)
+{
 
 	// Initialize variables
 	this->targetShapes = std::vector<sf::CircleShape>();
-	for (auto& target : this->targetPos) {
+	for (auto& target : this->targetPos)
+	{
 		sf::CircleShape shape = sf::CircleShape();
 		shape.setRadius(this->targetRadius);
 		shape.setOrigin(this->targetRadius, this->targetRadius);
@@ -124,21 +132,24 @@ NeuralRocketGS::NeuralRocketGS(
 };
 
 
-NeuralGD* NeuralRocketGS::createData() {
+NeuralGD* NeuralRocketGS::createData()
+{
 	// Create, randomize and return data
 	NeuralGD* data = new NeuralGD(this->dataLayerSizes);
 	data->randomize();
 	return data;
 };
 
-NeuralRocketGI* NeuralRocketGS::createInstance(NeuralGD* data) {
+NeuralRocketGI* NeuralRocketGS::createInstance(NeuralGD* data)
+{
 	// Create and return instance
 	NeuralRocketGI* inst = new NeuralRocketGI(this, this->instanceStartPos, this->instanceMoveSpeed, this->instancemaxIterations, data);
 	return inst;
 };
 
 
-void NeuralRocketGS::render(sf::RenderWindow* window) {
+void NeuralRocketGS::render(sf::RenderWindow* window)
+{
 	GenepoolSimulation::render(window);
 
 	// Draw target
@@ -148,7 +159,7 @@ void NeuralRocketGS::render(sf::RenderWindow* window) {
 
 sf::Vector2f NeuralRocketGS::getTarget(int index) { return this->targetPos[index]; }
 
-float NeuralRocketGS::getTargetCount() { return this->targetPos.size(); }
+size_t NeuralRocketGS::getTargetCount() { return this->targetPos.size(); }
 
 float NeuralRocketGS::getTargetRadius() { return this->targetRadius; }
 

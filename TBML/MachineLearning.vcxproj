@@ -168,6 +168,7 @@
     <ClInclude Include="SupervisedNetwork.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ThreadPool.h" />
     <ClCompile Include="UtilityFunctions.cpp" />
     <ClCompile Include="Matrix.cpp" />
     <ClCompile Include="NeuralNetwork.cpp" />

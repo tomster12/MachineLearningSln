@@ -41,5 +41,8 @@
     <ClCompile Include="SupervisedNetwork.cpp">
       <Filter>Library</Filter>
     </ClCompile>
+    <ClCompile Include="ThreadPool.h">
+      <Filter>Library</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -15,16 +15,17 @@ void testBackprop();
 void testMNIST();
 
 
-int main() {
-	testMNIST();
+int main()
+{
+	testTime();
 	return 0;
 }
 
-
-void testBasic() {
+void testBasic()
+{
 	// Create network, inputs, and run
-	tbml::NeuralNetwork network(std::vector<size_t>( { 3, 3, 1 } ));
-	tbml::Matrix input = tbml::Matrix( { { 1.0f, -1.0f, 1.0f } });
+	tbml::NeuralNetwork network(std::vector<size_t>({ 3, 3, 1 }));
+	tbml::Matrix input = tbml::Matrix({ { 1.0f, -1.0f, 1.0f } });
 	tbml::Matrix output = network.propogate(input);
 
 	// Print values
@@ -33,8 +34,8 @@ void testBasic() {
 	output.printValues("Output:");
 }
 
-
-void testTime() {
+void testTime()
+{
 	// Create network and inputs
 	tbml::NeuralNetwork network(std::vector<size_t>({ 8, 8, 8, 1 }));
 	tbml::Matrix input = tbml::Matrix({ { 1, 0, -1, 0.2f, 0.7f, -0.3f, -1, -1 } });
@@ -56,8 +57,8 @@ void testTime() {
 	std::cout << "Time taken: " << us.count() / 1000.0f << "ms" << std::endl;
 }
 
-
-void testBackprop() {
+void testBackprop()
+{
 	// Create network and setup training data
 	tbml::SupervisedNetwork network(std::vector<size_t>({ 2, 2, 1 }), tbml::tanh, tbml::tanhPd, tbml::calcErrSqDiff, tbml::calcErrSqDiffPd);
 	float l = -1.0f;
@@ -77,12 +78,12 @@ void testBackprop() {
 	input.printValues("Input:");
 	expected.printValues("Expected:");
 	network.propogate(input).printValues("Initial: ");
-	network.train(input, expected, { -1, -1, 0.2f, 0.85f, 0.01f, 2 }); 
+	network.train(input, expected, { -1, -1, 0.2f, 0.85f, 0.01f, 2 });
 	network.propogate(input).printValues("Trained: ");
 }
 
-
-void testMNIST() {
+void testMNIST()
+{
 	// Read dataset
 	size_t imageCount, imageSize, labelCount;
 	uchar** imageDataset = MNIST::readImages("MNIST/train-images.idx3-ubyte", imageCount, imageSize);
@@ -91,7 +92,8 @@ void testMNIST() {
 	// Parse dataset into input / training
 	std::vector<std::vector<float>> inputData = std::vector<std::vector<float>>(imageCount);
 	std::vector<std::vector<float>> expectedData = std::vector<std::vector<float>>(imageCount);
-	for (size_t i = 0; i < imageCount; i++) {
+	for (size_t i = 0; i < imageCount; i++)
+	{
 		inputData[i] = std::vector<float>(imageSize);
 		expectedData[i] = std::vector<float>(10);
 		for (size_t o = 0; o < imageSize; o++) inputData[i][o] = (float)imageDataset[i][o] / 255.0f;

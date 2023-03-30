@@ -5,7 +5,6 @@
 
 #pragma region - UIButton
 
-// Initialize static variables
 const sf::Color UIButton::HOVER_COLOR = sf::Color(100, 100, 100);
 
 

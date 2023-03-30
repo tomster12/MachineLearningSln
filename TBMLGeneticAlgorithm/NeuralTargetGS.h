@@ -6,11 +6,10 @@
 #include "Matrix.h"
 
 
-class NeuralGD : public tbml::GeneticData<NeuralGD> {
-
+class NeuralGD : public tbml::GeneticData<NeuralGD>
+{
 private:
 	tbml::NeuralNetwork network;
-
 
 public:
 	NeuralGD() {};
@@ -27,18 +26,18 @@ public:
 
 
 class NeuralTargetGS;
-class NeuralTargetGI : public tbml::GeneticInstance<NeuralGD> {
-
+class NeuralTargetGI : public tbml::GeneticInstance<NeuralGD>
+{
 private:
 	NeuralTargetGS* sim;
 	sf::CircleShape shape;
 
 	sf::Vector2f startPos;
-	float radius;
-	float moveSpeed;
-	int maxIterations;
+	float radius = 0;
+	float moveSpeed = 0;
+	int maxIterations = 0;
 	sf::Vector2f pos;
-	int currentIteration;
+	int currentIteration = 0;
 
 
 public:
@@ -46,7 +45,7 @@ public:
 	NeuralTargetGI(NeuralTargetGS* sim, sf::Vector2f startPos, float radius, float moveSpeed, int maxIterations, NeuralGD* geneticData);
 	void initVisual();
 
-	void step() override;
+	bool step() override;
 	void render(sf::RenderWindow* window) override;
 
 	float calculateDist();
@@ -57,18 +56,18 @@ public:
 };
 
 
-class NeuralTargetGS : public tbml::GenepoolSimulation<NeuralGD, NeuralTargetGI> {
-
+class NeuralTargetGS : public tbml::GenepoolSimulation<NeuralGD, NeuralTargetGI>
+{
 protected:
 	sf::CircleShape target;
 	sf::Vector2f instanceStartPos;
-	float instanceRadius;
-	float instanceMoveSpeed;
-	int instancemaxIterations;
+	float instanceRadius = 0.0f;
+	float instanceMoveSpeed = 0.0f;
+	int instancemaxIterations = 0;
 	std::vector<size_t> dataLayerSizes;
-	float targetRadius;
+	float targetRadius = 0.0f;
 	sf::Vector2f targetRandomCentre;
-	float targetRandomRadius;
+	float targetRandomRadius = 0.0f;
 	sf::Vector2f targetPos;
 
 	NeuralGD* createData() override;
