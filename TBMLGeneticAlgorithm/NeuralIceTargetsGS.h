@@ -2,30 +2,29 @@
 #pragma once
 
 #include "GenepoolSimulation.h"
-#include "NeuralTargetGS.h"
-#include "NeuralNetwork.h"
-#include "Matrix.h"
+#include "CommonGeneticDatas.h"
 
 
-class NeuralRocketGS;
-class NeuralRocketGI : public tbml::GeneticInstance<NeuralGD>
+class NeuralIceTargetsGS;
+class NeuralIceTargetsGI : public tbml::GeneticInstance<NeuralGD>
 {
 private:
-	NeuralRocketGS* sim = nullptr;
+	NeuralIceTargetsGS* sim = nullptr;
 	sf::CircleShape shape;
 
 	sf::Vector2f startPos;
-	float moveSpeed = 0;
+	float moveAcc = 0;
 	int maxIterations = 0;
 
 	sf::Vector2f pos;
 	sf::Vector2f vel;
 	int currentIteration = 0;
 	int currentTarget = 0;
+	float anger = 0.0f;
 
 public:
-	NeuralRocketGI(NeuralGD* geneticData) : tbml::GeneticInstance<NeuralGD>(geneticData) {};
-	NeuralRocketGI(NeuralRocketGS* sim, sf::Vector2f startPos, float moveSpeed, int maxIterations, NeuralGD* geneticData);
+	NeuralIceTargetsGI(NeuralGD* geneticData) : tbml::GeneticInstance<NeuralGD>(geneticData) {};
+	NeuralIceTargetsGI(NeuralIceTargetsGS* sim, sf::Vector2f startPos, float moveAcc, int maxIterations, NeuralGD* geneticData);
 	void initVisual();
 
 	bool step() override;
@@ -33,30 +32,27 @@ public:
 
 	float calculateDist();
 	float calculateFitness();
-
-	bool getInstanceFinished() override;
-	float getInstanceFitness() override;
 };
 
 
-class NeuralRocketGS : public tbml::GenepoolSimulation<NeuralGD, NeuralRocketGI>
+class NeuralIceTargetsGS : public tbml::GenepoolSimulation<NeuralGD, NeuralIceTargetsGI>
 {
 protected:
 	std::vector<sf::CircleShape> targetShapes;
 	sf::Vector2f instanceStartPos;
-	float instanceMoveSpeed = 0.0f;
+	float instancemoveAcc = 0.0f;
 	int instancemaxIterations = 0;
 	std::vector<size_t> dataLayerSizes;
 	std::vector<sf::Vector2f> targetPos;
 	float targetRadius = 0.0f;
 
 	NeuralGD* createData() override;
-	NeuralRocketGI* createInstance(NeuralGD* data) override;
+	NeuralIceTargetsGI* createInstance(NeuralGD* data) override;
 
 public:
-	NeuralRocketGS() {};
-	NeuralRocketGS(
-		sf::Vector2f instanceStartPos, float instanceMoveSpeed,
+	NeuralIceTargetsGS() {};
+	NeuralIceTargetsGS(
+		sf::Vector2f instanceStartPos, float instancemoveAcc,
 		int instancemaxIterations, std::vector<size_t> dataLayerSizes,
 		std::vector<sf::Vector2f> targets, float targetRadius);
 

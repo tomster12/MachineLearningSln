@@ -24,11 +24,11 @@ namespace tbml
 		float acc(float (*func)(float, float), float initial);
 		Matrix map(float (*func)(float));
 		Matrix* imap(float (*func)(float));
-		Matrix scale(float val);
-		Matrix* iscale(float val);
-
 		Matrix ewise(Matrix& other, float (*func)(float, float));
 		Matrix* iewise(Matrix& other, float (*func)(float, float));
+
+		Matrix scale(float val);
+		Matrix* iscale(float val);
 		Matrix add(Matrix& other);
 		Matrix* iadd(Matrix& other);
 		Matrix sub(Matrix& other);

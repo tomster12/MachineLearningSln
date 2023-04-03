@@ -2,27 +2,7 @@
 #pragma once
 
 #include "GenepoolSimulation.h"
-#include "NeuralNetwork.h"
-#include "Matrix.h"
-
-
-class NeuralGD : public tbml::GeneticData<NeuralGD>
-{
-private:
-	tbml::NeuralNetwork network;
-
-public:
-	NeuralGD() {};
-	NeuralGD(std::vector<size_t> layerSizes);
-	NeuralGD(tbml::NeuralNetwork network);
-
-	tbml::Matrix propogate(tbml::Matrix input);
-	void print();
-
-	void randomize() override;
-	void mutate(float chance) override;
-	NeuralGD* crossover(NeuralGD* otherData) override;
-};
+#include "CommonGeneticDatas.h"
 
 
 class NeuralTargetGS;
@@ -34,7 +14,7 @@ private:
 
 	sf::Vector2f startPos;
 	float radius = 0;
-	float moveSpeed = 0;
+	float moveAcc = 0;
 	int maxIterations = 0;
 	sf::Vector2f pos;
 	int currentIteration = 0;
@@ -42,7 +22,7 @@ private:
 
 public:
 	NeuralTargetGI(NeuralGD* geneticData) : tbml::GeneticInstance<NeuralGD>(geneticData) {};
-	NeuralTargetGI(NeuralTargetGS* sim, sf::Vector2f startPos, float radius, float moveSpeed, int maxIterations, NeuralGD* geneticData);
+	NeuralTargetGI(NeuralTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc, int maxIterations, NeuralGD* geneticData);
 	void initVisual();
 
 	bool step() override;
@@ -50,9 +30,6 @@ public:
 
 	float calculateDist();
 	float calculateFitness();
-
-	bool getInstanceFinished() override;
-	float getInstanceFitness() override;
 };
 
 
@@ -62,7 +39,7 @@ protected:
 	sf::CircleShape target;
 	sf::Vector2f instanceStartPos;
 	float instanceRadius = 0.0f;
-	float instanceMoveSpeed = 0.0f;
+	float instancemoveAcc = 0.0f;
 	int instancemaxIterations = 0;
 	std::vector<size_t> dataLayerSizes;
 	float targetRadius = 0.0f;
@@ -79,7 +56,7 @@ public:
 	NeuralTargetGS() {};
 	NeuralTargetGS(
 		sf::Vector2f instanceStartPos, float instanceRadius,
-		float instanceMoveSpeed, int instancemaxIterations, std::vector<size_t> dataLayerSizes,
+		float instancemoveAcc, int instancemaxIterations, std::vector<size_t> dataLayerSizes,
 		float targetRadius, sf::Vector2f targetRandomCentre, float targetRandomRadius);
 
 	void render(sf::RenderWindow* window) override;

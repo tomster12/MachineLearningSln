@@ -5,7 +5,7 @@
 #include "GenepoolSimulation.h"
 #include "VectorListTargetGS.h"
 #include "NeuralTargetGS.h"
-#include "NeuralRocketGS.h"
+#include "NeuralIceTargetsGS.h"
 
 
 class Game

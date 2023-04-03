@@ -10,14 +10,17 @@
     <Filter Include="UI">
       <UniqueIdentifier>{cba3320b-ded3-4b64-b3c0-c29ad8adfffe}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Implementation\Neural Rocket">
-      <UniqueIdentifier>{1e677a4d-0d7b-45e7-9093-6308907c46c3}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Implementation\Neural Target">
       <UniqueIdentifier>{0bafb34a-0707-4080-924b-2de6851cc49c}</UniqueIdentifier>
     </Filter>
     <Filter Include="Implementation\Vector List Target">
       <UniqueIdentifier>{a9a08ced-686f-4a7f-998c-df780b399c98}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Implementation\Neural Ice Targets">
+      <UniqueIdentifier>{1e677a4d-0d7b-45e7-9093-6308907c46c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Implementation\Neural Pole Balancer">
+      <UniqueIdentifier>{75f633c6-2ceb-4f36-bc16-35298ee2e0e6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -42,8 +45,14 @@
     <ClCompile Include="global.cpp">
       <Filter>Driver</Filter>
     </ClCompile>
-    <ClCompile Include="NeuralRocketGS.cpp">
-      <Filter>Implementation\Neural Rocket</Filter>
+    <ClCompile Include="NeuralIceTargetsGS.cpp">
+      <Filter>Implementation\Neural Ice Targets</Filter>
+    </ClCompile>
+    <ClCompile Include="CommonGeneticDatas.cpp">
+      <Filter>Implementation</Filter>
+    </ClCompile>
+    <ClCompile Include="NeuralPoleBalancerGS.cpp">
+      <Filter>Implementation\Neural Pole Balancer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -65,8 +74,14 @@
     <ClInclude Include="global.h">
       <Filter>Driver</Filter>
     </ClInclude>
-    <ClInclude Include="NeuralRocketGS.h">
-      <Filter>Implementation\Neural Rocket</Filter>
+    <ClInclude Include="NeuralIceTargetsGS.h">
+      <Filter>Implementation\Neural Ice Targets</Filter>
+    </ClInclude>
+    <ClInclude Include="CommonGeneticDatas.h">
+      <Filter>Implementation</Filter>
+    </ClInclude>
+    <ClInclude Include="NeuralPoleBalancerGS.h">
+      <Filter>Implementation\Neural Pole Balancer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

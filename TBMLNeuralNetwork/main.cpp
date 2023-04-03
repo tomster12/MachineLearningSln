@@ -17,7 +17,7 @@ void testMNIST();
 
 int main()
 {
-	testTime();
+	testMNIST();
 	return 0;
 }
 
@@ -39,12 +39,14 @@ void testTime()
 	// Create network and inputs
 	tbml::NeuralNetwork network(std::vector<size_t>({ 8, 8, 8, 1 }));
 	tbml::Matrix input = tbml::Matrix({ { 1, 0, -1, 0.2f, 0.7f, -0.3f, -1, -1 } });
-	size_t epoch = 50'000;
+	size_t epoch = 3'000'000;
 
-	// Time n epoch of propogation
-	// Pre			50,000		~3000ms
-	// Vec			50,000		~2450ms
-	// Vec+ref		50,000		~850ms
+	// Number of epochs propogation timing
+	//
+	// Release x86	1'000'000   ~1100ms
+	// Release x86	1'000'000   ~600ms		Change to vector subscript from push_back
+	// Release x86	3'000'000   ~1850ms
+	//
 	std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
 	for (size_t i = 0; i < epoch; i++) network.propogate(input);
 	std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
@@ -109,14 +111,15 @@ void testMNIST()
 	expected.printDims("Expected Dims: ");
 	std::cout << std::endl;
 
-	// Create network and train
-	// Pre			128			~3000ms
-	// Vec			128			~1300ms
+	// Batch size to time timing
+	//
+	// Release x86	128	~90ms 
 	// 
 	// For this to work in reasonable time will need:
 	//	- GPU Parallelism
 	//	- Small optimizations in Matrix class
 	//	- More complex architecture involving convolutions
+	//
 	tbml::SupervisedNetwork network(std::vector<size_t>({ imageSize, 100, 10 }), tbml::tanh, tbml::tanhPd);
 	network.train(input, expected, { 10, 128, 0.15f, 0.8f, 0.01f, 2 });
 }

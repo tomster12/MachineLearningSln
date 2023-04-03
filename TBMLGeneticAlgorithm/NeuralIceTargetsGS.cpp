@@ -1,21 +1,21 @@
 
 #include "stdafx.h"
 #include "global.h"
-#include "NeuralRocketGS.h"
+#include "NeuralIceTargetsGS.h"
+#include "CommonGeneticDatas.h"
 #include "UtilityFunctions.h"
-#include "NeuralTargetGS.h"
 #include "Matrix.h"
 
 
-#pragma region - NeuralRocketGI
+#pragma region - NeuralIceTargetsGI
 
-NeuralRocketGI::NeuralRocketGI(NeuralRocketGS* sim, sf::Vector2f startPos, float moveSpeed, int maxIterations, NeuralGD* geneticData)
-	: GeneticInstance(geneticData), sim(sim), pos(startPos), moveSpeed(moveSpeed), maxIterations(maxIterations), currentIteration(0), currentTarget(0), vel()
+NeuralIceTargetsGI::NeuralIceTargetsGI(NeuralIceTargetsGS* sim, sf::Vector2f startPos, float moveAcc, int maxIterations, NeuralGD* geneticData)
+	: GeneticInstance(geneticData), sim(sim), pos(startPos), moveAcc(moveAcc), maxIterations(maxIterations), currentIteration(0), currentTarget(0), vel(), anger(0.0f)
 {
 	if (global::showVisuals) initVisual();
 }
 
-void NeuralRocketGI::initVisual()
+void NeuralIceTargetsGI::initVisual()
 {
 	// Initialize all visual variables
 	this->shape.setRadius(5.0f);
@@ -26,7 +26,7 @@ void NeuralRocketGI::initVisual()
 }
 
 
-bool NeuralRocketGI::step()
+bool NeuralIceTargetsGI::step()
 {
 	if (this->instanceFinished) return true;
 
@@ -39,17 +39,19 @@ bool NeuralRocketGI::step()
 		this->vel.y
 	} });
 	tbml::Matrix output = this->geneticData->propogate(input);
-	this->vel.x += output.get(0, 0) * this->moveSpeed * (1.0f / 120.0f);
-	this->vel.y += output.get(0, 1) * this->moveSpeed * (1.0f / 120.0f);
+	this->vel.x += output.get(0, 0) * this->moveAcc * (1.0f / 60.0f);
+	this->vel.y += output.get(0, 1) * this->moveAcc * (1.0f / 60.0f);
 	this->currentIteration++;
 
-	// Update position with velocity and apply gravity
-	this->vel.y += 0.02f;
-	this->pos.x += this->vel.x;
-	this->pos.y += this->vel.y;
-
+	// Update position with velocity and apply drag
+	this->pos.x += this->vel.x * (1.0f / 60.0f);
+	this->pos.y += this->vel.y * (1.0f / 60.0f);
+	this->vel.x *= 0.95f;
+	this->vel.y *= 0.95f;
+	
 	// Check finish conditions
 	float dist = calculateDist();
+	anger += dist;
 	if (dist <= 0.0f) this->currentTarget++;
 	if (currentIteration == maxIterations || this->currentTarget == this->sim->getTargetCount())
 	{
@@ -59,17 +61,22 @@ bool NeuralRocketGI::step()
 	return this->instanceFinished;
 };
 
-void NeuralRocketGI::render(sf::RenderWindow* window)
+void NeuralIceTargetsGI::render(sf::RenderWindow* window)
 {
 	// Update shape position and colour
 	this->shape.setPosition(this->pos.x, this->pos.y);
+	
+	// Color based on fitness
+	float fitness = this->calculateFitness();
+	int v = static_cast<int>(255.0f * (0.3f + 0.7f * (fitness / 15.0f)));
+	this->shape.setOutlineColor(sf::Color(v, v, v));
 
 	// Draw shape to window
 	window->draw(this->shape);
 };
 
 
-float NeuralRocketGI::calculateDist()
+float NeuralIceTargetsGI::calculateDist()
 {
 	// Calculate distance to target
 	if (this->currentTarget == this->sim->getTargetCount()) return 0.0f;
@@ -78,44 +85,42 @@ float NeuralRocketGI::calculateDist()
 	float dy = targetPos.y - pos.y;
 	float fullDistSq = sqrt(dx * dx + dy * dy);
 	float radii = this->sim->getTargetRadius();
-	return fullDistSq - radii;
+	return fullDistSq - radii - 5.0f;
 }
 
-float NeuralRocketGI::calculateFitness()
+float NeuralIceTargetsGI::calculateFitness()
 {
 	// Dont calculate once finished
 	if (this->instanceFinished) return this->instanceFitness;
+	
+	// Calculate fitness (anger)
+	float fitness = std::min(1000000.0f / anger, 15.0f);
+	fitness -= this->currentTarget * 2.0f;
+	fitness = fitness > 0.0f ? fitness : 0.0f;
 
-	// Calculate fitness
-	float dist = calculateDist();
-	float fitness = 0.5f * tbml::relu(1.0f - dist / 500.0f);
-	fitness += this->currentTarget;
+	// Calculate fitness (speed)
+	//float fitness = this->currentTarget + 1.0f;
+	//if (this->currentTarget != this->sim->getTargetCount()) fitness -= (1.0f / calculateDist());
+	//else fitness += 5.0f * (1.0f - ((float)this->currentIteration / this->maxIterations));
 
 	// Update and return
 	this->instanceFitness = fitness;
 	return this->instanceFitness;
 };
 
-
-bool NeuralRocketGI::getInstanceFinished() { return this->instanceFinished; };
-
-float NeuralRocketGI::getInstanceFitness() { return calculateFitness(); };
-
 #pragma endregion
 
 
-#pragma region - NeuralRocketGS
+#pragma region - NeuralIceTargetsGS
 
-NeuralRocketGS::NeuralRocketGS(
-	sf::Vector2f instanceStartPos, float instanceMoveSpeed,
+NeuralIceTargetsGS::NeuralIceTargetsGS(
+	sf::Vector2f instanceStartPos, float instancemoveAcc,
 	int instancemaxIterations, std::vector<size_t> dataLayerSizes,
 	std::vector<sf::Vector2f> targets, float targetRadius)
-
-	: instanceStartPos(instanceStartPos), instanceMoveSpeed(instanceMoveSpeed),
-	instancemaxIterations(instancemaxIterations), dataLayerSizes(dataLayerSizes),
-	targetPos(targets), targetRadius(targetRadius)
+	:	instanceStartPos(instanceStartPos), instancemoveAcc(instancemoveAcc),
+		instancemaxIterations(instancemaxIterations), dataLayerSizes(dataLayerSizes),
+		targetPos(targets), targetRadius(targetRadius)
 {
-
 	// Initialize variables
 	this->targetShapes = std::vector<sf::CircleShape>();
 	for (auto& target : this->targetPos)
@@ -132,23 +137,23 @@ NeuralRocketGS::NeuralRocketGS(
 };
 
 
-NeuralGD* NeuralRocketGS::createData()
+NeuralGD* NeuralIceTargetsGS::createData()
 {
 	// Create, randomize and return data
-	NeuralGD* data = new NeuralGD(this->dataLayerSizes);
+	NeuralGD* data = new NeuralGD(this->dataLayerSizes, tbml::tanh);
 	data->randomize();
 	return data;
 };
 
-NeuralRocketGI* NeuralRocketGS::createInstance(NeuralGD* data)
+NeuralIceTargetsGI* NeuralIceTargetsGS::createInstance(NeuralGD* data)
 {
 	// Create and return instance
-	NeuralRocketGI* inst = new NeuralRocketGI(this, this->instanceStartPos, this->instanceMoveSpeed, this->instancemaxIterations, data);
+	NeuralIceTargetsGI* inst = new NeuralIceTargetsGI(this, this->instanceStartPos, this->instancemoveAcc, this->instancemaxIterations, data);
 	return inst;
 };
 
 
-void NeuralRocketGS::render(sf::RenderWindow* window)
+void NeuralIceTargetsGS::render(sf::RenderWindow* window)
 {
 	GenepoolSimulation::render(window);
 
@@ -157,10 +162,10 @@ void NeuralRocketGS::render(sf::RenderWindow* window)
 }
 
 
-sf::Vector2f NeuralRocketGS::getTarget(int index) { return this->targetPos[index]; }
+sf::Vector2f NeuralIceTargetsGS::getTarget(int index) { return this->targetPos[index]; }
 
-size_t NeuralRocketGS::getTargetCount() { return this->targetPos.size(); }
+size_t NeuralIceTargetsGS::getTargetCount() { return this->targetPos.size(); }
 
-float NeuralRocketGS::getTargetRadius() { return this->targetRadius; }
+float NeuralIceTargetsGS::getTargetRadius() { return this->targetRadius; }
 
 #pragma endregion

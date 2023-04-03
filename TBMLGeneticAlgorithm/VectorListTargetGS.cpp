@@ -1,80 +1,15 @@
 
 #include "stdafx.h"
 #include "VectorListTargetGS.h"
+#include "CommonGeneticDatas.h"
 #include "UtilityFunctions.h"
 
-
-#pragma region - VectorListGD
-
-VectorListGD::VectorListGD(int dataSize)
-{
-	// Initialize variables
-	this->dataSize = dataSize;
-	this->values = std::vector<sf::Vector2f>(dataSize);
-}
-
-VectorListGD::VectorListGD(std::vector<sf::Vector2f> values)
-{
-	// Initialize variables
-	this->dataSize = values.size();
-	this->values = values;
-}
-
-
-std::vector<sf::Vector2f>& VectorListGD::getValues() { return values; };
-
-sf::Vector2f VectorListGD::getValue(int index) { return this->values[index]; }
-
-size_t VectorListGD::getSize() { return this->dataSize; }
-
-
-void VectorListGD::randomize()
-{
-	// Randomize each data point in the list
-	for (int i = 0; i < this->dataSize; i++)
-	{
-		this->values[i].x = tbml::getRandomFloat() * 2 - 1;
-		this->values[i].y = tbml::getRandomFloat() * 2 - 1;
-	}
-};
-
-void VectorListGD::mutate(float chance)
-{
-	// Randomly mutate each data point in the list
-	for (int i = 0; i < this->dataSize; i++)
-	{
-		if (tbml::getRandomFloat() < chance)
-		{
-			this->values[i].x = tbml::getRandomFloat() * 2 - 1;
-			this->values[i].y = tbml::getRandomFloat() * 2 - 1;
-		}
-	}
-};
-
-VectorListGD* VectorListGD::crossover(VectorListGD* otherData)
-{
-	// Constructa new vector data
-	std::vector<sf::Vector2f>& thisValues = this->getValues();
-	std::vector<sf::Vector2f>& otherValues = otherData->getValues();
-	std::vector<sf::Vector2f> newValues;
-	newValues.reserve(this->getSize());
-
-	for (size_t i = 0; i < this->getSize(); i++)
-	{
-		if (i % 2 == 0) newValues.push_back(thisValues[i]);
-		else newValues.push_back(otherValues[i]);
-	}
-
-	return new VectorListGD(newValues);
-};
-
-#pragma endregion
 
 
 #pragma region - VectorListTargetGI
 
-VectorListTargetGI::VectorListTargetGI(VectorListTargetGS* sim, sf::Vector2f startPos, float radius, float moveSpeed, VectorListGD* geneticData)
-	: GeneticInstance(geneticData), sim(sim), pos(startPos), radius(radius), moveSpeed(moveSpeed), currentIndex(0)
+VectorListTargetGI::VectorListTargetGI(VectorListTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc, VectorListGD* geneticData)
+	: GeneticInstance(geneticData), sim(sim), pos(startPos), radius(radius), moveAcc(moveAcc), currentIndex(0)
 {
 	// Initialize variables
 	if (global::showVisuals) initVisual();
@@ -97,8 +32,8 @@ bool VectorListTargetGI::step()
 
 	// Move position by current vector
 	sf::Vector2f nextDir = this->geneticData->getValue(this->currentIndex);
-	this->pos.x += nextDir.x * this->moveSpeed;
-	this->pos.y += nextDir.y * this->moveSpeed;
+	this->pos.x += nextDir.x * this->moveAcc;
+	this->pos.y += nextDir.y * this->moveAcc;
 	this->currentIndex++;
 
 	// Check finish conditions
@@ -156,11 +91,6 @@ float VectorListTargetGI::calculateFitness()
 	return this->instanceFitness;
 };
 
-
-bool VectorListTargetGI::getInstanceFinished() { return this->instanceFinished; };
-
-float VectorListTargetGI::getInstanceFitness() { return calculateFitness(); };
-
 #pragma endregion
 
 
@@ -168,10 +98,10 @@ float VectorListTargetGI::getInstanceFitness() { return calculateFitness(); };
 
 VectorListTargetGS::VectorListTargetGS(
 	sf::Vector2f instanceStartPos, float instanceRadius,
-	float instanceMoveSpeed, int dataSize,
+	float instancemoveAcc, int dataSize,
 	sf::Vector2f targetPos, float targetRadius)
 	: instanceStartPos(instanceStartPos), instanceRadius(instanceRadius),
-	instanceMoveSpeed(instanceMoveSpeed), dataSize(dataSize),
+	instancemoveAcc(instancemoveAcc), dataSize(dataSize),
 	targetPos(targetPos), targetRadius(targetRadius)
 {
 	// Initialize variables
@@ -195,7 +125,7 @@ VectorListGD* VectorListTargetGS::createData()
 VectorListTargetGI* VectorListTargetGS::createInstance(VectorListGD* data)
 {
 	// Create and return instance
-	VectorListTargetGI* inst = new VectorListTargetGI(this, this->instanceStartPos, this->instanceRadius, this->instanceMoveSpeed, data);
+	VectorListTargetGI* inst = new VectorListTargetGI(this, this->instanceStartPos, this->instanceRadius, this->instancemoveAcc, data);
 	return inst;
 };
 

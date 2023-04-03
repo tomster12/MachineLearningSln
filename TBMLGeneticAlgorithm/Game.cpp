@@ -4,9 +4,11 @@
 
 #include "UtilityFunctions.h"
 #include "GenepoolSimulation.h"
+
 #include "VectorListTargetGS.h"
 #include "NeuralTargetGS.h"
-#include "NeuralRocketGS.h"
+#include "NeuralIceTargetsGS.h"
+#include "NeuralPoleBalancerGS.h"
 
 
 Game::Game()
@@ -34,7 +36,7 @@ void Game::initVariables()
 	windowMode.height = 1000;
 	std::string title = "Genetic Algorithm";
 	bool fullscreen = false;
-	unsigned framerateLimit = 120;
+	unsigned framerateLimit = 60;
 	bool verticalSyncEnabled = false;
 
 	// Setup window using default settings
@@ -43,24 +45,27 @@ void Game::initVariables()
 	this->window->setFramerateLimit(framerateLimit);
 	this->window->setVerticalSyncEnabled(verticalSyncEnabled);
 
-	// Initialize genepool
+	// Setup genepool structure
 	//this->genepool = new VectorListTargetGS({ 700.0f, 600.0f }, 4.0f, 4.0f, 500, { 700.0f, 100.0f }, 20.0f);
 	//this->genepool = new NeuralTargetGS({ 700.0f, 850.0f }, 2.0f, 2.0f, 1000, { 2, 2 }, 20.0f, { 700.0f, 150.0f }, 500.0f);
-	this->genepool = new NeuralRocketGS({ 700.0f, 850.0f }, 5.0f, 1500, { 4, 6, 6, 2 }, { { 150.0f, 150.0f }, { 920.0f, 400.0f }, { 300.0f, 850.0f }, { 550.0f, 320.0f } }, 20.0f);
-	this->genepool->initGenepool(500, 0.02f);
+	//this->genepool = new NeuralIceTargetsGS({ 700.0f, 850.0f }, 300.0f, 3000, { 4, 4, 2 }, { { 150.0f, 150.0f }, { 920.0f, 400.0f }, { 300.0f, 850.0f }, { 550.0f, 320.0f } }, 20.0f);
+	this->genepool = new NeuralPoleBalancerGS(1.0f, 0.1f, 0.5f, 2.0f, 0.6f, 0.4f, 20.0f, { 4, 4, 1 });
+
+	// Restart the genepool
+	this->genepool->restartGenepool(500, 0.03f);
 
 	// Initialize UI
 	this->uiManager = UIManager();
 	float spacing = 6.0f;
 	float size = 30.0f;
-	this->uiManager.addElement(new UIButton(this->window, { spacing + 0 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "assets/play.png",
-		[this]() { this->genepool->startGeneration(); }
+	this->uiManager.addElement(new UIButton(this->window, { spacing + 0 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "assets/startstepping.png",
+		[this]() { this->genepool->setStepping(true); }
 	));
-	this->uiManager.addElement(new UIButton(this->window, { spacing + 1 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "assets/pause.png",
-		[this]() { this->genepool->pauseGeneration(); }
+	this->uiManager.addElement(new UIButton(this->window, { spacing + 1 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "assets/pausestepping.png",
+		[this]() { this->genepool->setStepping(false); }
 	));
-	this->uiManager.addElement(new UIButton(this->window, { spacing + 2 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "assets/complete.png",
-		[this]() { this->genepool->fullStepGeneration(); }
+	this->uiManager.addElement(new UIButton(this->window, { spacing + 2 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "assets/process.png",
+		[this]() { this->genepool->processGeneration(); }
 	));
 	this->uiManager.addElement(new UIButton(this->window, { spacing + 3 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "assets/finish.png",
 		[this]() { this->genepool->finishGeneration(); }
@@ -68,11 +73,11 @@ void Game::initVariables()
 	this->uiManager.addElement(new UIToggleButton(this->window, { spacing + 4 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "assets/hide.png", false,
 		[this](bool toggled) { global::showVisuals = !toggled; }
 	));
-	this->uiManager.addElement(new UIToggleButton(this->window, { spacing + 0 * (spacing + size), spacing + 1 * (spacing + size) }, { size, size }, "assets/autoplay.png", false,
-		[this](bool toggled) { this->genepool->setAutoStart(toggled); }
+	this->uiManager.addElement(new UIToggleButton(this->window, { spacing + 0 * (spacing + size), spacing + 1 * (spacing + size) }, { size, size }, "assets/autostep.png", false,
+		[this](bool toggled) { this->genepool->setAutoStep(toggled); }
 	));
-	this->uiManager.addElement(new UIToggleButton(this->window, { spacing + 2 * (spacing + size), spacing + 1 * (spacing + size) }, { size, size }, "assets/autocomplete.png", false,
-		[this](bool toggled) { this->genepool->setAutoComplete(toggled); }
+	this->uiManager.addElement(new UIToggleButton(this->window, { spacing + 2 * (spacing + size), spacing + 1 * (spacing + size) }, { size, size }, "assets/autoprocess.png", false,
+		[this](bool toggled) { this->genepool->setAutoProcess(toggled); }
 	));
 	this->uiManager.addElement(new UIToggleButton(this->window, { spacing + 3 * (spacing + size), spacing + 1 * (spacing + size) }, { size, size }, "assets/autofinish.png", false,
 		[this](bool toggled) { this->genepool->setAutoFinish(toggled); }

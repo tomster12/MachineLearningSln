@@ -3,98 +3,15 @@
 #include "global.h"
 #include "NeuralTargetGS.h"
 #include "UtilityFunctions.h"
+#include "CommonGeneticDatas.h"
 #include "Matrix.h"
-
-
-#pragma region - NeuralGD
-
-NeuralGD::NeuralGD(std::vector<size_t> layerSizes)
-	: network(layerSizes, tbml::tanh, false)
-{}
-
-NeuralGD::NeuralGD(tbml::NeuralNetwork network)
-	: network(network)
-{}
-
-
-tbml::Matrix NeuralGD::propogate(tbml::Matrix input) { return this->network.propogate(input); }
-
-void NeuralGD::print() { this->network.printLayers(); }
-
-
-void NeuralGD::randomize() { this->network.randomize(); };
-
-void NeuralGD::mutate(float chance)
-{
-	// Mutate all weights
-	// - Cannot use imap because cannot have capture chance into a lambda
-	std::vector<tbml::Matrix>& weights = this->network.getWeights();
-	for (auto& layer : weights)
-	{
-		std::vector<std::vector<float>>& data = layer.getData();
-		for (size_t row = 0; row < layer.getRows(); row++)
-		{
-			for (size_t col = 0; col < layer.getCols(); col++)
-			{
-				if (tbml::getRandomFloat() < chance) data[row][col] = -1.0f + 2.0f * tbml::getRandomFloat();
-			}
-		}
-	}
-
-	// Mutate all bias
-	std::vector<tbml::Matrix>& bias = this->network.getBias();
-	for (auto& layer : bias)
-	{
-		std::vector<std::vector<float>>& data = layer.getData();
-		for (size_t row = 0; row < layer.getRows(); row++)
-		{
-			for (size_t col = 0; col < layer.getCols(); col++)
-			{
-				if (tbml::getRandomFloat() < chance) data[row][col] = -1.0f + 2.0f * tbml::getRandomFloat();
-			}
-		}
-	}
-};
-
-NeuralGD* NeuralGD::crossover(NeuralGD* otherData)
-{
-	// Crossover weights
-	std::vector<tbml::Matrix>& weights = this->network.getWeights();
-	std::vector<tbml::Matrix>& oWeights = otherData->network.getWeights();
-	std::vector<tbml::Matrix> newWeights = std::vector<tbml::Matrix>();
-	for (size_t i = 0; i < weights.size(); i++)
-	{
-		newWeights.push_back(weights[i].ewise(oWeights[i], [](float a, float b)
-			{
-				return tbml::getRandomFloat() < 0.5f ? a : b;
-			}));
-	}
-
-	// Crossover bias
-	std::vector<tbml::Matrix>& bias = this->network.getBias();
-	std::vector<tbml::Matrix>& oBias = otherData->network.getBias();
-	std::vector<tbml::Matrix> newBias = std::vector<tbml::Matrix>();
-	for (size_t i = 0; i < bias.size(); i++)
-	{
-		newBias.push_back(bias[i].ewise(oBias[i], [](float a, float b)
-			{
-				return tbml::getRandomFloat() < 0.5f ? a : b;
-			}));
-	}
-
-	// Create new network and return
-	return new NeuralGD(tbml::NeuralNetwork(newWeights, newBias, tbml::tanh));
-};
-
-#pragma endregion
 
 
 #pragma region - NeuralTargetGI
 
-NeuralTargetGI::NeuralTargetGI(NeuralTargetGS* sim, sf::Vector2f startPos, float radius, float moveSpeed, int maxIterations, NeuralGD* geneticData)
-	: GeneticInstance(geneticData), sim(sim), pos(startPos), radius(radius), moveSpeed(moveSpeed), maxIterations(maxIterations), currentIteration(0)
+NeuralTargetGI::NeuralTargetGI(NeuralTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc, int maxIterations, NeuralGD* geneticData)
+	: GeneticInstance(geneticData), sim(sim), pos(startPos), radius(radius), moveAcc(moveAcc), maxIterations(maxIterations), currentIteration(0)
 {
-
 	// Initialize variables
 	if (global::showVisuals) initVisual();
 }
@@ -118,8 +35,8 @@ bool NeuralTargetGI::step()
 	sf::Vector2f targetPos = this->sim->getTargetPos();
 	tbml::Matrix input = tbml::Matrix({ { this->pos.x - targetPos.x, this->pos.y - targetPos.y } });
 	tbml::Matrix output = this->geneticData->propogate(input);
-	this->pos.x += output.get(0, 0) * this->moveSpeed;
-	this->pos.y += output.get(0, 1) * this->moveSpeed;
+	this->pos.x += output.get(0, 0) * this->moveAcc;
+	this->pos.y += output.get(0, 1) * this->moveAcc;
 	this->currentIteration++;
 
 	// Check finish conditions
@@ -177,11 +94,6 @@ float NeuralTargetGI::calculateFitness()
 	return this->instanceFitness;
 };
 
-
-bool NeuralTargetGI::getInstanceFinished() { return this->instanceFinished; };
-
-float NeuralTargetGI::getInstanceFitness() { return calculateFitness(); };
-
 #pragma endregion
 
 
@@ -189,14 +101,13 @@ float NeuralTargetGI::getInstanceFitness() { return calculateFitness(); };
 
 NeuralTargetGS::NeuralTargetGS(
 	sf::Vector2f instanceStartPos, float instanceRadius,
-	float instanceMoveSpeed, int instancemaxIterations, std::vector<size_t> dataLayerSizes,
+	float instancemoveAcc, int instancemaxIterations, std::vector<size_t> dataLayerSizes,
 	float targetRadius, sf::Vector2f targetRandomCentre, float targetRandomRadius)
 
 	: instanceStartPos(instanceStartPos), instanceRadius(instanceRadius),
-	instanceMoveSpeed(instanceMoveSpeed), instancemaxIterations(instancemaxIterations), dataLayerSizes(dataLayerSizes),
+	instancemoveAcc(instancemoveAcc), instancemaxIterations(instancemaxIterations), dataLayerSizes(dataLayerSizes),
 	targetRadius(targetRadius), targetRandomCentre(targetRandomCentre), targetRandomRadius(targetRandomRadius)
 {
-
 	// Initialize variables
 	this->targetPos = this->getRandomTargetPos();
 	this->target.setRadius(this->targetRadius);
@@ -219,7 +130,7 @@ NeuralGD* NeuralTargetGS::createData()
 NeuralTargetGI* NeuralTargetGS::createInstance(NeuralGD* data)
 {
 	// Create and return instance
-	NeuralTargetGI* inst = new NeuralTargetGI(this, this->instanceStartPos, this->instanceRadius, this->instanceMoveSpeed, this->instancemaxIterations, data);
+	NeuralTargetGI* inst = new NeuralTargetGI(this, this->instanceStartPos, this->instanceRadius, this->instancemoveAcc, this->instancemaxIterations, data);
 	return inst;
 };
 

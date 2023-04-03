@@ -12,6 +12,8 @@ namespace tbml
 	float tanhPd(float x);
 	float relu(float x);
 	float reluPd(float x);
+	float sign(float x);
+	float signPd(float x);
 	//float softmax(float x);
 	//float softmaxPd(float x);
 

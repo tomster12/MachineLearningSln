@@ -73,8 +73,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)\bin\output\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\bin\intermediates\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)\bin\$(ProjectName)\output\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)\bin\$(ProjectName)\intermediates\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -97,7 +97,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)\dependencies\SFML\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\TBML;$(SolutionDir)\dependencies\SFML\include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
     <Link>
@@ -164,10 +164,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CommonGeneticDatas.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="global.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="NeuralRocketGS.cpp" />
+    <ClCompile Include="NeuralIceTargetsGS.cpp" />
+    <ClCompile Include="NeuralPoleBalancerGS.cpp" />
     <ClCompile Include="NeuralTargetGS.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -179,9 +181,11 @@
     <ClCompile Include="VectorListTargetGS.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CommonGeneticDatas.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="global.h" />
-    <ClInclude Include="NeuralRocketGS.h" />
+    <ClInclude Include="NeuralIceTargetsGS.h" />
+    <ClInclude Include="NeuralPoleBalancerGS.h" />
     <ClInclude Include="NeuralTargetGS.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="UIManager.h" />

@@ -18,6 +18,10 @@ namespace tbml
 
 	float reluPd(float x) { return x > 0.0f ? 1.0f : 0.0f; }
 
+	float sign(float x) { return x > 0.0f ? 1.0f : -1.0f; }
+
+	float signPd(float x) { return x > 0.0f ? 1.0f : -1.0f; }
+
 	//float actSoftmax(float x) { return 0; }
 	// 
 	//float actSoftmaxPd(float x) { return 0; }

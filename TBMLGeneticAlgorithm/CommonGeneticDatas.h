@@ -1,0 +1,48 @@
+
+#pragma once
+
+#include "GenepoolSimulation.h"
+#include "NeuralNetwork.h"
+#include "Matrix.h"
+
+
+class VectorListGD : public tbml::GeneticData<VectorListGD>
+{
+private:
+	std::vector<sf::Vector2f> values;
+	int dataSize = 0;
+
+public:
+	VectorListGD() {}
+	VectorListGD(int dataSize);
+	VectorListGD(std::vector<sf::Vector2f> values);
+
+	std::vector<sf::Vector2f>& getValues();
+	sf::Vector2f getValue(int index);
+	size_t getSize();
+
+	void randomize() override;
+	void mutate(float chance) override;
+	VectorListGD* crossover(VectorListGD* otherData) override;
+	VectorListGD* clone() override;
+};
+
+
+class NeuralGD : public tbml::GeneticData<NeuralGD>
+{
+private:
+	tbml::NeuralNetwork network;
+
+public:
+	NeuralGD() {};
+	NeuralGD(std::vector<size_t> layerSizes, float (*activator)(float));
+	NeuralGD(tbml::NeuralNetwork network);
+
+	tbml::Matrix propogate(tbml::Matrix input);
+	void print();
+
+	void randomize() override;
+	void mutate(float chance) override;
+	NeuralGD* crossover(NeuralGD* otherData) override;
+	NeuralGD* clone() override;
+};

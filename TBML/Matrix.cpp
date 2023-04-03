@@ -47,85 +47,70 @@ namespace tbml
 
 	Matrix Matrix::cross(Matrix& other)
 	{
-		// Get variables and check dimensions compatible
-		std::vector<std::vector<float>> newData;
+		// Check compatibility
 		size_t oRows = other.getRows();
 		size_t oCols = other.getCols();
 		std::vector<std::vector<float>>& oData = other.getData();
 		if (cols != oRows) throw std::invalid_argument("Matrix dimensions do not match.");
 
-		// Matrix multiply
-		for (size_t newRow = 0; newRow < rows; newRow++)
-		{
-			newData.push_back(std::vector<float>());
-			for (size_t newCol = 0; newCol < oCols; newCol++)
-			{
-				float sum = 0;
-				for (size_t i = 0; i < cols; i++)
-					sum += data[newRow][i] * oData[i][newCol];
-				newData[newRow].push_back(sum);
-			}
-		}
-		return Matrix(newData);
+		// Create new matrix and inplace cross with other
+		Matrix newMatrix = this->copy();
+		newMatrix.icross(other);
+		return newMatrix;
 	}
 
 	Matrix* Matrix::icross(Matrix& other)
 	{
-		// Get variables and check dimensions compatible
+		// Check compatibility
 		size_t oRows = other.getRows();
 		size_t oCols = other.getCols();
 		std::vector<std::vector<float>>& oData = other.getData();
 		if (cols != oRows) throw std::invalid_argument("Matrix dimensions do not match.");
 
-		// Inplace matrix multiply
+		// Inplace cross with other
 		for (size_t row = 0; row < rows; row++)
 		{
-			std::vector<float> newRow;
-			for (size_t col = 0; col < oCols; col++)
+			std::vector<float> newRow(oCols);
+			for (size_t oCol = 0; oCol < oCols; oCol++)
 			{
 				float sum = 0;
-				for (size_t i = 0; i < cols; i++)
-					sum += data[row][i] * oData[i][col];
-				newRow.push_back(sum);
+				for (size_t i = 0; i < cols; i++) sum += data[row][i] * oData[i][oCol];
+				newRow[oCol] = sum;
 			}
 			data[row] = newRow;
 		}
 
-		// Update variables
+		// Update variables and return
 		rows = rows;
 		cols = oCols;
 		return this;
 	}
 
+
 	Matrix Matrix::transpose()
 	{
-		// Tranpose matrix
-		std::vector<std::vector<float>> newData;
-		for (size_t newRow = 0; newRow < cols; newRow++)
-		{
-			newData.push_back(std::vector<float>());
-			for (size_t newCol = 0; newCol < rows; newCol++)
-			{
-				newData[newRow].push_back(data[newCol][newRow]);
-			}
-		}
-		return Matrix(newData);
+		// Create new matrix and inplace tranpose
+		Matrix newMatrix = this->copy();
+		newMatrix.itranspose();
+		return newMatrix;
 	}
-
+	
 	Matrix* Matrix::itranspose()
 	{
-		// Inplace tranpose matrix
-		data = std::vector<std::vector<float>>();
+		// Inplace tranpose this
+		std::vector<std::vector<float>> newData(cols);
 		for (size_t row = 0; row < cols; row++)
 		{
-			data.push_back(std::vector<float>());
+			std::vector<float> newRow(rows);
 			for (size_t col = 0; col < rows; col++)
 			{
-				data[row].push_back(data[col][row]);
+				newRow[col] = data[col][row];
 			}
+			newData[row] = newRow;
 		}
 
-		// Update variables
+		// Update variables and return
+		data = newData;
 		size_t tmp = rows;
 		rows = cols;
 		cols = tmp;
@@ -149,22 +134,15 @@ namespace tbml
 
 	Matrix Matrix::map(float (*func)(float))
 	{
-		// Apply function to matrix
-		std::vector<std::vector<float>> newData;
-		for (size_t newRow = 0; newRow < rows; newRow++)
-		{
-			newData.push_back(std::vector<float>());
-			for (size_t newCol = 0; newCol < cols; newCol++)
-			{
-				newData[newRow].push_back(func(data[newRow][newCol]));
-			}
-		}
-		return Matrix(newData);
+		// Create new matrix and inplace map
+		Matrix newMatrix = this->copy();
+		newMatrix.imap(func);
+		return newMatrix;
 	}
 
 	Matrix* Matrix::imap(float (*func)(float))
 	{
-		// Apply function to matrix
+		// Apply function to each element
 		for (size_t row = 0; row < rows; row++)
 		{
 			for (size_t col = 0; col < cols; col++)
@@ -175,55 +153,12 @@ namespace tbml
 		return this;
 	}
 
-	Matrix Matrix::scale(float val)
-	{
-		// Apply function to matrix
-		std::vector<std::vector<float>> newData;
-		for (size_t newRow = 0; newRow < rows; newRow++)
-		{
-			newData.push_back(std::vector<float>());
-			for (size_t newCol = 0; newCol < cols; newCol++)
-			{
-				newData[newRow].push_back(data[newRow][newCol] * val);
-			}
-		}
-		return Matrix(newData);
-	}
-
-	Matrix* Matrix::iscale(float val)
-	{
-		// Apply function to matrix
-		for (size_t row = 0; row < rows; row++)
-		{
-			for (size_t col = 0; col < cols; col++)
-			{
-				data[row][col] = data[row][col] * val;
-			}
-		}
-		return this;
-	}
-
-
 	Matrix Matrix::ewise(Matrix& other, float (*func)(float, float))
 	{
-		// Get variables
-		std::vector<std::vector<float>> newData;
-		size_t oRows = other.getRows();
-		size_t oCols = other.getCols();
-		std::vector<std::vector<float>>& oData = other.getData();
-
-		// Add to other matrix
-		for (size_t newRow = 0; newRow < rows; newRow++)
-		{
-			newData.push_back(std::vector<float>());
-			for (size_t newCol = 0; newCol < cols; newCol++)
-			{
-				float value = data[newRow][newCol];
-				float oValue = oData[newRow < oRows ? newRow : oRows - 1][newCol < oCols ? newCol : oCols - 1];
-				newData[newRow].push_back(func(value, oValue));
-			}
-		}
-		return Matrix(newData);
+		// Create new matrix and inplace map
+		Matrix newMatrix = this->copy();
+		newMatrix.iewise(other, func);
+		return newMatrix;
 	}
 
 	Matrix* Matrix::iewise(Matrix& other, float (*func)(float, float))
@@ -241,6 +176,28 @@ namespace tbml
 				float value = data[row][col];
 				float oValue = oData[row < oRows ? row : oRows - 1][col < oCols ? col : oCols - 1];
 				data[row][col] = func(value, oValue);
+			}
+		}
+		return this;
+	}
+
+
+	Matrix Matrix::scale(float val)
+	{
+		// Create new matrix and inplace scale
+		Matrix newMatrix = this->copy();
+		newMatrix.scale(val);
+		return newMatrix;
+	}
+
+	Matrix* Matrix::iscale(float val)
+	{
+		// Apply function to matrix
+		for (size_t row = 0; row < rows; row++)
+		{
+			for (size_t col = 0; col < cols; col++)
+			{
+				data[row][col] = data[row][col] * val;
 			}
 		}
 		return this;
@@ -343,15 +300,15 @@ namespace tbml
 	Matrix Matrix::copy()
 	{
 		// Return new matrix with same data
-		std::vector<std::vector<float>> newData;
-		for (size_t newRow = 0; newRow < rows; newRow++)
+		std::vector<std::vector<float>> newData(rows);
+		for (size_t row = 0; row < rows; row++)
 		{
-			std::vector<float> rowData;
-			for (size_t newCol = 0; newCol < cols; newCol++)
+			std::vector<float> newRow(cols);
+			for (size_t col = 0; col < cols; col++)
 			{
-				rowData.push_back(data[newRow][newCol]);
+				newRow[col] = data[row][col];
 			}
-			newData.push_back(rowData);
+			newData[row] = newRow;
 		}
 		return Matrix(newData);
 	}
