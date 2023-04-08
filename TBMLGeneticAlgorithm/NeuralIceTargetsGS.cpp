@@ -10,7 +10,15 @@
 #pragma region - NeuralIceTargetsGI
 
 NeuralIceTargetsGI::NeuralIceTargetsGI(NeuralIceTargetsGS* sim, sf::Vector2f startPos, float moveAcc, int maxIterations, NeuralGD* geneticData)
-	: GeneticInstance(geneticData), sim(sim), pos(startPos), moveAcc(moveAcc), maxIterations(maxIterations), currentIteration(0), currentTarget(0), vel(), anger(0.0f)
+	:	GeneticInstance(geneticData), sim(sim),
+		netInput(1, 4),
+		pos(startPos),
+		moveAcc(moveAcc),
+		maxIterations(maxIterations),
+		currentIteration(0),
+		currentTarget(0),
+		vel(),
+		anger(0.0f)
 {
 	if (global::showVisuals) initVisual();
 }
@@ -32,13 +40,11 @@ bool NeuralIceTargetsGI::step()
 
 	// Move position by current vector
 	sf::Vector2f targetPos = this->sim->getTarget(this->currentTarget);
-	tbml::Matrix input = tbml::Matrix({ {
-		this->pos.x - targetPos.x,
-		this->pos.y - targetPos.y,
-		this->vel.x,
-		this->vel.y
-	} });
-	tbml::Matrix output = this->geneticData->propogate(input);
+	netInput.set(0, 0, this->pos.x - targetPos.x);
+	netInput.set(0, 1, this->pos.y - targetPos.y);
+	netInput.set(0, 2, this->vel.x);
+	netInput.set(0, 3, this->vel.y);
+	tbml::Matrix output = this->geneticData->propogate(netInput);
 	this->vel.x += output.get(0, 0) * this->moveAcc * (1.0f / 60.0f);
 	this->vel.y += output.get(0, 1) * this->moveAcc * (1.0f / 60.0f);
 	this->currentIteration++;

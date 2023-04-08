@@ -16,6 +16,7 @@ private:
 	float moveAcc = 0;
 	int maxIterations = 0;
 
+	tbml::Matrix netInput;
 	sf::Vector2f pos;
 	sf::Vector2f vel;
 	int currentIteration = 0;

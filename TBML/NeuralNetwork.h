@@ -2,10 +2,13 @@
 #pragma once
 
 #include "Matrix.h"
+#include "UtilityFunctions.h"
 
 
 namespace tbml
 {
+	typedef float (*afptr)(float);
+
 	class NeuralNetwork
 	{
 	protected:
@@ -18,16 +21,16 @@ namespace tbml
 
 	public:
 		NeuralNetwork() {}
-		NeuralNetwork(std::vector<size_t> layerSizes);
-		NeuralNetwork(std::vector<size_t> layerSizes, float (*activator)(float), bool randomize = true);
-		NeuralNetwork(std::vector<Matrix> weights, std::vector<Matrix> bias);
-		NeuralNetwork(std::vector<Matrix> weights, std::vector<Matrix> bias, float (*activator)(float));
+		NeuralNetwork(std::vector<size_t> layerSizes, float (*activator)(float) = tbml::sigmoid, bool randomize = true);
+		NeuralNetwork(std::vector<Matrix> weights, std::vector<Matrix> bias, float (*activator)(float) = tbml::sigmoid);
 
 		void randomize();
-		Matrix propogate(Matrix input);
+		Matrix& propogate(Matrix& input);
 		void printLayers();
 
+		float getCachedValue(int layer, int row, int col);
 		std::vector<Matrix>& getWeights();
 		std::vector<Matrix>& getBias();
+		afptr getActivator();
 	};
 }

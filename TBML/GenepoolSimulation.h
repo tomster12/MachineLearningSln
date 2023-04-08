@@ -60,7 +60,7 @@ namespace tbml
 		bool getFinished() { return this->instanceFinished; };
 		float getFitness() { return this->instanceFitness; };
 	};
-
+	
 
 	template<class D, class I> // D: GeneticData<D>, I: GeneticInstance<D>
 	class GenepoolSimulation : public IGenepoolSimulation
@@ -79,8 +79,11 @@ namespace tbml
 		bool autoStep;
 		bool autoFinish;
 		bool autoProcess;
-		std::vector<I*> currentGeneration;
+
 		ThreadPool threadPool;
+		std::vector<I*> currentGeneration;
+		D* bestCurrentData;
+		float bestCurrentFitness;
 
 
 		virtual D* createData()
@@ -157,6 +160,7 @@ namespace tbml
 			}
 
 			// [INITIALIZATION] Initialize new instances
+			this->currentGeneration.clear();
 			for (int i = 0; i < generationCount; i++)
 			{
 				D* data = createData();
@@ -237,6 +241,7 @@ namespace tbml
 				for (auto& inst : subset) allFinished &= inst->step();
 				return allFinished;
 			};
+
 			auto processSubset = [=](std::vector<I*> subset)
 			{
 				for (bool allFinished = false; !allFinished;)
@@ -246,6 +251,9 @@ namespace tbml
 				}
 				return true;
 			};
+
+			// Start timer
+			//std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
 
 			// Split up generation and process each
 			if (this->enableMultithreadedProcess)
@@ -271,6 +279,11 @@ namespace tbml
 
 			// Process full generation without multithreading
 			else processSubset(this->currentGeneration);
+
+			// Stop timer and print
+			//std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+			//auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0);
+			//std::cout << "Processed generation: " << us.count() / 1000.0f << "ms" << std::endl;
 
 			// Finish up running
 			this->isFinished = true;

@@ -79,7 +79,7 @@ VectorListGD* VectorListGD::clone()
 
 #pragma region - NeuralGD
 
-NeuralGD::NeuralGD(std::vector<size_t> layerSizes, float (*activator)(float)=tbml::sigmoid)
+NeuralGD::NeuralGD(std::vector<size_t> layerSizes, float (*activator)(float))
 	: network(layerSizes, activator, false)
 {}
 
@@ -88,7 +88,9 @@ NeuralGD::NeuralGD(tbml::NeuralNetwork network)
 {}
 
 
-tbml::Matrix NeuralGD::propogate(tbml::Matrix input) { return this->network.propogate(input); }
+tbml::Matrix& NeuralGD::propogate(tbml::Matrix& input) { return this->network.propogate(input); }
+
+float NeuralGD::getCachedOutput(int num) { return this->network.getCachedValue(-1, 0, num); }
 
 void NeuralGD::print() { this->network.printLayers(); }
 
@@ -136,25 +138,25 @@ NeuralGD* NeuralGD::crossover(NeuralGD* otherData)
 	for (size_t i = 0; i < weights.size(); i++)
 	{
 		newWeights.push_back(weights[i].ewise(oWeights[i], [](float a, float b)
-			{
-				return tbml::getRandomFloat() < 0.5f ? a : b;
-			}));
+		{
+			return tbml::getRandomFloat() < 0.5f ? a : b;
+		}));
 	}
 
 	// Crossover bias
-	std::vector<tbml::Matrix>& bias = this->network.getBias();
+	std::vector<tbml::Matrix>& bias = network.getBias();
 	std::vector<tbml::Matrix>& oBias = otherData->network.getBias();
 	std::vector<tbml::Matrix> newBias = std::vector<tbml::Matrix>();
 	for (size_t i = 0; i < bias.size(); i++)
 	{
 		newBias.push_back(bias[i].ewise(oBias[i], [](float a, float b)
-			{
-				return tbml::getRandomFloat() < 0.5f ? a : b;
-			}));
+		{
+			return tbml::getRandomFloat() < 0.5f ? a : b;
+		}));
 	}
 
 	// Create new network and return
-	return new NeuralGD(tbml::NeuralNetwork(newWeights, newBias, tbml::tanh));
+	return new NeuralGD(tbml::NeuralNetwork(newWeights, newBias, network.getActivator()));
 };
 
 NeuralGD* NeuralGD::clone()

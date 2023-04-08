@@ -10,12 +10,12 @@ NeuralPoleBalancerGI::NeuralPoleBalancerGI(
 	float cartMass, float poleMass, float poleLength, float force,
 	float trackLimit, float angleLimit, float timeLimit,
 	NeuralGD* geneticData)
-	:	cartMass(cartMass), poleMass(poleMass), poleLength(poleLength), force(force),
+	:	tbml::GeneticInstance<NeuralGD>(geneticData),
+		cartMass(cartMass), poleMass(poleMass), poleLength(poleLength), force(force),
 		trackLimit(trackLimit), angleLimit(angleLimit), timeLimit(timeLimit),
-		tbml::GeneticInstance<NeuralGD>(geneticData)
+		netInput(1, 4), poleAngle(0.1f)
 {
 	this->initVisual();
-	this->poleAngle = 0.1f;
 }
 
 void NeuralPoleBalancerGI::initVisual()
@@ -39,15 +39,13 @@ bool NeuralPoleBalancerGI::step()
 {
 	if (this->instanceFinished) return true;
 
-	// Calculate force with netowkr
-	tbml::Matrix input = tbml::Matrix({ {
-		cartPosition,
-		cartAcceleration,
-		poleAngle,
-		poleAcceleration
-	} });
-	tbml::Matrix output = this->geneticData->propogate(input);
-	float ft = output.get(0, 0) > 0.5f ? force : -force;
+	// Calculate force with network
+	netInput.set(0, 0, cartPosition);
+	netInput.set(0, 1, cartAcceleration);
+	netInput.set(0, 2, poleAngle);
+	netInput.set(0, 3, poleAcceleration);
+	this->geneticData->propogate(netInput);
+	float ft = this->geneticData->getCachedOutput(0) > 0.5f ? force : -force;
 
 	// Update cart
 	cartAcceleration = (ft + poleMass * poleLength * (poleVelocity * poleVelocity * sin(poleAngle) - poleAcceleration * cos(poleAngle))) / (cartMass + poleMass);

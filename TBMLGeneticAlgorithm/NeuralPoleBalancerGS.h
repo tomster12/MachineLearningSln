@@ -26,6 +26,7 @@ private:
 	float angleLimit = 0.21f;
 	float timeLimit = 5.0f;
 
+	tbml::Matrix netInput;
 	float poleAngle = 0.0f;
 	float poleVelocity = 0.0f;
 	float poleAcceleration = 0.0f;

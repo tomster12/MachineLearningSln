@@ -15,6 +15,7 @@ namespace tbml
 		Matrix();
 		Matrix(std::vector<std::vector<float>> data_);
 		Matrix(size_t rows_, size_t cols_);
+		void resize(size_t rows_, size_t cols_);
 
 		Matrix cross(Matrix& other);
 		Matrix* icross(Matrix& other);
@@ -46,6 +47,7 @@ namespace tbml
 		size_t getRows();
 		size_t getCols();
 		float get(size_t row, size_t col);
+		void set(size_t row, size_t col, float val);
 		bool getEmpty();
 
 		void clear();

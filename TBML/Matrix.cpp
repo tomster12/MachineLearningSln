@@ -16,27 +16,30 @@ namespace tbml
 		cols = 0;
 	}
 
-	Matrix::Matrix(std::vector<std::vector<float>> data_)
+	Matrix::Matrix(std::vector<std::vector<float>> data)
 	{
 		// Initialize variables
-		data = data_;
-		rows = data.size();
-		cols = (rows > 0) ? data[0].size() : 0;
+		this->data = data;
+		this->rows = data.size();
+		this->cols = (rows > 0) ? data[0].size() : 0;
 	}
 
-	Matrix::Matrix(size_t rows_, size_t cols_)
+	Matrix::Matrix(size_t rows, size_t cols)
 	{
 		// Initialize variables
-		data = std::vector<std::vector<float>>();
-		rows = rows_;
-		cols = cols_;
+		resize(rows, cols);
+	}
+
+	void Matrix::resize(size_t rows, size_t cols)
+	{
+		// Set to a specific size and zero
+		this->rows = rows;
+		this->cols = cols;
+		data = std::vector<std::vector<float>>(rows);
 		for (size_t row = 0; row < rows; row++)
 		{
-			data.push_back(std::vector<float>());
-			for (size_t col = 0; col < cols; col++)
-			{
-				data[row].push_back(0);
-			}
+			data[row] = std::vector<float>(cols);
+			for (size_t col = 0; col < cols; col++) data[row][col] = 0.0f;
 		}
 	}
 
@@ -186,7 +189,7 @@ namespace tbml
 	{
 		// Create new matrix and inplace scale
 		Matrix newMatrix = this->copy();
-		newMatrix.scale(val);
+		newMatrix.iscale(val);
 		return newMatrix;
 	}
 
@@ -247,6 +250,7 @@ namespace tbml
 		std::cout << tag << rows << " x " << cols << std::endl;
 	}
 
+
 	std::vector<Matrix> Matrix::splitRows(size_t splitSize)
 	{
 		// Initialize variables
@@ -287,7 +291,15 @@ namespace tbml
 		else throw std::invalid_argument("Index out of range.");
 	}
 
+	void Matrix::set(size_t row, size_t col, float val)
+	{
+		// Set data, and check if indices are inbound
+		if (row >= 0 && col >= 0 && row < rows && col < cols) data[row][col] = val;
+		else throw std::invalid_argument("Index out of range.");
+	}
+
 	bool Matrix::getEmpty() { return rows == 0 || cols == 0; }
+
 
 	void Matrix::clear()
 	{

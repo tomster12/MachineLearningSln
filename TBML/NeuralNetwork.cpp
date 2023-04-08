@@ -7,13 +7,10 @@
 
 namespace tbml
 {
-	NeuralNetwork::NeuralNetwork(std::vector<size_t> layerSizes) : NeuralNetwork(layerSizes, sigmoid) {}
-
-	NeuralNetwork::NeuralNetwork(std::vector<size_t> layerSizes, float (*activator)(float), bool randomize)
+	NeuralNetwork::NeuralNetwork(std::vector<size_t> layerSizes, float (*activator)(float), bool toRandomize)
 		: layerCount(layerSizes.size()), layerSizes(layerSizes), activator(activator), weights(), bias()
 	{
-
-		// Initialize weights / bias
+		// Initialize w + b from preset sizes
 		for (size_t layer = 0; layer < layerCount - 1; layer++)
 		{
 			weights.push_back(Matrix(layerSizes[layer], layerSizes[layer + 1]));
@@ -21,18 +18,13 @@ namespace tbml
 		}
 
 		// Randomize if needed
-		if (randomize) this->randomize();
+		if (toRandomize) this->randomize();
 	}
-
-	NeuralNetwork::NeuralNetwork(std::vector<Matrix> weights, std::vector<Matrix> bias)
-		: NeuralNetwork(weights, bias, sigmoid)
-	{}
 
 	NeuralNetwork::NeuralNetwork(std::vector<Matrix> weights, std::vector<Matrix> bias, float (*activator)(float))
 		: layerCount(weights.size() + 1), weights(weights), bias(bias), activator(activator)
 	{
-
-		// Initialize variables
+		// Initialize sizes from preset w + b
 		this->layerSizes = std::vector<size_t>();
 		for (int i = 0; i < this->layerCount - 1; i++) this->layerSizes.push_back(this->weights[i].getRows());
 		this->layerSizes.push_back(this->weights[this->layerCount - 2].getCols());
@@ -60,10 +52,11 @@ namespace tbml
 		}
 	}
 
-	Matrix NeuralNetwork::propogate(Matrix current)
+	Matrix& NeuralNetwork::propogate(Matrix& input)
 	{
 		// Intialize previous neuron outputs with current
 		if (neuronOutCache.size() != layerCount) neuronOutCache = std::vector<Matrix>(layerCount);
+		Matrix current = input;
 		neuronOutCache[0] = current;
 
 		// Run current through weight layers
@@ -76,7 +69,7 @@ namespace tbml
 		}
 
 		// Return final layer values
-		return current;
+		return neuronOutCache[layerCount - 1];
 	}
 
 	void NeuralNetwork::printLayers()
@@ -90,9 +83,13 @@ namespace tbml
 			bias[layer].printValues(std::to_string(layer) + ": ");
 		std::cout << "------\n" << std::endl;
 	}
+	
 
+	float NeuralNetwork::getCachedValue(int layer, int row, int col) { return neuronOutCache[(layer + layerCount) % layerCount].get(row, col); }
 
-	std::vector<Matrix>& NeuralNetwork::getWeights() { return this->weights; }
+	std::vector<Matrix>& NeuralNetwork::getWeights() { return weights; }
 
-	std::vector<Matrix>& NeuralNetwork::getBias() { return this->bias; }
+	std::vector<Matrix>& NeuralNetwork::getBias() { return bias; }
+
+	afptr NeuralNetwork::getActivator() { return activator; }
 }
