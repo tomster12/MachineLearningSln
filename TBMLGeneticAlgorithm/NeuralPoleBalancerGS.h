@@ -61,6 +61,7 @@ protected:
 	float angleLimit;
 	float timeLimit;
 	std::vector<size_t> dataLayerSizes;
+	float (*dataActivator)(float);
 
 	NeuralGD* createData() override;
 	NeuralPoleBalancerGI* createInstance(NeuralGD* data) override;
@@ -69,5 +70,5 @@ public:
 	NeuralPoleBalancerGS(
 		float cartMass, float poleMass, float poleLength, float force,
 		float trackLimit, float angleLimit, float timeLimit,
-		std::vector<size_t> dataLayerSizes);
+		std::vector<size_t> dataLayerSizes, float (*dataActivator)(float) = tbml::sign);
 };

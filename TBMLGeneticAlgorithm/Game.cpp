@@ -48,11 +48,11 @@ void Game::initVariables()
 	// Setup genepool structure
 	//this->genepool = new VectorListTargetGS({ 700.0f, 600.0f }, 4.0f, 4.0f, 500, { 700.0f, 100.0f }, 20.0f);
 	//this->genepool = new NeuralTargetGS({ 700.0f, 850.0f }, 2.0f, 2.0f, 1000, { 2, 2 }, 20.0f, { 700.0f, 150.0f }, 500.0f);
-	//this->genepool = new NeuralIceTargetsGS({ 700.0f, 850.0f }, 300.0f, 3000, { 4, 4, 2 }, { { 150.0f, 150.0f }, { 920.0f, 400.0f }, { 300.0f, 850.0f }, { 550.0f, 320.0f } }, 20.0f);
-	this->genepool = new NeuralPoleBalancerGS(1.0f, 0.1f, 0.5f, 2.0f, 0.6f, 0.2f, 20.0f, { 4, 1 });
+	this->genepool = new NeuralIceTargetsGS({ 700.0f, 850.0f }, 300.0f, 3000, { 4, 4, 2 }, { { 150.0f, 150.0f }, { 920.0f, 400.0f }, { 300.0f, 850.0f }, { 550.0f, 320.0f } }, 20.0f);
+	//this->genepool = new NeuralPoleBalancerGS(1.0f, 0.1f, 0.5f, 2.0f, 0.6f, 0.25f, 20.0f, { 4, 1 }, tbml::tanh);
 
 	// Restart the genepool
-	this->genepool->restartGenepool(2000, 0.04f);
+	this->genepool->restartGenepool(2000, 0.05f);
 
 	// Initialize UI
 	this->uiManager = UIManager();

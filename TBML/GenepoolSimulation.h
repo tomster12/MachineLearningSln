@@ -357,11 +357,7 @@ namespace tbml
 		bool getAutoProcess() { return this->autoProcess; };
 
 
-		void setStepping(bool isStepping)
-		{
-			if (this->isFinished) return;
-			this->isStepping = isStepping;
-		}
+		void setStepping(bool isStepping) { if (!this->isFinished) this->isStepping = isStepping; }
 
 		void setAutoStep(bool autoStep) { this->autoStep = autoStep; if (!this->isStepping && this->autoStep) this->setStepping(true); };
 

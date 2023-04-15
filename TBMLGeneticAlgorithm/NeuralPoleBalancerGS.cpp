@@ -103,17 +103,17 @@ float NeuralPoleBalancerGI::calculateFitness()
 NeuralPoleBalancerGS::NeuralPoleBalancerGS(
 	float cartMass, float poleMass, float poleLength, float force,
 	float trackLimit, float angleLimit, float timeLimit,
-	std::vector<size_t> dataLayerSizes)
+	std::vector<size_t> dataLayerSizes, float (*dataActivator)(float))
 	:	cartMass(cartMass), poleMass(poleMass), poleLength(poleLength), force(force),
 		trackLimit(trackLimit), angleLimit(angleLimit), timeLimit(timeLimit),
-		dataLayerSizes(dataLayerSizes)
+		dataLayerSizes(dataLayerSizes), dataActivator(dataActivator)
 {}
 
 
 NeuralGD* NeuralPoleBalancerGS::createData()
 {
 	// Create, randomize and return data
-	NeuralGD* data = new NeuralGD(this->dataLayerSizes, tbml::sign);
+	NeuralGD* data = new NeuralGD(dataLayerSizes, dataActivator);
 	data->randomize();
 	return data;
 }
