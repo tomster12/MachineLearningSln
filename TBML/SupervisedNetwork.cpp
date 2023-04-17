@@ -54,22 +54,18 @@ namespace tbml
 			splitExpected = expected.splitRows(config.batchSize);
 			batchCount = splitInput.size();
 		}
-
-
+		
 		// Start timer
 		std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
 		std::chrono::steady_clock::time_point tmid = t0;
 
-
 		// Loop over and run training
 		for (; epoch < maxEpochs; epoch++)
 		{
-
 			// Forward / backwards propogate for current batch
 			error = 0;
 			for (size_t batch = 0; batch < batchCount; batch++)
 			{
-
 				// Forward propogation current batch
 				Matrix predicted = propogate(splitInput[batch]);
 				float batchError = calcError(predicted, splitExpected[batch]);
@@ -87,7 +83,6 @@ namespace tbml
 				calculateDerivates(predicted, splitExpected[batch]);
 				for (size_t layer = 0; layer < layerCount - 1; layer++)
 				{
-
 					// Calculate average derivative for weights / bias
 					Matrix derivativeSum = pdWeightsCache[layer][0];
 					Matrix biasSum = pdBiasCache[layer][0];
@@ -121,7 +116,6 @@ namespace tbml
 			if (config.logLevel >= 2 && batchCount != 1) std::cout << "Epoch Error: " << error << std::endl;
 			if (error < config.errorExit) { epoch++; break; }
 		}
-
 
 		// Print training outcome
 		if (config.logLevel >= 1)
