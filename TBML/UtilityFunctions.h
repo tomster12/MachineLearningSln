@@ -3,7 +3,6 @@
 
 #include "Matrix.h"
 
-
 namespace tbml
 {
 	float sigmoid(float x);

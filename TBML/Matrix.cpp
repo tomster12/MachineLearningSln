@@ -2,10 +2,8 @@
 #include "stdafx.h"
 #include "Matrix.h"
 
-
 namespace tbml
 {
-
 #pragma region Setup
 
 	Matrix::Matrix()
@@ -43,8 +41,15 @@ namespace tbml
 		}
 	}
 
-#pragma endregion
+	void Matrix::clear()
+	{
+		// Clear out matrix
+		data.clear();
+		rows = 0;
+		cols = 0;
+	}
 
+#pragma endregion
 
 #pragma region Arithmetic
 
@@ -57,7 +62,7 @@ namespace tbml
 		if (cols != oRows) throw std::invalid_argument("Matrix dimensions do not match.");
 
 		// Create new matrix and inplace cross with other
-		Matrix newMatrix = this->copy();
+		Matrix newMatrix = *this;
 		newMatrix.icross(other);
 		return newMatrix;
 	}
@@ -89,15 +94,14 @@ namespace tbml
 		return this;
 	}
 
-
 	Matrix Matrix::transpose()
 	{
 		// Create new matrix and inplace tranpose
-		Matrix newMatrix = this->copy();
+		Matrix newMatrix = *this;
 		newMatrix.itranspose();
 		return newMatrix;
 	}
-	
+
 	Matrix* Matrix::itranspose()
 	{
 		// Inplace tranpose this
@@ -120,7 +124,6 @@ namespace tbml
 		return this;
 	}
 
-
 	float Matrix::acc(float (*func)(float, float), float initial)
 	{
 		// Apply function to each element in matrix
@@ -138,7 +141,7 @@ namespace tbml
 	Matrix Matrix::map(float (*func)(float))
 	{
 		// Create new matrix and inplace map
-		Matrix newMatrix = this->copy();
+		Matrix newMatrix = *this;
 		newMatrix.imap(func);
 		return newMatrix;
 	}
@@ -159,7 +162,7 @@ namespace tbml
 	Matrix Matrix::ewise(Matrix& other, float (*func)(float, float))
 	{
 		// Create new matrix and inplace map
-		Matrix newMatrix = this->copy();
+		Matrix newMatrix = *this;
 		newMatrix.iewise(other, func);
 		return newMatrix;
 	}
@@ -184,11 +187,10 @@ namespace tbml
 		return this;
 	}
 
-
 	Matrix Matrix::scale(float val)
 	{
 		// Create new matrix and inplace scale
-		Matrix newMatrix = this->copy();
+		Matrix newMatrix = *this;
 		newMatrix.iscale(val);
 		return newMatrix;
 	}
@@ -224,7 +226,6 @@ namespace tbml
 
 #pragma endregion
 
-
 #pragma region Main
 
 	void Matrix::printValues(std::string tag)
@@ -250,11 +251,9 @@ namespace tbml
 		std::cout << tag << rows << " x " << cols << std::endl;
 	}
 
-
-	std::vector<Matrix> Matrix::splitRows(size_t splitSize)
+	std::vector<Matrix> Matrix::splitRows(size_t splitSize) const
 	{
 		// Initialize variables
-		std::vector<std::vector<float>>& data = getData();
 		size_t splitCount = (int)(rows / splitSize);
 		std::vector<Matrix> splits = std::vector<Matrix>(splitCount + ((rows % splitSize == 0) ? 0 : 1));
 
@@ -280,11 +279,11 @@ namespace tbml
 
 	std::vector<std::vector<float>>& Matrix::getData() { return data; }
 
-	size_t Matrix::getRows() { return rows; }
+	size_t Matrix::getRows() const { return rows; }
 
-	size_t Matrix::getCols() { return cols; }
+	size_t Matrix::getCols() const { return cols; }
 
-	float Matrix::get(size_t row, size_t col)
+	float Matrix::get(size_t row, size_t col) const
 	{
 		// Return data, and check if indices are inbound
 		if (row >= 0 && col >= 0 && row < rows && col < cols) return data[row][col];
@@ -298,32 +297,7 @@ namespace tbml
 		else throw std::invalid_argument("Index out of range.");
 	}
 
-	bool Matrix::getEmpty() { return rows == 0 || cols == 0; }
-
-
-	void Matrix::clear()
-	{
-		// Clear out matrix
-		data.clear();
-		rows = 0;
-		cols = 0;
-	}
-
-	Matrix Matrix::copy()
-	{
-		// Return new matrix with same data
-		std::vector<std::vector<float>> newData(rows);
-		for (size_t row = 0; row < rows; row++)
-		{
-			std::vector<float> newRow(cols);
-			for (size_t col = 0; col < cols; col++)
-			{
-				newRow[col] = data[row][col];
-			}
-			newData[row] = newRow;
-		}
-		return Matrix(newData);
-	}
+	bool Matrix::getEmpty() const { return rows == 0 || cols == 0; }
 
 #pragma endregion
 }

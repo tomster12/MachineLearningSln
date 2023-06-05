@@ -4,7 +4,6 @@
 #include "UtilityFunctions.h"
 #include "Matrix.h"
 
-
 namespace tbml
 {
 	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes_)
@@ -20,24 +19,20 @@ namespace tbml
 	{}
 
 	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes_, float (*activator_)(float), float (*activatorPd_)(float), float (*calcError_)(Matrix, Matrix), Matrix(*calcErrorPd_)(Matrix, Matrix))
-		: NeuralNetwork(layerSizes_, activator_)
-	{
+		: NeuralNetwork(layerSizes_, activator_),
+		activatorPd(activatorPd_),
+		calcError(calcError_),
+		calcErrorPd(calcErrorPd_)
+	{}
 
-		// Initialize variables
-		activatorPd = activatorPd_;
-		calcError = calcError_;
-		calcErrorPd = calcErrorPd_;
-	}
-
-
-	void SupervisedNetwork::train(Matrix input, Matrix expected, TrainingConfig config)
+	void SupervisedNetwork::train(const Matrix& input, const Matrix& expected, const TrainingConfig& config)
 	{
 		// Setup variables
 		pdWeightsMomentum = std::vector<Matrix>(layerCount);
 		pdBiasMomentum = std::vector<Matrix>(layerCount);
-		int maxEpochs = (config.epochs == -1 && config.errorExit > 0.0f) ? MAX_maxIterations : config.epochs;
+		int maxEpochs = (config.epochs == -1 && config.errorExit > 0.0f) ? MAX_MAX_ITERATIONS : config.epochs;
 		int epoch = 0;
-		float error = 0;
+		float error = 0.0f;
 
 		// Split input and expected
 		size_t batchCount = 1;
@@ -45,16 +40,17 @@ namespace tbml
 		if (config.batchSize == -1)
 		{
 			splitInput = std::vector<Matrix>(1);
-			splitInput[0] = input;
+			splitInput[0] = Matrix(input);
 			splitExpected = std::vector<Matrix>(1);
-			splitExpected[0] = expected;
-		} else
+			splitExpected[0] = Matrix(expected);
+		}
+		else
 		{
 			splitInput = input.splitRows(config.batchSize);
 			splitExpected = expected.splitRows(config.batchSize);
 			batchCount = splitInput.size();
 		}
-		
+
 		// Start timer
 		std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
 		std::chrono::steady_clock::time_point tmid = t0;
@@ -129,7 +125,6 @@ namespace tbml
 		}
 	}
 
-
 	void SupervisedNetwork::calculateDerivates(Matrix& predicted, Matrix& expected)
 	{
 		// Reinitialize partial derivative caches
@@ -139,7 +134,8 @@ namespace tbml
 			pdNeuronInCache = std::vector<Matrix>(layerCount); // element = layer, row = input, column = neuron
 			pdWeightsCache = std::vector<std::vector<Matrix>>(layerCount - 1); // element^1 = layer, element^2 = input, matrix = weights
 			pdBiasCache = std::vector<std::vector<Matrix>>(layerCount - 1); // element^1 = layer, element^2 = input, matrix = weights
-		} else
+		}
+		else
 		{
 			for (size_t i = 0; i < layerCount; i++) pdNeuronInCache[i].clear();
 		}
@@ -197,12 +193,12 @@ namespace tbml
 
 		// Partial derivative of error w.r.t. to neuron in
 		// (δE / δnetⱼ) = (δE / δoⱼ) * (δoⱼ / δnetᵢⱼ)
-		Matrix pdToOut = pdErrorToOut(layer);
+		Matrix pdToOut = calculatePdErrorToOut(layer);
 		Matrix pdToIn = neuronOutCache[layer].map(activatorPd);
 		pdNeuronInCache[layer] = *pdToOut.itimes(pdToIn);
 	}
 
-	Matrix SupervisedNetwork::pdErrorToOut(size_t layer)
+	Matrix SupervisedNetwork::calculatePdErrorToOut(size_t layer)
 	{
 		// Last layer derivative of error
 		// (δE / δoⱼ) = (δE / δy)
@@ -214,12 +210,10 @@ namespace tbml
 		{
 			calculatePdErrorToIn(layer + 1);
 			Matrix wt = weights[layer].transpose();
-			Matrix pdErrorToOut = pdNeuronInCache[layer + 1].cross(wt);
-			return pdErrorToOut;
+			return pdNeuronInCache[layer + 1].cross(wt);
 		}
 	}
 }
-
 
 // --------------------------------
 //

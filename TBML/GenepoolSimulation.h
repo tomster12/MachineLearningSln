@@ -60,7 +60,7 @@ namespace tbml
 		bool getFinished() { return this->instanceFinished; };
 		float getFitness() { return this->instanceFitness; };
 	};
-	
+
 
 	template<class D, class I> // D: GeneticData<D>, I: GeneticInstance<D>
 	class GenepoolSimulation : public IGenepoolSimulation
@@ -93,7 +93,7 @@ namespace tbml
 			data->randomize();
 			return data;
 		}
-		
+
 		virtual I* createInstance(D* data)
 		{
 			// Create and return instance
@@ -181,7 +181,7 @@ namespace tbml
 			initGeneration();
 		};
 
-		void initGeneration() { }
+		void initGeneration() {}
 
 		void stepGeneration()
 		{

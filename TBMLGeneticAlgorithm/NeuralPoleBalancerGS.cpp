@@ -10,10 +10,10 @@ NeuralPoleBalancerGI::NeuralPoleBalancerGI(
 	float cartMass, float poleMass, float poleLength, float force,
 	float trackLimit, float angleLimit, float timeLimit,
 	NeuralGD* geneticData)
-	:	tbml::GeneticInstance<NeuralGD>(geneticData),
-		cartMass(cartMass), poleMass(poleMass), poleLength(poleLength), force(force),
-		trackLimit(trackLimit), angleLimit(angleLimit), timeLimit(timeLimit),
-		netInput(1, 4), poleAngle(0.1f)
+	: tbml::GeneticInstance<NeuralGD>(geneticData),
+	cartMass(cartMass), poleMass(poleMass), poleLength(poleLength), force(force),
+	trackLimit(trackLimit), angleLimit(angleLimit), timeLimit(timeLimit),
+	netInput(1, 4), poleAngle(0.1f)
 {
 	this->initVisual();
 }
@@ -63,7 +63,8 @@ bool NeuralPoleBalancerGI::step()
 	done |= abs(poleAngle) > angleLimit;
 	done |= abs(cartPosition) > trackLimit;
 	done |= time > timeLimit;
-	if (done) {
+	if (done)
+	{
 		calculateFitness();
 		instanceFinished = true;
 		this->cartShape.setOutlineColor(sf::Color(100, 100, 140, 10));
@@ -104,9 +105,9 @@ NeuralPoleBalancerGS::NeuralPoleBalancerGS(
 	float cartMass, float poleMass, float poleLength, float force,
 	float trackLimit, float angleLimit, float timeLimit,
 	std::vector<size_t> dataLayerSizes, float (*dataActivator)(float))
-	:	cartMass(cartMass), poleMass(poleMass), poleLength(poleLength), force(force),
-		trackLimit(trackLimit), angleLimit(angleLimit), timeLimit(timeLimit),
-		dataLayerSizes(dataLayerSizes), dataActivator(dataActivator)
+	: cartMass(cartMass), poleMass(poleMass), poleLength(poleLength), force(force),
+	trackLimit(trackLimit), angleLimit(angleLimit), timeLimit(timeLimit),
+	dataLayerSizes(dataLayerSizes), dataActivator(dataActivator)
 {}
 
 

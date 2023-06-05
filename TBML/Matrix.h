@@ -1,21 +1,16 @@
 
 #pragma once
 
-
 namespace tbml
 {
-
 	class Matrix
 	{
-	private:
-		std::vector<std::vector<float>> data;
-		size_t rows, cols;
-
 	public:
 		Matrix();
 		Matrix(std::vector<std::vector<float>> data_);
 		Matrix(size_t rows_, size_t cols_);
 		void resize(size_t rows_, size_t cols_);
+		void clear();
 
 		Matrix cross(Matrix& other);
 		Matrix* icross(Matrix& other);
@@ -42,15 +37,16 @@ namespace tbml
 		void printValues(std::string tag = "Matrix:");
 		void printDims(std::string tag = "Dimensions: ");
 
-		std::vector<Matrix> splitRows(size_t splitSize);
+		std::vector<Matrix> splitRows(size_t splitSize) const;
 		std::vector<std::vector<float>>& getData();
-		size_t getRows();
-		size_t getCols();
-		float get(size_t row, size_t col);
+		size_t getRows() const;
+		size_t getCols() const;
+		float get(size_t row, size_t col) const;
 		void set(size_t row, size_t col, float val);
-		bool getEmpty();
+		bool getEmpty() const;
 
-		void clear();
-		Matrix copy();
+	private:
+		std::vector<std::vector<float>> data;
+		size_t rows, cols;
 	};
 }

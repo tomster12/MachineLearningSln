@@ -1,5 +1,6 @@
 
 #pragma once
+
 #include <thread>
 #include <vector>
 #include <queue>
@@ -10,7 +11,6 @@
 #include <future>
 #include <functional>
 #include <stdexcept>
-
 
 // https://github.com/progschj/ThreadPool
 class ThreadPool
@@ -24,7 +24,6 @@ private:
 	std::condition_variable condition;
 	bool stop;
 
-
 public:
 	ThreadPool(size_t threads = std::thread::hardware_concurrency()) : threads(threads), stop(false)
 	{
@@ -33,7 +32,6 @@ public:
 		{
 			workers.emplace_back([this]
 				{
-
 					// Run indefinetly
 					for (;;)
 					{

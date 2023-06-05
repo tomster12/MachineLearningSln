@@ -86,6 +86,7 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)\bin\$(ProjectName)\output\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\bin\$(ProjectName)\intermediates\$(Configuration)\</IntDir>
+    <ClangTidyChecks>clang-analyzer-*</ClangTidyChecks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>

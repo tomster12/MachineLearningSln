@@ -4,8 +4,6 @@
 #include "CommonGeneticDatas.h"
 #include "UtilityFunctions.h"
 
-
-
 #pragma region - VectorListTargetGI
 
 VectorListTargetGI::VectorListTargetGI(VectorListTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc, VectorListGD* geneticData)
@@ -24,7 +22,6 @@ void VectorListTargetGI::initVisual()
 	this->shape.setOutlineColor(sf::Color::White);
 	this->shape.setOutlineThickness(1.0f);
 }
-
 
 bool VectorListTargetGI::step()
 {
@@ -55,7 +52,6 @@ void VectorListTargetGI::render(sf::RenderWindow* window)
 	window->draw(this->shape);
 };
 
-
 float VectorListTargetGI::calculateDist()
 {
 	// Calculate distance to target
@@ -80,7 +76,8 @@ float VectorListTargetGI::calculateFitness()
 		fitness = 0.5f * (1.0f - dist / 500.0f);
 		fitness = fitness < 0.0f ? 0.0f : fitness;
 
-	} else
+	}
+	else
 	{
 		float dataPct = static_cast<float>(this->currentIndex) / static_cast<float>(this->geneticData->getSize());
 		fitness = 1.0f - 0.5f * dataPct;
@@ -92,7 +89,6 @@ float VectorListTargetGI::calculateFitness()
 };
 
 #pragma endregion
-
 
 #pragma region - VectorListTargetGS
 
@@ -113,7 +109,6 @@ VectorListTargetGS::VectorListTargetGS(
 	this->target.setPosition(this->targetPos);
 };
 
-
 VectorListGD* VectorListTargetGS::createData()
 {
 	// Create, randomize and return data
@@ -129,7 +124,6 @@ VectorListTargetGI* VectorListTargetGS::createInstance(VectorListGD* data)
 	return inst;
 };
 
-
 void VectorListTargetGS::render(sf::RenderWindow* window)
 {
 	GenepoolSimulation::render(window);
@@ -137,7 +131,6 @@ void VectorListTargetGS::render(sf::RenderWindow* window)
 	// Draw target
 	window->draw(this->target);
 }
-
 
 sf::Vector2f VectorListTargetGS::getTargetPos() { return this->targetPos; }
 

@@ -8,16 +8,14 @@
 #include "SupervisedNetwork.h"
 #include "MNIST.h"
 
-
 void testBasic();
 void testTime();
 void testBackprop();
 void testMNIST();
 
-
 int main()
 {
-	testMNIST();
+	testTime();
 	return 0;
 }
 
@@ -42,11 +40,11 @@ void testTime()
 	size_t epoch = 3'000'000;
 
 	// Number of epochs propogation timing
-	//
+	// -----------
 	// Release x86	1'000'000   ~1100ms
 	// Release x86	1'000'000   ~600ms		Change to vector subscript from push_back
 	// Release x86	3'000'000   ~1850ms
-	//
+	// -----------
 	std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
 	for (size_t i = 0; i < epoch; i++) network.propogate(input);
 	std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
@@ -61,20 +59,25 @@ void testTime()
 
 void testBackprop()
 {
+	const float L = -1.0f, H = 1.0f;
+
 	// Create network and setup training data
-	tbml::SupervisedNetwork network(std::vector<size_t>({ 2, 2, 1 }), tbml::tanh, tbml::tanhPd, tbml::calcErrSqDiff, tbml::calcErrSqDiffPd);
-	float l = -1.0f;
-	float h = 1.0f;
+	tbml::SupervisedNetwork network(std::vector<size_t>({ 2, 2, 1 }),
+		tbml::tanh, tbml::tanhPd,
+		tbml::calcErrSqDiff, tbml::calcErrSqDiffPd
+	);
 	tbml::Matrix input = tbml::Matrix({
-		{ l, l },
-		{ l, h },
-		{ h, l },
-		{ h, h } });
+		{ L, L },
+		{ L, H },
+		{ H, L },
+		{ H, H }
+		});
 	tbml::Matrix expected = tbml::Matrix({
-		{ l },
-		{ h },
-		{ h },
-		{ l } });
+		{ L },
+		{ H },
+		{ H },
+		{ L }
+		});
 
 	// Print values and train
 	input.printValues("Input:");
@@ -91,19 +94,17 @@ void testMNIST()
 	uchar** imageDataset = MNIST::readImages("MNIST/train-images.idx3-ubyte", imageCount, imageSize);
 	uchar* labelDataset = MNIST::readLabels("MNIST/train-labels.idx1-ubyte", labelCount);
 
-	// Parse dataset into input / training
-	std::vector<std::vector<float>> inputData = std::vector<std::vector<float>>(imageCount);
-	std::vector<std::vector<float>> expectedData = std::vector<std::vector<float>>(imageCount);
+	// Parse dataset into input / training and cleanup
+	tbml::Matrix input = tbml::Matrix(imageCount, imageSize);
+	tbml::Matrix expected = tbml::Matrix(imageCount, 10);
 	for (size_t i = 0; i < imageCount; i++)
 	{
-		inputData[i] = std::vector<float>(imageSize);
-		expectedData[i] = std::vector<float>(10);
-		for (size_t o = 0; o < imageSize; o++) inputData[i][o] = (float)imageDataset[i][o] / 255.0f;
-		int label = labelDataset[i];
-		expectedData[i][label] = 1;
+		for (size_t o = 0; o < imageSize; o++) input.set(i, o, (float)imageDataset[i][o] / 255.0f);
+		expected.set(i, labelDataset[i], 1);
+		delete imageDataset[i];
 	}
-	tbml::Matrix input = tbml::Matrix(inputData);
-	tbml::Matrix expected = tbml::Matrix(expectedData);
+	delete imageDataset;
+	delete labelDataset;
 
 	// Print data
 	std::cout << std::endl;
@@ -112,14 +113,13 @@ void testMNIST()
 	std::cout << std::endl;
 
 	// Batch size to time timing
-	//
+	// -----------
 	// Release x86	128	~90ms 
-	// 
+	// -----------
 	// For this to work in reasonable time will need:
 	//	- GPU Parallelism
 	//	- Small optimizations in Matrix class
 	//	- More complex architecture involving convolutions
-	//
 	tbml::SupervisedNetwork network(std::vector<size_t>({ imageSize, 100, 10 }), tbml::tanh, tbml::tanhPd);
 	network.train(input, expected, { 10, 128, 0.15f, 0.8f, 0.01f, 2 });
 }

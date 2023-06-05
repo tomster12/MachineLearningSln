@@ -1,9 +1,8 @@
 
 #pragma once
 
-
-namespace global {
-	
+namespace global
+{
 	extern bool showVisuals;
 	extern sf::Font font;
 

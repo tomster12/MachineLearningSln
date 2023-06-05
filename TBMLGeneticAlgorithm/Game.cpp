@@ -10,7 +10,6 @@
 #include "NeuralIceTargetsGS.h"
 #include "NeuralPoleBalancerGS.h"
 
-
 Game::Game()
 {
 	this->initVariables();
@@ -21,7 +20,6 @@ Game::~Game()
 	delete this->window;
 	delete this->genepool;
 }
-
 
 void Game::initVariables()
 {

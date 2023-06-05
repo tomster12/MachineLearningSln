@@ -6,19 +6,18 @@
 #include "UtilityFunctions.h"
 #include "Matrix.h"
 
-
 #pragma region - NeuralIceTargetsGI
 
 NeuralIceTargetsGI::NeuralIceTargetsGI(NeuralIceTargetsGS* sim, sf::Vector2f startPos, float moveAcc, int maxIterations, NeuralGD* geneticData)
-	:	GeneticInstance(geneticData), sim(sim),
-		netInput(1, 4),
-		pos(startPos),
-		moveAcc(moveAcc),
-		maxIterations(maxIterations),
-		currentIteration(0),
-		currentTarget(0),
-		vel(),
-		anger(0.0f)
+	: GeneticInstance(geneticData), sim(sim),
+	netInput(1, 4),
+	pos(startPos),
+	moveAcc(moveAcc),
+	maxIterations(maxIterations),
+	currentIteration(0),
+	currentTarget(0),
+	vel(),
+	anger(0.0f)
 {
 	if (global::showVisuals) initVisual();
 }
@@ -32,7 +31,6 @@ void NeuralIceTargetsGI::initVisual()
 	this->shape.setOutlineColor(sf::Color::White);
 	this->shape.setOutlineThickness(1.0f);
 }
-
 
 bool NeuralIceTargetsGI::step()
 {
@@ -54,7 +52,7 @@ bool NeuralIceTargetsGI::step()
 	this->pos.y += this->vel.y * (1.0f / 60.0f);
 	this->vel.x *= 0.95f;
 	this->vel.y *= 0.95f;
-	
+
 	// Check finish conditions
 	float dist = calculateDist();
 	anger += dist;
@@ -71,7 +69,7 @@ void NeuralIceTargetsGI::render(sf::RenderWindow* window)
 {
 	// Update shape position and colour
 	this->shape.setPosition(this->pos.x, this->pos.y);
-	
+
 	// Color based on fitness
 	float fitness = this->calculateFitness();
 	int v = static_cast<int>(255.0f * (0.3f + 0.7f * (fitness / 15.0f)));
@@ -80,7 +78,6 @@ void NeuralIceTargetsGI::render(sf::RenderWindow* window)
 	// Draw shape to window
 	window->draw(this->shape);
 };
-
 
 float NeuralIceTargetsGI::calculateDist()
 {
@@ -98,7 +95,7 @@ float NeuralIceTargetsGI::calculateFitness()
 {
 	// Dont calculate once finished
 	if (this->instanceFinished) return this->instanceFitness;
-	
+
 	// Calculate fitness (anger)
 	float fitness = std::min(1000000.0f / anger, 15.0f);
 	fitness -= this->currentTarget * 2.0f;
@@ -116,16 +113,15 @@ float NeuralIceTargetsGI::calculateFitness()
 
 #pragma endregion
 
-
 #pragma region - NeuralIceTargetsGS
 
 NeuralIceTargetsGS::NeuralIceTargetsGS(
 	sf::Vector2f instanceStartPos, float instancemoveAcc,
 	int instancemaxIterations, std::vector<size_t> dataLayerSizes,
 	std::vector<sf::Vector2f> targets, float targetRadius)
-	:	instanceStartPos(instanceStartPos), instancemoveAcc(instancemoveAcc),
-		instancemaxIterations(instancemaxIterations), dataLayerSizes(dataLayerSizes),
-		targetPos(targets), targetRadius(targetRadius)
+	: instanceStartPos(instanceStartPos), instancemoveAcc(instancemoveAcc),
+	instancemaxIterations(instancemaxIterations), dataLayerSizes(dataLayerSizes),
+	targetPos(targets), targetRadius(targetRadius)
 {
 	// Initialize variables
 	this->targetShapes = std::vector<sf::CircleShape>();
@@ -141,7 +137,6 @@ NeuralIceTargetsGS::NeuralIceTargetsGS(
 		this->targetShapes.push_back(shape);
 	}
 };
-
 
 NeuralGD* NeuralIceTargetsGS::createData()
 {
@@ -166,7 +161,6 @@ void NeuralIceTargetsGS::render(sf::RenderWindow* window)
 	// Draw target
 	for (auto& shape : this->targetShapes) window->draw(shape);
 }
-
 
 sf::Vector2f NeuralIceTargetsGS::getTarget(int index) { return this->targetPos[index]; }
 

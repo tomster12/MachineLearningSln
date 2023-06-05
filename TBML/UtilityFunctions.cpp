@@ -3,7 +3,6 @@
 #include "UtilityFunctions.h"
 #include "Matrix.h"
 
-
 namespace tbml
 {
 	float sigmoid(float x) { return 1.0f / (1.0f + exp(-x)); }
@@ -23,9 +22,8 @@ namespace tbml
 	float signPd(float x) { return x > 0.0f ? 1.0f : -1.0f; }
 
 	//float actSoftmax(float x) { return 0; }
-	// 
-	//float actSoftmaxPd(float x) { return 0; }
 
+	//float actSoftmaxPd(float x) { return 0; }
 
 	float calcErrSqDiff(Matrix predicted, Matrix expected)
 	{
@@ -42,9 +40,8 @@ namespace tbml
 		}
 		return 0.5f * error;
 	}
-	
-	Matrix calcErrSqDiffPd(Matrix predicted, Matrix expected) { return predicted.sub(expected); }
 
+	Matrix calcErrSqDiffPd(Matrix predicted, Matrix expected) { return predicted.sub(expected); }
 
 	float getRandomFloat() { return static_cast<float>(rand()) / static_cast<float>(RAND_MAX); }
 }

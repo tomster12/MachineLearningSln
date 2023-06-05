@@ -1,16 +1,22 @@
 
 #pragma once
 
-
-class UIElement {
-
+class UIElement
+{
 public:
 	virtual void update() {};
 	virtual void render(sf::RenderWindow* window) {};
 };
 
+class UIButton : public UIElement
+{
+public:
+	static const sf::Color HOVER_COLOR;
 
-class UIButton : public UIElement {
+	UIButton(sf::RenderWindow* window, sf::Vector2f pos, sf::Vector2f size, std::string texturePath, std::function<void()> action);
+
+	void update() override;
+	void render(sf::RenderWindow* window) override;
 
 private:
 	sf::RenderWindow* window;
@@ -22,19 +28,17 @@ private:
 
 	bool isHovered;
 	bool isPressed;
+};
 
-
+class UIToggleButton : public UIElement
+{
 public:
-	static const sf::Color HOVER_COLOR;
+	static const sf::Color TOGGLE_COLOR;
 
-	UIButton(sf::RenderWindow* window, sf::Vector2f pos, sf::Vector2f size, std::string texturePath, std::function<void()> action);
+	UIToggleButton(sf::RenderWindow* window, sf::Vector2f pos, sf::Vector2f size, std::string texturePath, bool initial, std::function<void(bool)> action);
 
 	void update() override;
 	void render(sf::RenderWindow* window) override;
-};
-
-
-class UIToggleButton : public UIElement {
 
 private:
 	sf::RenderWindow* window;
@@ -47,24 +51,10 @@ private:
 	bool isToggled;
 	bool isHovered;
 	bool isPressed;
-
-
-public:
-	static const sf::Color TOGGLE_COLOR;
-
-	UIToggleButton(sf::RenderWindow* window, sf::Vector2f pos, sf::Vector2f size, std::string texturePath, bool initial, std::function<void(bool)> action);
-
-	void update() override;
-	void render(sf::RenderWindow* window) override;
 };
 
-
-class UIManager {
-
-private:
-	std::vector<UIElement*> uiElements;
-
-
+class UIManager
+{
 public:
 	~UIManager();
 
@@ -72,4 +62,7 @@ public:
 	void render(sf::RenderWindow* window);
 
 	void addElement(UIElement* uiElement);
+
+private:
+	std::vector<UIElement*> uiElements;
 };

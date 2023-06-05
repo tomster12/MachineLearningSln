@@ -4,7 +4,6 @@
 #include "Matrix.h"
 #include "UtilityFunctions.h"
 
-
 namespace tbml
 {
 	NeuralNetwork::NeuralNetwork(std::vector<size_t> layerSizes, float (*activator)(float), bool toRandomize)
@@ -26,10 +25,9 @@ namespace tbml
 	{
 		// Initialize sizes from preset w + b
 		this->layerSizes = std::vector<size_t>();
-		for (int i = 0; i < this->layerCount - 1; i++) this->layerSizes.push_back(this->weights[i].getRows());
+		for (size_t i = 0; i < this->layerCount - 1; i++) this->layerSizes.push_back(this->weights[i].getRows());
 		this->layerSizes.push_back(this->weights[this->layerCount - 2].getCols());
 	}
-
 
 	void NeuralNetwork::randomize()
 	{
@@ -83,7 +81,6 @@ namespace tbml
 			bias[layer].printValues(std::to_string(layer) + ": ");
 		std::cout << "------\n" << std::endl;
 	}
-	
 
 	float NeuralNetwork::getCachedValue(int layer, int row, int col) { return neuronOutCache[(layer + layerCount) % layerCount].get(row, col); }
 

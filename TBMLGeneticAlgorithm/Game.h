@@ -7,9 +7,14 @@
 #include "NeuralTargetGS.h"
 #include "NeuralIceTargetsGS.h"
 
-
 class Game
 {
+public:
+	Game();
+	~Game();
+
+	void run();
+
 private:
 	sf::RenderWindow* window;
 	sf::Event sfEvent;
@@ -22,10 +27,4 @@ private:
 	void initVariables();
 	void update();
 	void render();
-
-public:
-	Game();
-	~Game();
-
-	void run();
 };

@@ -6,7 +6,6 @@
 #include "CommonGeneticDatas.h"
 #include "Matrix.h"
 
-
 #pragma region - NeuralTargetGI
 
 NeuralTargetGI::NeuralTargetGI(NeuralTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc, int maxIterations, NeuralGD* geneticData)
@@ -25,7 +24,6 @@ void NeuralTargetGI::initVisual()
 	this->shape.setOutlineColor(sf::Color::White);
 	this->shape.setOutlineThickness(1.0f);
 }
-
 
 bool NeuralTargetGI::step()
 {
@@ -58,7 +56,6 @@ void NeuralTargetGI::render(sf::RenderWindow* window)
 	window->draw(this->shape);
 };
 
-
 float NeuralTargetGI::calculateDist()
 {
 	// Calculate distance to target
@@ -83,7 +80,8 @@ float NeuralTargetGI::calculateFitness()
 		fitness = 0.5f * (1.0f - dist / 500.0f);
 		fitness = fitness < 0.0f ? 0.0f : fitness;
 
-	} else
+	}
+	else
 	{
 		float dataPct = static_cast<float>(this->currentIteration) / static_cast<float>(this->maxIterations);
 		fitness = 1.0f - 0.5f * dataPct;
@@ -95,7 +93,6 @@ float NeuralTargetGI::calculateFitness()
 };
 
 #pragma endregion
-
 
 #pragma region - NeuralTargetGS
 
@@ -118,7 +115,6 @@ NeuralTargetGS::NeuralTargetGS(
 	this->target.setPosition(this->targetPos);
 };
 
-
 NeuralGD* NeuralTargetGS::createData()
 {
 	// Create, randomize and return data
@@ -134,7 +130,6 @@ NeuralTargetGI* NeuralTargetGS::createInstance(NeuralGD* data)
 	return inst;
 };
 
-
 void NeuralTargetGS::render(sf::RenderWindow* window)
 {
 	GenepoolSimulation::render(window);
@@ -142,7 +137,6 @@ void NeuralTargetGS::render(sf::RenderWindow* window)
 	// Draw target
 	window->draw(this->target);
 }
-
 
 void NeuralTargetGS::initGeneration()
 {
@@ -159,7 +153,6 @@ sf::Vector2f NeuralTargetGS::getRandomTargetPos()
 		this->targetRandomCentre.y
 	};
 }
-
 
 sf::Vector2f NeuralTargetGS::getTargetPos() { return this->targetPos; }
 

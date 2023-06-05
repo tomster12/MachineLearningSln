@@ -5,13 +5,8 @@
 #include "NeuralNetwork.h"
 #include "Matrix.h"
 
-
 class VectorListGD : public tbml::GeneticData<VectorListGD>
 {
-private:
-	std::vector<sf::Vector2f> values;
-	int dataSize = 0;
-
 public:
 	VectorListGD() {}
 	VectorListGD(int dataSize);
@@ -25,14 +20,14 @@ public:
 	void mutate(float chance) override;
 	VectorListGD* crossover(VectorListGD* otherData) override;
 	VectorListGD* clone() override;
-};
 
+private:
+	std::vector<sf::Vector2f> values;
+	int dataSize = 0;
+};
 
 class NeuralGD : public tbml::GeneticData<NeuralGD>
 {
-private:
-	tbml::NeuralNetwork network;
-
 public:
 	NeuralGD() {};
 	NeuralGD(std::vector<size_t> layerSizes, float (*activator)(float) = tbml::sigmoid);
@@ -46,4 +41,7 @@ public:
 	void mutate(float chance) override;
 	NeuralGD* crossover(NeuralGD* otherData) override;
 	NeuralGD* clone() override;
+
+private:
+	tbml::NeuralNetwork network;
 };

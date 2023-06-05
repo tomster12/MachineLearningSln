@@ -4,10 +4,20 @@
 #include "GenepoolSimulation.h"
 #include "CommonGeneticDatas.h"
 
-
 class NeuralIceTargetsGS;
 class NeuralIceTargetsGI : public tbml::GeneticInstance<NeuralGD>
 {
+public:
+	NeuralIceTargetsGI(NeuralGD* geneticData) : tbml::GeneticInstance<NeuralGD>(geneticData) {};
+	NeuralIceTargetsGI(NeuralIceTargetsGS* sim, sf::Vector2f startPos, float moveAcc, int maxIterations, NeuralGD* geneticData);
+	void initVisual();
+
+	bool step() override;
+	void render(sf::RenderWindow* window) override;
+
+	float calculateDist();
+	float calculateFitness();
+
 private:
 	NeuralIceTargetsGS* sim = nullptr;
 	sf::CircleShape shape;
@@ -22,34 +32,11 @@ private:
 	int currentIteration = 0;
 	int currentTarget = 0;
 	float anger = 0.0f;
-
-public:
-	NeuralIceTargetsGI(NeuralGD* geneticData) : tbml::GeneticInstance<NeuralGD>(geneticData) {};
-	NeuralIceTargetsGI(NeuralIceTargetsGS* sim, sf::Vector2f startPos, float moveAcc, int maxIterations, NeuralGD* geneticData);
-	void initVisual();
-
-	bool step() override;
-	void render(sf::RenderWindow* window) override;
-
-	float calculateDist();
-	float calculateFitness();
 };
 
 
 class NeuralIceTargetsGS : public tbml::GenepoolSimulation<NeuralGD, NeuralIceTargetsGI>
 {
-protected:
-	std::vector<sf::CircleShape> targetShapes;
-	sf::Vector2f instanceStartPos;
-	float instancemoveAcc = 0.0f;
-	int instancemaxIterations = 0;
-	std::vector<size_t> dataLayerSizes;
-	std::vector<sf::Vector2f> targetPos;
-	float targetRadius = 0.0f;
-
-	NeuralGD* createData() override;
-	NeuralIceTargetsGI* createInstance(NeuralGD* data) override;
-
 public:
 	NeuralIceTargetsGS() {};
 	NeuralIceTargetsGS(
@@ -62,4 +49,16 @@ public:
 	sf::Vector2f getTarget(int index);
 	size_t getTargetCount();
 	float getTargetRadius();
+
+protected:
+	std::vector<sf::CircleShape> targetShapes;
+	sf::Vector2f instanceStartPos;
+	float instancemoveAcc = 0.0f;
+	int instancemaxIterations = 0;
+	std::vector<size_t> dataLayerSizes;
+	std::vector<sf::Vector2f> targetPos;
+	float targetRadius = 0.0f;
+
+	NeuralGD* createData() override;
+	NeuralIceTargetsGI* createInstance(NeuralGD* data) override;
 };

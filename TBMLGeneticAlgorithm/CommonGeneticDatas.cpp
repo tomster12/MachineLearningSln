@@ -3,7 +3,6 @@
 #include "CommonGeneticDatas.h"
 #include "Matrix.h"
 
-
 #pragma region - VectorListGD
 
 VectorListGD::VectorListGD(int dataSize)
@@ -20,13 +19,11 @@ VectorListGD::VectorListGD(std::vector<sf::Vector2f> values)
 	this->values = values;
 }
 
-
 std::vector<sf::Vector2f>& VectorListGD::getValues() { return values; };
 
 sf::Vector2f VectorListGD::getValue(int index) { return this->values[index]; }
 
 size_t VectorListGD::getSize() { return this->dataSize; }
-
 
 void VectorListGD::randomize()
 {
@@ -76,24 +73,24 @@ VectorListGD* VectorListGD::clone()
 
 #pragma endregion
 
-
 #pragma region - NeuralGD
 
 NeuralGD::NeuralGD(std::vector<size_t> layerSizes, float (*activator)(float))
 	: network(layerSizes, activator, false)
 {}
 
+NeuralGD::NeuralGD(std::vector<size_t> layerSizes, float(*activator)(float) sigmoid)
+{}
+
 NeuralGD::NeuralGD(tbml::NeuralNetwork network)
 	: network(network)
 {}
-
 
 tbml::Matrix& NeuralGD::propogate(tbml::Matrix& input) { return this->network.propogate(input); }
 
 float NeuralGD::getCachedOutput(int num) { return this->network.getCachedValue(-1, 0, num); }
 
 void NeuralGD::print() { this->network.printLayers(); }
-
 
 void NeuralGD::randomize() { this->network.randomize(); };
 
@@ -138,9 +135,9 @@ NeuralGD* NeuralGD::crossover(NeuralGD* otherData)
 	for (size_t i = 0; i < weights.size(); i++)
 	{
 		newWeights.push_back(weights[i].ewise(oWeights[i], [](float a, float b)
-		{
-			return tbml::getRandomFloat() < 0.5f ? a : b;
-		}));
+			{
+				return tbml::getRandomFloat() < 0.5f ? a : b;
+			}));
 	}
 
 	// Crossover bias
@@ -150,9 +147,9 @@ NeuralGD* NeuralGD::crossover(NeuralGD* otherData)
 	for (size_t i = 0; i < bias.size(); i++)
 	{
 		newBias.push_back(bias[i].ewise(oBias[i], [](float a, float b)
-		{
-			return tbml::getRandomFloat() < 0.5f ? a : b;
-		}));
+			{
+				return tbml::getRandomFloat() < 0.5f ? a : b;
+			}));
 	}
 
 	// Create new network and return
