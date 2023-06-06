@@ -3,6 +3,7 @@
 #include "SupervisedNetwork.h"
 #include "UtilityFunctions.h"
 #include "Matrix.h"
+#include "ThreadPool.h"
 
 namespace tbml
 {
@@ -14,11 +15,11 @@ namespace tbml
 		: SupervisedNetwork(layerSizes_, activator_, activatorPd_, calcErrSqDiff, calcErrSqDiffPd)
 	{}
 
-	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes_, float (*calcError_)(Matrix, Matrix), Matrix(*calcErrorPd_)(Matrix, Matrix))
+	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes_, float (*calcError_)(const Matrix&, const Matrix&), Matrix(*calcErrorPd_)(const Matrix&, const Matrix&))
 		: SupervisedNetwork(layerSizes_, tanh, tanhPd, calcError_, calcErrorPd_)
 	{}
 
-	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes_, float (*activator_)(float), float (*activatorPd_)(float), float (*calcError_)(Matrix, Matrix), Matrix(*calcErrorPd_)(Matrix, Matrix))
+	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes_, float (*activator_)(float), float (*activatorPd_)(float), float (*calcError_)(const Matrix&, const Matrix&), Matrix(*calcErrorPd_)(const Matrix&, const Matrix&))
 		: NeuralNetwork(layerSizes_, activator_),
 		activatorPd(activatorPd_),
 		calcError(calcError_),
@@ -27,22 +28,14 @@ namespace tbml
 
 	void SupervisedNetwork::train(const Matrix& input, const Matrix& expected, const TrainingConfig& config)
 	{
-		// Setup variables
-		pdWeightsMomentum = std::vector<Matrix>(layerCount);
-		pdBiasMomentum = std::vector<Matrix>(layerCount);
-		int maxEpochs = (config.epochs == -1 && config.errorExit > 0.0f) ? MAX_MAX_ITERATIONS : config.epochs;
-		int epoch = 0;
-		float error = 0.0f;
-
 		// Split input and expected
-		size_t batchCount = 1;
+		size_t batchCount;
 		std::vector<Matrix> splitInput, splitExpected;
 		if (config.batchSize == -1)
 		{
-			splitInput = std::vector<Matrix>(1);
-			splitInput[0] = Matrix(input);
-			splitExpected = std::vector<Matrix>(1);
-			splitExpected[0] = Matrix(expected);
+			splitInput = std::vector<Matrix>({ input });
+			splitExpected = std::vector<Matrix>({ expected });
+			batchCount = 1;
 		}
 		else
 		{
@@ -51,66 +44,50 @@ namespace tbml
 			batchCount = splitInput.size();
 		}
 
-		// Start timer
-		std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
-		std::chrono::steady_clock::time_point tmid = t0;
+		// Setup variables
+		std::mutex updateMutex;
+		std::vector<Matrix> weightsMomentum = std::vector<Matrix>(layerCount);
+		std::vector<Matrix> biasMomentum = std::vector<Matrix>(layerCount);
+		int maxEpochs = (config.epochs == -1 && config.errorExit > 0.0f) ? MAX_MAX_ITERATIONS : config.epochs;
+		int epoch = 0;
 
-		// Loop over and run training
+		// Main timed training loop
+		//ThreadPool threadPool;
+		std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
+		std::chrono::steady_clock::time_point tepoch = t0;
+		std::chrono::steady_clock::time_point tbatch = t0;
 		for (; epoch < maxEpochs; epoch++)
 		{
-			// Forward / backwards propogate for current batch
-			error = 0;
+			float epochError = 0.0f;
+			std::vector<std::future<float>> results(batchCount);
 			for (size_t batch = 0; batch < batchCount; batch++)
 			{
-				// Forward propogation current batch
-				Matrix predicted = propogate(splitInput[batch]);
-				float batchError = calcError(predicted, splitExpected[batch]);
-				error += batchError / batchCount;
-				if (config.logLevel >= 2)
-				{
-					std::chrono::steady_clock::time_point tnow = std::chrono::steady_clock::now();
-					auto us = std::chrono::duration_cast<std::chrono::microseconds>(tnow - tmid);
-					if (batchCount == 1) std::cout << "Epoch: " << epoch << ", epoch time: " << us.count() / 1000 << "ms | Error: " << batchError << std::endl;
-					else std::cout << "Epoch: " << epoch << ", batch: " << batch << ", batch time: " << us.count() / 1000 << "ms | Batch Error: " << batchError << std::endl;
-					tmid = tnow;
-				}
+				const Matrix& input = splitInput[batch];
+				const Matrix& expected = splitExpected[batch];
+				//results[batch] = threadPool.enqueue([=]
+				//{
+				float batchError = trainBatch(input, expected, config, weightsMomentum, biasMomentum, updateMutex);
+				epochError += batchError;
+				std::chrono::steady_clock::time_point tnow = std::chrono::steady_clock::now();
+				auto us = std::chrono::duration_cast<std::chrono::microseconds>(tnow - tbatch);
+				std::cout << "Batch: " << batch << ", batch time: " << us.count() / 1000 << "ms | Batch Error: " << batchError << std::endl;
+				tbatch = tnow;
+				//	return batchError;
+				//});
+			}
+			//for (auto& result : results) epochError += result.get();
 
-				// Backwards propogate using mini-batch gradient descent
-				calculateDerivates(predicted, splitExpected[batch]);
-				for (size_t layer = 0; layer < layerCount - 1; layer++)
-				{
-					// Calculate average derivative for weights / bias
-					Matrix derivativeSum = pdWeightsCache[layer][0];
-					Matrix biasSum = pdBiasCache[layer][0];
-					for (size_t input = 1; input < predicted.getRows(); input++)
-					{
-						derivativeSum.iadd(pdWeightsCache[layer][input]);
-						biasSum.iadd(pdBiasCache[layer][input]);
-					}
-					derivativeSum.iscale(-config.learningRate / predicted.getRows());
-					biasSum.iscale(-config.learningRate / predicted.getRows());
-
-					// Add momentum to weight / bias delta
-					if (epoch > 0 || batch > 0)
-					{
-						pdWeightsMomentum[layer].iscale(config.momentumRate);
-						pdBiasMomentum[layer].iscale(config.momentumRate);
-						derivativeSum.iadd(pdWeightsMomentum[layer]);
-						biasSum.iadd(pdBiasMomentum[layer]);
-					}
-
-					// Update weights / bias / momentum
-					weights[layer].iadd(derivativeSum);
-					bias[layer].iadd(biasSum);
-
-					pdWeightsMomentum[layer] = derivativeSum;
-					pdBiasMomentum[layer] = biasSum;
-				}
+			// Log curret epoch
+			if (config.logLevel >= 2)
+			{
+				std::chrono::steady_clock::time_point tnow = std::chrono::steady_clock::now();
+				auto us = std::chrono::duration_cast<std::chrono::microseconds>(tnow - tepoch);
+				std::cout << "Epoch: " << epoch << ", epoch time: " << us.count() / 1000 << "ms | Epoch Error: " << epochError << std::endl;
+				tepoch = tnow;
 			}
 
 			// Exit early if error below certain amount
-			if (config.logLevel >= 2 && batchCount != 1) std::cout << "Epoch Error: " << error << std::endl;
-			if (error < config.errorExit) { epoch++; break; }
+			if (epochError < config.errorExit) { epoch++; break; }
 		}
 
 		// Print training outcome
@@ -120,46 +97,95 @@ namespace tbml
 			auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0);
 			std::cout << std::endl << "-- Finished training --" << std::endl;
 			std::cout << "Epochs: " << epoch << std::endl;
-			std::cout << "Average Error: " << error << std::endl;
 			std::cout << "Time taken: " << us.count() / 1000 << "ms" << std::endl << std::endl;
 		}
 	}
 
-	void SupervisedNetwork::calculateDerivates(Matrix& predicted, Matrix& expected)
+	float SupervisedNetwork::trainBatch(const Matrix& input, const Matrix& expected, const TrainingConfig& config, std::vector<Matrix>& weightsMomentum, std::vector<Matrix>& biasMomentum, std::mutex& updateMutex)
 	{
-		// Reinitialize partial derivative caches
-		pdOutCache = Matrix(); // row = input, column = neuron
-		if (pdWeightsCache.size() != layerCount - 1)
+		// Forward propogation current batch
+		PropogateCache predictedCache;
+		propogate(input, predictedCache);
+
+		// Backwards propogate using mini-batch gradient descent
+		BackpropogateCache backpropogateCache;
+		backpropogate(expected, predictedCache, backpropogateCache);
+
+		// Update weights and biases for each layer
+		for (size_t layer = 0; layer < layerCount - 1; layer++)
 		{
-			pdNeuronInCache = std::vector<Matrix>(layerCount); // element = layer, row = input, column = neuron
-			pdWeightsCache = std::vector<std::vector<Matrix>>(layerCount - 1); // element^1 = layer, element^2 = input, matrix = weights
-			pdBiasCache = std::vector<std::vector<Matrix>>(layerCount - 1); // element^1 = layer, element^2 = input, matrix = weights
+			// Calculate scaled average of derivatives
+			Matrix derivativeDelta = backpropogateCache.pdWeights[layer][0];
+			Matrix biasDelta = backpropogateCache.pdBias[layer][0];
+			for (size_t input = 1; input < backpropogateCache.pdWeights[layer].size(); input++)
+			{
+				derivativeDelta.iadd(backpropogateCache.pdWeights[layer][input]);
+				biasDelta.iadd(backpropogateCache.pdBias[layer][input]);
+			}
+			derivativeDelta.iscale(-config.learningRate / backpropogateCache.pdWeights[layer].size());
+			biasDelta.iscale(-config.learningRate / backpropogateCache.pdWeights[layer].size());
+
+			// Carry forward momentum
+			{
+				std::lock_guard<std::mutex> guard(updateMutex);
+
+				if (!weightsMomentum[layer].getEmpty())
+				{
+					weightsMomentum[layer].iscale(config.momentumRate);
+					biasMomentum[layer].iscale(config.momentumRate);
+					derivativeDelta.iadd(weightsMomentum[layer]);
+					biasDelta.iadd(biasMomentum[layer]);
+				}
+				weightsMomentum[layer] = derivativeDelta;
+				biasMomentum[layer] = biasDelta;
+				weights[layer].iadd(derivativeDelta);
+				bias[layer].iadd(biasDelta);
+			}
+		}
+
+		// Return error
+		return calcError(predictedCache.neuronOutput[layerCount - 1], expected);
+	}
+
+	void SupervisedNetwork::backpropogate(const Matrix& expected, const PropogateCache& predictedCache, BackpropogateCache& backpropgateCache) const
+	{
+		// Reinitialize cache
+		backpropgateCache.pdOut = Matrix(); // row = input, column = neuron
+		if (backpropgateCache.pdWeights.size() != layerCount - 1)
+		{
+			backpropgateCache.pdNeuronOut = std::vector<Matrix>(layerCount); // element = layer, row = input, column = neuron
+			backpropgateCache.pdNeuronIn = std::vector<Matrix>(layerCount); // element = layer, row = input, column = neuron
+			backpropgateCache.pdWeights = std::vector<std::vector<Matrix>>(layerCount - 1); // element^1 = layer, element^2 = input, matrix = weights
+			backpropgateCache.pdBias = std::vector<std::vector<Matrix>>(layerCount - 1); // element^1 = layer, element^2 = input, matrix = weights
 		}
 		else
 		{
-			for (size_t i = 0; i < layerCount; i++) pdNeuronInCache[i].clear();
+			for (size_t i = 0; i < layerCount; i++)
+			{
+				backpropgateCache.pdNeuronOut[i].clear();
+				backpropgateCache.pdNeuronIn[i].clear();
+			}
 		}
 
 		// Partial derivative of error w.r.t. to neuron out
 		// (δE / δoⱼ) = (δE / δy)
-		pdOutCache = calcErrorPd(predicted, expected);
+		backpropgateCache.pdNeuronOut[layerCount - 1] = calcErrorPd(predictedCache.neuronOutput[layerCount - 1], expected);
 
 		// Partial derivative of error w.r.t. to weight
 		// (δE / δWᵢⱼ) = (δE / δnetⱼ) * (δnetⱼ / δWᵢⱼ)
 		// - Loop over layers
 		for (size_t layer = 0; layer < layerCount - 1; layer++)
 		{
-			calculatePdErrorToIn(layer + 1);
-			Matrix& neuronOut = neuronOutCache[layer];
-			Matrix& pdNeuronIn = pdNeuronInCache[layer + 1];
+			calculatePdErrorToIn(layer + 1, predictedCache, backpropgateCache);
+			const Matrix& neuronOut = predictedCache.neuronOutput[layer];
+			Matrix& pdNeuronIn = backpropgateCache.pdNeuronIn[layer + 1];
 
 			// - Loop over each input
 			size_t inputCount = expected.getRows();
-			if (pdWeightsCache[layer].size() != inputCount) pdWeightsCache[layer] = std::vector<Matrix>(inputCount);
-			if (pdBiasCache[layer].size() != inputCount) pdBiasCache[layer] = std::vector<Matrix>(inputCount);
+			if (backpropgateCache.pdWeights[layer].size() != inputCount) backpropgateCache.pdWeights[layer] = std::vector<Matrix>(inputCount);
+			if (backpropgateCache.pdBias[layer].size() != inputCount) backpropgateCache.pdBias[layer] = std::vector<Matrix>(inputCount);
 			for (size_t input = 0; input < expected.getRows(); input++)
 			{
-
 				// - Calculate weight derivatives
 				std::vector<std::vector<float>> pdWeightData = std::vector<std::vector<float>>(layerSizes[layer]);
 				for (size_t row = 0; row < layerSizes[layer]; row++)
@@ -171,7 +197,7 @@ namespace tbml
 						pdWeightData[row][col] = val;
 					}
 				}
-				pdWeightsCache[layer][input] = Matrix(pdWeightData);
+				backpropgateCache.pdWeights[layer][input] = Matrix(pdWeightData);
 
 				// - Calculate bias derivatives
 				std::vector<std::vector<float>> pdBiasData = std::vector<std::vector<float>>(1);
@@ -181,37 +207,41 @@ namespace tbml
 					float val = pdNeuronIn.get(input, col);
 					pdBiasData[0][col] = val;
 				}
-				pdBiasCache[layer][input] = Matrix(pdBiasData);
+				backpropgateCache.pdBias[layer][input] = Matrix(pdBiasData);
 			}
 		}
 	}
 
-	void SupervisedNetwork::calculatePdErrorToIn(size_t layer)
+	void SupervisedNetwork::calculatePdErrorToIn(size_t layer, const PropogateCache& predictedCache, BackpropogateCache& backpropgateCache) const
 	{
 		// Already calculated
-		if (!pdNeuronInCache[layer].getEmpty()) return;
+		if (!backpropgateCache.pdNeuronIn[layer].getEmpty()) return;
 
 		// Partial derivative of error w.r.t. to neuron in
 		// (δE / δnetⱼ) = (δE / δoⱼ) * (δoⱼ / δnetᵢⱼ)
-		Matrix pdToOut = calculatePdErrorToOut(layer);
-		Matrix pdToIn = neuronOutCache[layer].map(activatorPd);
-		pdNeuronInCache[layer] = *pdToOut.itimes(pdToIn);
+		calculatePdErrorToOut(layer, predictedCache, backpropgateCache);
+		Matrix& pdToOut = backpropgateCache.pdNeuronOut[layer];
+		Matrix pdToIn = predictedCache.neuronOutput[layer].map(activatorPd);
+		pdToIn.itimes(pdToOut);
+		backpropgateCache.pdNeuronIn[layer] = pdToIn;
 	}
 
-	Matrix SupervisedNetwork::calculatePdErrorToOut(size_t layer)
+	void SupervisedNetwork::calculatePdErrorToOut(size_t layer, const PropogateCache& predictedCache, BackpropogateCache& backpropgateCache) const
 	{
-		// Last layer derivative of error
-		// (δE / δoⱼ) = (δE / δy)
-		if (layer == layerCount - 1) return pdOutCache;
+		// Already calculated
+		if (!backpropgateCache.pdNeuronOut[layer].getEmpty()) return;
 
 		// Start / middle layer derivative of activator
 		// (δE / δoⱼ) = Σ(δWᵢⱼ * δₗ)
-		else
+		else if (layer < layerCount - 1)
 		{
-			calculatePdErrorToIn(layer + 1);
+			calculatePdErrorToIn(layer + 1, predictedCache, backpropgateCache);
 			Matrix wt = weights[layer].transpose();
-			return pdNeuronInCache[layer + 1].cross(wt);
+			backpropgateCache.pdNeuronOut[layer] = backpropgateCache.pdNeuronIn[layer + 1].cross(wt);
 		}
+
+		// Last layer derivative should already be calculated
+		else throw std::exception("calculatePdErrorToOut() for last layer should already be calculated.");
 	}
 }
 
@@ -224,7 +254,6 @@ namespace tbml
 // Layer Sizes:  2, 4, 1
 // Bias:		 True
 // Data Count:	 3
-// 
 // 
 // - Data Layout -
 // 
@@ -262,7 +291,7 @@ namespace tbml
 // 
 // (δE / δWᵢⱼ)		= (δE / δoⱼ) * (δoⱼ / δnetⱼ) * (δnetⱼ / δWᵢⱼ)
 // 
-// pdErrorToWeight	= pdErrorToIn  * pdInToWeight
+// pdErrorToWeight	= pdErrorToIn * pdInToWeight
 // (δE / δWᵢⱼ)		= (δE / δnetⱼ) * (δnetⱼ / δWᵢⱼ)
 //					= (δE / δnetⱼ) * Out[j]
 // 
@@ -282,7 +311,6 @@ namespace tbml
 // Error
 // E(y)				= 1/2 * Σ(t - y) ^ 2
 //
-// 
 // -- Gradient Descent --
 // 
 // weight += derivative * learningRate

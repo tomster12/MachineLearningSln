@@ -33,8 +33,7 @@ public:
 	NeuralGD(std::vector<size_t> layerSizes, float (*activator)(float) = tbml::sigmoid);
 	NeuralGD(tbml::NeuralNetwork network);
 
-	tbml::Matrix& propogate(tbml::Matrix& input);
-	float getCachedOutput(int num);
+	tbml::Matrix propogate(tbml::Matrix& input);
 	void print();
 
 	void randomize() override;

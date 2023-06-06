@@ -3,6 +3,7 @@
 
 namespace tbml
 {
+	class Matrix;
 	class Matrix
 	{
 	public:
@@ -12,30 +13,30 @@ namespace tbml
 		void resize(size_t rows_, size_t cols_);
 		void clear();
 
-		Matrix cross(Matrix& other);
-		Matrix* icross(Matrix& other);
-		Matrix transpose();
+		Matrix cross(const Matrix& other) const;
+		Matrix* icross(const Matrix& other);
+		Matrix transpose() const;
 		Matrix* itranspose();
 
-		float acc(float (*func)(float, float), float initial);
-		Matrix map(float (*func)(float));
+		float acc(float (*func)(float, float), float initial) const;
+		Matrix map(float (*func)(float)) const;
 		Matrix* imap(float (*func)(float));
-		Matrix ewise(Matrix& other, float (*func)(float, float));
-		Matrix* iewise(Matrix& other, float (*func)(float, float));
+		Matrix ewise(const Matrix& other, float (*func)(float, float)) const;
+		Matrix* iewise(const Matrix& other, float (*func)(float, float));
 
-		Matrix scale(float val);
+		Matrix scale(float val) const;
 		Matrix* iscale(float val);
-		Matrix add(Matrix& other);
-		Matrix* iadd(Matrix& other);
-		Matrix sub(Matrix& other);
-		Matrix* isub(Matrix& other);
-		Matrix times(Matrix& other);
-		Matrix* itimes(Matrix& other);
-		Matrix div(Matrix& other);
-		Matrix* idiv(Matrix& other);
+		Matrix add(const Matrix& other) const;
+		Matrix* iadd(const Matrix& other);
+		Matrix sub(const Matrix& other) const;
+		Matrix* isub(const Matrix& other);
+		Matrix times(const Matrix& other) const;
+		Matrix* itimes(const Matrix& other);
+		Matrix div(const Matrix& other) const;
+		Matrix* idiv(const Matrix& other);
 
-		void printValues(std::string tag = "Matrix:");
-		void printDims(std::string tag = "Dimensions: ");
+		void printValues(std::string tag = "Matrix:") const;
+		void printDims(std::string tag = "Dimensions: ") const;
 
 		std::vector<Matrix> splitRows(size_t splitSize) const;
 		std::vector<std::vector<float>>& getData();

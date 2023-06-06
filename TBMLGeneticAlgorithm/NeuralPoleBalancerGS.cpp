@@ -44,8 +44,8 @@ bool NeuralPoleBalancerGI::step()
 	netInput.set(0, 1, cartAcceleration);
 	netInput.set(0, 2, poleAngle);
 	netInput.set(0, 3, poleAcceleration);
-	this->geneticData->propogate(netInput);
-	float ft = this->geneticData->getCachedOutput(0) > 0.5f ? force : -force;
+	tbml::Matrix output = this->geneticData->propogate(netInput);
+	float ft = output.get(0, 0) > 0.5f ? force : -force;
 
 	// Update cart
 	cartAcceleration = (ft + poleMass * poleLength * (poleVelocity * poleVelocity * sin(poleAngle) - poleAcceleration * cos(poleAngle))) / (cartMass + poleMass);

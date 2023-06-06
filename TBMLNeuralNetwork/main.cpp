@@ -7,15 +7,17 @@
 #include "UtilityFunctions.h"
 #include "SupervisedNetwork.h"
 #include "MNIST.h"
+#include "ThreadPool.h"
 
 void testBasic();
 void testTime();
+void testTimeThreaded();
 void testBackprop();
 void testMNIST();
 
 int main()
 {
-	testTime();
+	testMNIST();
 	return 0;
 }
 
@@ -37,16 +39,53 @@ void testTime()
 	// Create network and inputs
 	tbml::NeuralNetwork network(std::vector<size_t>({ 8, 8, 8, 1 }));
 	tbml::Matrix input = tbml::Matrix({ { 1, 0, -1, 0.2f, 0.7f, -0.3f, -1, -1 } });
-	size_t epoch = 3'000'000;
+	size_t epoch = 10'000'000;
 
 	// Number of epochs propogation timing
 	// -----------
 	// Release x86	1'000'000   ~1100ms
 	// Release x86	1'000'000   ~600ms		Change to vector subscript from push_back
-	// Release x86	3'000'000   ~1850ms
+	// Release x86	3'000'000   ~1900ms
+	// Release x86	3'000'000   ~1780ms		Update where icross initialises matrix
+	// Release x86	3'000'000   ~1370ms		(Reverted) Make icross storage matrix static (cannot const or thread)
+	// Release x86	10'000'000	~6000ms
 	// -----------
 	std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
-	for (size_t i = 0; i < epoch; i++) network.propogate(input);
+	tbml::PropogateCache cache;
+	for (size_t i = 0; i < epoch; i++) network.propogate(input, cache);
+	std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+	auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0);
+
+	// Print output
+	network.printLayers();
+	input.printValues("Input: ");
+	std::cout << std::endl << "Epochs: " << epoch << std::endl;
+	std::cout << "Time taken: " << us.count() / 1000.0f << "ms" << std::endl;
+}
+
+void testTimeThreaded()
+{
+	// Create network and inputs
+	tbml::NeuralNetwork network(std::vector<size_t>({ 8, 8, 8, 1 }));
+	tbml::Matrix input = tbml::Matrix({ { 1, 0, -1, 0.2f, 0.7f, -0.3f, -1, -1 } });
+	size_t epoch = 50'000'000;
+
+	// Number of epochs propogation timing
+	// -----------
+	// Release x86	50'000'000   ~6500ms
+	// -----------
+	std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
+	ThreadPool threadPool;
+	std::vector<std::future<void>> results(threadPool.size());
+	const size_t count = epoch / threadPool.size();
+	for (size_t i = 0; i < threadPool.size(); i++)
+	{
+		results[i] = threadPool.enqueue([=]
+		{
+			for (size_t o = 0; o < count; o++) network.propogate(input);
+		});
+	}
+	for (auto&& result : results) result.get();
 	std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 	auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0);
 
@@ -115,6 +154,7 @@ void testMNIST()
 	// Batch size to time timing
 	// -----------
 	// Release x86	128	~90ms 
+	// Release x86	128	~65ms	Slight icross improvements
 	// -----------
 	// For this to work in reasonable time will need:
 	//	- GPU Parallelism

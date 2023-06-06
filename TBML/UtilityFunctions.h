@@ -16,8 +16,8 @@ namespace tbml
 	//float softmax(float x);
 	//float softmaxPd(float x);
 
-	float calcErrSqDiff(Matrix predicted, Matrix expected);
-	Matrix calcErrSqDiffPd(Matrix predicted, Matrix expected);
+	float calcErrSqDiff(const Matrix& predicted, const Matrix& expected);
+	Matrix calcErrSqDiffPd(const Matrix& predicted, const Matrix& expected);
 
 	float getRandomFloat();
 }

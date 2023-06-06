@@ -35,27 +35,35 @@ namespace tbml
 		for (auto& layer : this->weights)
 		{
 			layer.imap([](float v)
-				{
-					return -1.0f + 2.0f * getRandomFloat();
-				});
+			{
+				return -1.0f + 2.0f * getRandomFloat();
+			});
 		}
 
 		// Randomize all bias
 		for (auto& layer : this->bias)
 		{
 			layer.imap([](float v)
-				{
-					return -1.0f + 2.0f * getRandomFloat();
-				});
+			{
+				return -1.0f + 2.0f * getRandomFloat();
+			});
 		}
 	}
 
-	Matrix& NeuralNetwork::propogate(Matrix& input)
+	Matrix NeuralNetwork::propogate(const Matrix& input) const
+	{
+		// Propogate and return last layer
+		PropogateCache cache;
+		propogate(input, cache);
+		return cache.neuronOutput[layerCount - 1];
+	}
+
+	void NeuralNetwork::propogate(const Matrix& input, PropogateCache& cache) const
 	{
 		// Intialize previous neuron outputs with current
-		if (neuronOutCache.size() != layerCount) neuronOutCache = std::vector<Matrix>(layerCount);
+		if (cache.neuronOutput.size() != layerCount) cache.neuronOutput.resize(layerCount);
 		Matrix current = input;
-		neuronOutCache[0] = current;
+		cache.neuronOutput[0] = current;
 
 		// Run current through weight layers
 		for (size_t layer = 0; layer < weights.size(); layer++)
@@ -63,14 +71,11 @@ namespace tbml
 			current.icross(weights[layer]);
 			current.iadd(bias[layer]); // Adds (1 x n) bias to each row of the (m x n) neuron values
 			current.imap(activator);
-			neuronOutCache[layer + 1] = current;
+			cache.neuronOutput[layer + 1] = current;
 		}
-
-		// Return final layer values
-		return neuronOutCache[layerCount - 1];
 	}
 
-	void NeuralNetwork::printLayers()
+	void NeuralNetwork::printLayers() const
 	{
 		// Print layer / bias values
 		std::cout << "\nLayers\n------" << std::endl;
@@ -82,11 +87,13 @@ namespace tbml
 		std::cout << "------\n" << std::endl;
 	}
 
-	float NeuralNetwork::getCachedValue(int layer, int row, int col) { return neuronOutCache[(layer + layerCount) % layerCount].get(row, col); }
-
 	std::vector<Matrix>& NeuralNetwork::getWeights() { return weights; }
 
 	std::vector<Matrix>& NeuralNetwork::getBias() { return bias; }
 
-	afptr NeuralNetwork::getActivator() { return activator; }
+	afptr NeuralNetwork::getActivator() const { return activator; }
+
+	size_t NeuralNetwork::getLayerCount() const { return layerCount; }
+
+	std::vector<size_t> NeuralNetwork::getLayerSizes() const { return layerSizes; }
 }

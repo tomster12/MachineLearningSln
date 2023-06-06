@@ -53,39 +53,34 @@ namespace tbml
 
 #pragma region Arithmetic
 
-	Matrix Matrix::cross(Matrix& other)
+	Matrix Matrix::cross(const Matrix& other) const
 	{
-		// Check compatibility
-		size_t oRows = other.getRows();
-		size_t oCols = other.getCols();
-		std::vector<std::vector<float>>& oData = other.getData();
-		if (cols != oRows) throw std::invalid_argument("Matrix dimensions do not match.");
-
 		// Create new matrix and inplace cross with other
 		Matrix newMatrix = *this;
 		newMatrix.icross(other);
 		return newMatrix;
 	}
 
-	Matrix* Matrix::icross(Matrix& other)
+	Matrix* Matrix::icross(const Matrix& other)
 	{
-		// Check compatibility
 		size_t oRows = other.getRows();
 		size_t oCols = other.getCols();
-		std::vector<std::vector<float>>& oData = other.getData();
-		if (cols != oRows) throw std::invalid_argument("Matrix dimensions do not match.");
+
+		// Massive speedup but cannot parrellelise or const
+		// static std::vector<float> calcRow(oCols);
+		//if (calcRow.size() != oCols) calcRow.resize(oCols);
 
 		// Inplace cross with other
+		std::vector<float> calcRow(oCols);
 		for (size_t row = 0; row < rows; row++)
 		{
-			std::vector<float> newRow(oCols);
 			for (size_t oCol = 0; oCol < oCols; oCol++)
 			{
 				float sum = 0;
-				for (size_t i = 0; i < cols; i++) sum += data[row][i] * oData[i][oCol];
-				newRow[oCol] = sum;
+				for (size_t i = 0; i < cols; i++) sum += data[row][i] * other.get(i, oCol);
+				calcRow[oCol] = sum;
 			}
-			data[row] = newRow;
+			data[row] = calcRow;
 		}
 
 		// Update variables and return
@@ -94,7 +89,7 @@ namespace tbml
 		return this;
 	}
 
-	Matrix Matrix::transpose()
+	Matrix Matrix::transpose() const
 	{
 		// Create new matrix and inplace tranpose
 		Matrix newMatrix = *this;
@@ -124,7 +119,7 @@ namespace tbml
 		return this;
 	}
 
-	float Matrix::acc(float (*func)(float, float), float initial)
+	float Matrix::acc(float (*func)(float, float), float initial) const
 	{
 		// Apply function to each element in matrix
 		float current = initial;
@@ -138,7 +133,7 @@ namespace tbml
 		return current;
 	}
 
-	Matrix Matrix::map(float (*func)(float))
+	Matrix Matrix::map(float (*func)(float)) const
 	{
 		// Create new matrix and inplace map
 		Matrix newMatrix = *this;
@@ -159,7 +154,7 @@ namespace tbml
 		return this;
 	}
 
-	Matrix Matrix::ewise(Matrix& other, float (*func)(float, float))
+	Matrix Matrix::ewise(const Matrix& other, float (*func)(float, float)) const
 	{
 		// Create new matrix and inplace map
 		Matrix newMatrix = *this;
@@ -167,12 +162,10 @@ namespace tbml
 		return newMatrix;
 	}
 
-	Matrix* Matrix::iewise(Matrix& other, float (*func)(float, float))
+	Matrix* Matrix::iewise(const Matrix& other, float (*func)(float, float))
 	{
-		// Get variables
 		size_t oRows = other.getRows();
 		size_t oCols = other.getCols();
-		std::vector<std::vector<float>>& oData = other.getData();
 
 		// Inplace add to other matrix
 		for (size_t row = 0; row < rows; row++)
@@ -180,14 +173,14 @@ namespace tbml
 			for (size_t col = 0; col < cols; col++)
 			{
 				float value = data[row][col];
-				float oValue = oData[row < oRows ? row : oRows - 1][col < oCols ? col : oCols - 1];
+				float oValue = other.get(row < oRows ? row : oRows - 1, col < oCols ? col : oCols - 1);
 				data[row][col] = func(value, oValue);
 			}
 		}
 		return this;
 	}
 
-	Matrix Matrix::scale(float val)
+	Matrix Matrix::scale(float val) const
 	{
 		// Create new matrix and inplace scale
 		Matrix newMatrix = *this;
@@ -208,27 +201,27 @@ namespace tbml
 		return this;
 	}
 
-	Matrix Matrix::sub(Matrix& other) { return ewise(other, [](float x, float y) { return x - y; }); }
+	Matrix Matrix::sub(const Matrix& other) const { return ewise(other, [](float x, float y) { return x - y; }); }
 
-	Matrix* Matrix::isub(Matrix& other) { return iewise(other, [](float x, float y) { return x - y; }); }
+	Matrix* Matrix::isub(const Matrix& other) { return iewise(other, [](float x, float y) { return x - y; }); }
 
-	Matrix Matrix::add(Matrix& other) { return ewise(other, [](float x, float y) { return x + y; }); }
+	Matrix Matrix::add(const Matrix& other) const { return ewise(other, [](float x, float y) { return x + y; }); }
 
-	Matrix* Matrix::iadd(Matrix& other) { return iewise(other, [](float x, float y) { return x + y; }); }
+	Matrix* Matrix::iadd(const Matrix& other) { return iewise(other, [](float x, float y) { return x + y; }); }
 
-	Matrix Matrix::times(Matrix& other) { return ewise(other, [](float x, float y) { return x * y; }); }
+	Matrix Matrix::times(const Matrix& other) const { return ewise(other, [](float x, float y) { return x * y; }); }
 
-	Matrix* Matrix::itimes(Matrix& other) { return iewise(other, [](float x, float y) { return x * y; }); }
+	Matrix* Matrix::itimes(const Matrix& other) { return iewise(other, [](float x, float y) { return x * y; }); }
 
-	Matrix Matrix::div(Matrix& other) { return ewise(other, [](float x, float y) { return x / y; }); }
+	Matrix Matrix::div(const Matrix& other) const { return ewise(other, [](float x, float y) { return x / y; }); }
 
-	Matrix* Matrix::idiv(Matrix& other) { return iewise(other, [](float x, float y) { return x / y; }); }
+	Matrix* Matrix::idiv(const Matrix& other) { return iewise(other, [](float x, float y) { return x / y; }); }
 
 #pragma endregion
 
 #pragma region Main
 
-	void Matrix::printValues(std::string tag)
+	void Matrix::printValues(std::string tag) const
 	{
 		// Print each layers values
 		std::cout << tag << std::endl;
@@ -245,7 +238,7 @@ namespace tbml
 		std::cout << std::endl;
 	}
 
-	void Matrix::printDims(std::string tag)
+	void Matrix::printDims(std::string tag) const
 	{
 		// Print dimensions
 		std::cout << tag << rows << " x " << cols << std::endl;
@@ -283,19 +276,9 @@ namespace tbml
 
 	size_t Matrix::getCols() const { return cols; }
 
-	float Matrix::get(size_t row, size_t col) const
-	{
-		// Return data, and check if indices are inbound
-		if (row >= 0 && col >= 0 && row < rows && col < cols) return data[row][col];
-		else throw std::invalid_argument("Index out of range.");
-	}
+	float Matrix::get(size_t row, size_t col) const { return data[row][col]; }
 
-	void Matrix::set(size_t row, size_t col, float val)
-	{
-		// Set data, and check if indices are inbound
-		if (row >= 0 && col >= 0 && row < rows && col < cols) data[row][col] = val;
-		else throw std::invalid_argument("Index out of range.");
-	}
+	void Matrix::set(size_t row, size_t col, float val) { data[row][col] = val; }
 
 	bool Matrix::getEmpty() const { return rows == 0 || cols == 0; }
 

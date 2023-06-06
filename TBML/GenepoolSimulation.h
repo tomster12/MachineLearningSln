@@ -4,7 +4,6 @@
 #include "UtilityFunctions.h"
 #include "ThreadPool.h"
 
-
 namespace tbml
 {
 	class IGenepoolSimulation
@@ -29,7 +28,6 @@ namespace tbml
 		virtual void setAutoProcess(bool autoProcess) = 0;
 	};
 
-
 	template<class D> // D: GeneticData<D>
 	class GeneticData
 	{
@@ -39,7 +37,6 @@ namespace tbml
 		virtual D* crossover(D* data) = 0;
 		virtual D* clone() = 0;
 	};
-
 
 	template<class D> // D: GeneticData<D>
 	class GeneticInstance
@@ -60,7 +57,6 @@ namespace tbml
 		bool getFinished() { return this->instanceFinished; };
 		float getFitness() { return this->instanceFitness; };
 	};
-
 
 	template<class D, class I> // D: GeneticData<D>, I: GeneticInstance<D>
 	class GenepoolSimulation : public IGenepoolSimulation
@@ -85,7 +81,6 @@ namespace tbml
 		D* bestCurrentData;
 		float bestCurrentFitness;
 
-
 		virtual D* createData()
 		{
 			// Create, randomize and return data
@@ -100,7 +95,6 @@ namespace tbml
 			I* inst = new I(data);
 			return inst;
 		}
-
 
 	public:
 		GenepoolSimulation(bool linkedSteps = false, bool enableMultithreadedStep = false, bool enableMultithreadedProcess = true)
@@ -130,7 +124,6 @@ namespace tbml
 			}
 		}
 
-
 		void update()
 		{
 			if (!this->isInitialized) throw std::runtime_error("tbml::GenepoolSimulation: Cannot update because uninitialized.");
@@ -149,7 +142,6 @@ namespace tbml
 			// Render all instances
 			for (auto inst : currentGeneration) inst->render(window);
 		};
-
 
 		void restartGenepool(int generationCount, float mutationRate)
 		{
@@ -216,7 +208,10 @@ namespace tbml
 			}
 
 			// Step entire generation without multithreading
-			else allFinished = stepSubset(this->currentGeneration);
+			else
+			{
+				allFinished = stepSubset(this->currentGeneration);
+			}
 
 			// Once all finished update variables
 			this->generationStep++;
@@ -349,13 +344,11 @@ namespace tbml
 			if (this->autoStep) setStepping(true);
 		};
 
-
 		bool getAutoStep() { return this->autoStep; };
 
 		bool getAutoFinish() { return this->autoFinish; };
 
 		bool getAutoProcess() { return this->autoProcess; };
-
 
 		void setStepping(bool isStepping) { if (!this->isFinished) this->isStepping = isStepping; }
 

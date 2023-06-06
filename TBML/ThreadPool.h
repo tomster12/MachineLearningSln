@@ -31,29 +31,28 @@ public:
 		for (size_t i = 0; i < threads; ++i)
 		{
 			workers.emplace_back([this]
+			{
+				// Run indefinetly
+				for (;;)
 				{
-					// Run indefinetly
-					for (;;)
+					std::function<void()> task;
+
+					// Lock the queue, and take top task
 					{
-						std::function<void()> task;
-
-						// Lock the queue, and take top task
-						{
-							std::unique_lock<std::mutex> lock(this->queueMutex);
-							this->condition.wait(lock,
-								[this] { return this->stop || !this->tasks.empty(); });
-							if (this->stop && this->tasks.empty()) return;
-							task = std::move(this->tasks.front());
-							this->tasks.pop();
-						}
-
-						// Run task
-						task();
+						std::unique_lock<std::mutex> lock(this->queueMutex);
+						this->condition.wait(lock,
+							[this] { return this->stop || !this->tasks.empty(); });
+						if (this->stop && this->tasks.empty()) return;
+						task = std::move(this->tasks.front());
+						this->tasks.pop();
 					}
-				});
+
+					// Run task
+					task();
+				}
+			});
 		}
 	}
-
 
 	~ThreadPool()
 	{
@@ -67,7 +66,6 @@ public:
 		condition.notify_all();
 		for (std::thread& worker : workers) worker.join();
 	}
-
 
 	template<class F, class... Args>
 	auto enqueue(F&& f, Args&&... args)
@@ -94,7 +92,6 @@ public:
 		condition.notify_one();
 		return res;
 	}
-
 
 	size_t size() const { return threads; }
 };

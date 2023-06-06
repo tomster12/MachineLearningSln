@@ -79,16 +79,11 @@ NeuralGD::NeuralGD(std::vector<size_t> layerSizes, float (*activator)(float))
 	: network(layerSizes, activator, false)
 {}
 
-NeuralGD::NeuralGD(std::vector<size_t> layerSizes, float(*activator)(float) sigmoid)
-{}
-
 NeuralGD::NeuralGD(tbml::NeuralNetwork network)
 	: network(network)
 {}
 
-tbml::Matrix& NeuralGD::propogate(tbml::Matrix& input) { return this->network.propogate(input); }
-
-float NeuralGD::getCachedOutput(int num) { return this->network.getCachedValue(-1, 0, num); }
+tbml::Matrix NeuralGD::propogate(tbml::Matrix& input) { return this->network.propogate(input); }
 
 void NeuralGD::print() { this->network.printLayers(); }
 
@@ -135,9 +130,9 @@ NeuralGD* NeuralGD::crossover(NeuralGD* otherData)
 	for (size_t i = 0; i < weights.size(); i++)
 	{
 		newWeights.push_back(weights[i].ewise(oWeights[i], [](float a, float b)
-			{
-				return tbml::getRandomFloat() < 0.5f ? a : b;
-			}));
+		{
+			return tbml::getRandomFloat() < 0.5f ? a : b;
+		}));
 	}
 
 	// Crossover bias
@@ -147,9 +142,9 @@ NeuralGD* NeuralGD::crossover(NeuralGD* otherData)
 	for (size_t i = 0; i < bias.size(); i++)
 	{
 		newBias.push_back(bias[i].ewise(oBias[i], [](float a, float b)
-			{
-				return tbml::getRandomFloat() < 0.5f ? a : b;
-			}));
+		{
+			return tbml::getRandomFloat() < 0.5f ? a : b;
+		}));
 	}
 
 	// Create new network and return

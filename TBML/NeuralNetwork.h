@@ -6,6 +6,11 @@
 
 namespace tbml
 {
+	struct PropogateCache
+	{
+		std::vector<Matrix> neuronOutput;
+	};
+
 	typedef float (*afptr)(float);
 
 	class NeuralNetwork
@@ -16,13 +21,15 @@ namespace tbml
 		NeuralNetwork(std::vector<Matrix> weights, std::vector<Matrix> bias, float (*activator)(float) = tbml::sigmoid);
 
 		void randomize();
-		Matrix& propogate(Matrix& input);
-		void printLayers();
+		Matrix propogate(const Matrix& input) const;
+		void propogate(const Matrix& input, PropogateCache& cache) const;
+		void printLayers() const;
 
-		float getCachedValue(int layer, int row, int col);
 		std::vector<Matrix>& getWeights();
 		std::vector<Matrix>& getBias();
-		afptr getActivator();
+		afptr getActivator() const;
+		size_t getLayerCount() const;
+		std::vector<size_t> getLayerSizes() const;
 
 	protected:
 		size_t layerCount;
@@ -30,6 +37,5 @@ namespace tbml
 		std::vector<Matrix> weights;
 		std::vector<Matrix> bias;
 		float (*activator)(float);
-		std::vector<Matrix> neuronOutCache;
 	};
 }
