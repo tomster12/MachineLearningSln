@@ -6,9 +6,7 @@
 #include <stdlib.h>
 #include <uchar.h>
 
-
 typedef unsigned char uchar;
-
 
 class MNIST {
 
