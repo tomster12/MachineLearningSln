@@ -46,7 +46,7 @@ VectorListGD::DataPtr VectorListGD::crossover(const VectorListGD::DataPtr& other
 		}
 	}
 
-	return std::move(std::make_shared<VectorListGD>(newValues));
+	return std::make_shared<VectorListGD>(newValues);
 }
 
 #pragma endregion

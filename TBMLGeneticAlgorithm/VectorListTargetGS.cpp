@@ -6,8 +6,8 @@
 
 #pragma region - VectorListTargetGI
 
-VectorListTargetGI::VectorListTargetGI(VectorListTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc, const VectorListTargetGI::DataPtr&& geneticData)
-	: GeneticInstance(std::move(geneticData)), sim(sim), pos(startPos), radius(radius), moveAcc(moveAcc), currentIndex(0)
+VectorListTargetGI::VectorListTargetGI(VectorListTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc, const VectorListTargetGI::DataPtr geneticData)
+	: GeneticInstance(geneticData), sim(sim), pos(startPos), radius(radius), moveAcc(moveAcc), currentIndex(0)
 {
 	// Initialize variables
 	if (global::showVisuals) initVisual();
@@ -96,7 +96,8 @@ VectorListTargetGS::VectorListTargetGS(
 	sf::Vector2f instanceStartPos, float instanceRadius,
 	float instancemoveAcc, int dataSize,
 	sf::Vector2f targetPos, float targetRadius)
-	: instanceStartPos(instanceStartPos), instanceRadius(instanceRadius),
+	: GenepoolSimulation(false, true, false),
+	instanceStartPos(instanceStartPos), instanceRadius(instanceRadius),
 	instancemoveAcc(instancemoveAcc), dataSize(dataSize),
 	targetPos(targetPos), targetRadius(targetRadius)
 {
@@ -114,9 +115,9 @@ VectorListTargetGS::DataPtr VectorListTargetGS::createData()
 	return std::make_shared<VectorListGD>(this->dataSize);
 };
 
-VectorListTargetGS::InstPtr VectorListTargetGS::createInstance(const VectorListTargetGS::DataPtr&& data)
+VectorListTargetGS::InstPtr VectorListTargetGS::createInstance(const VectorListTargetGS::DataPtr data)
 {
-	return std::make_shared<VectorListTargetGI>(this, this->instanceStartPos, this->instanceRadius, this->instancemoveAcc, std::move(data));
+	return std::make_shared<VectorListTargetGI>(this, this->instanceStartPos, this->instanceRadius, this->instancemoveAcc, data);
 };
 
 void VectorListTargetGS::render(sf::RenderWindow* window)

@@ -8,8 +8,8 @@ class VectorListTargetGS;
 class VectorListTargetGI : public tbml::GeneticInstance<VectorListGD>
 {
 public:
-	VectorListTargetGI(const VectorListTargetGI::DataPtr&& geneticData) : GeneticInstance(std::move(geneticData)), sim(nullptr), moveAcc(0), radius(0), currentIndex(-1) {};
-	VectorListTargetGI(VectorListTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc, const VectorListTargetGI::DataPtr&& geneticData);
+	VectorListTargetGI(const VectorListTargetGI::DataPtr geneticData) : GeneticInstance(geneticData), sim(nullptr), moveAcc(0), radius(0), currentIndex(-1) {};
+	VectorListTargetGI(VectorListTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc, const VectorListTargetGI::DataPtr geneticData);
 	void initVisual();
 
 	bool step() override;
@@ -53,5 +53,5 @@ protected:
 	int dataSize = 0;
 
 	DataPtr createData() override;
-	InstPtr createInstance(const DataPtr&& data) override;
+	InstPtr createInstance(const DataPtr data) override;
 };

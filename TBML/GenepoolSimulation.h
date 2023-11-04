@@ -23,12 +23,12 @@ namespace tbml
 	protected:
 		using DataPtr = std::shared_ptr<const Data>;
 
-		const DataPtr geneticData = nullptr;
+		const DataPtr geneticData;
 		bool instanceFinished = false;
 		float instanceFitness = 0;
 
 	public:
-		GeneticInstance(const DataPtr&& geneticData) : geneticData(geneticData), instanceFinished(false), instanceFitness(0.0f) {};
+		GeneticInstance(const DataPtr geneticData) : geneticData(std::move(geneticData)), instanceFinished(false), instanceFitness(0.0f) {};
 
 		virtual bool step() = 0;
 		virtual void render(sf::RenderWindow* window) = 0;
@@ -61,8 +61,9 @@ namespace tbml
 		using DataPtr = std::shared_ptr<const Data>;
 		using InstPtr = std::shared_ptr<Inst>;
 
-		bool enableMultithreading = false;
-		bool linkMultithreadedSteps = false;
+		bool enableMultithreadedStepEvaluation = false;
+		bool enableMultithreadedFullEvaluation = false;
+		bool multithreadSyncSteps = false;
 
 		bool isInitialized = false;
 		int populationSize = 0;
@@ -78,13 +79,18 @@ namespace tbml
 
 		virtual DataPtr createData() { return std::make_shared<Data>(); }
 
-		virtual InstPtr createInstance(const DataPtr&& data) { return std::make_shared<Inst>(std::move(data)); }
+		virtual InstPtr createInstance(const DataPtr data) { return std::make_shared<Inst>(data); }
 
 	public:
-		GenepoolSimulation(bool enableMultithreading = false, bool linkMultithreadedSteps = false)
+		GenepoolSimulation(bool enableMultithreadedStepEvaluation = false, bool enableMultithreadedFullEvaluation = false, bool multithreadSyncSteps = false)
 		{
-			this->enableMultithreading = enableMultithreading;
-			this->linkMultithreadedSteps = linkMultithreadedSteps;
+			if (enableMultithreadedFullEvaluation && enableMultithreadedStepEvaluation)
+				throw std::runtime_error("tbml::GenepoolSimulation: Cannot have both enableMultithreadedFullEvaluation and enableMultithreadedStepEvaluation.");
+			if (multithreadSyncSteps && !enableMultithreadedFullEvaluation)
+				throw std::runtime_error("tbml::GenepoolSimulation: Cannot have multithreadSyncSteps without enableMultithreadedFullEvaluation.");
+			this->enableMultithreadedStepEvaluation = enableMultithreadedStepEvaluation;
+			this->enableMultithreadedFullEvaluation = enableMultithreadedFullEvaluation;
+			this->multithreadSyncSteps = multithreadSyncSteps;
 		}
 
 		void render(sf::RenderWindow* window)
@@ -102,7 +108,7 @@ namespace tbml
 			{
 				DataPtr geneticData = createData();
 				InstPtr geneticInstance = createInstance(std::move(geneticData));
-				this->currentGeneration.push_back(geneticInstance);
+				this->currentGeneration.push_back(std::move(geneticInstance));
 			}
 
 			this->isInitialized = true;
@@ -126,13 +132,13 @@ namespace tbml
 			if (this->isGenerationEvaluated) return;
 
 			// Helper functions
-			auto stepSubset = [&](const std::vector<InstPtr>& subset)
+			auto stepSubset = [](const std::vector<InstPtr>& subset)
 			{
 				bool allFinished = true;
 				for (const auto& inst : subset) allFinished &= inst->step();
 				return allFinished;
 			};
-			auto processSubset = [&](const std::vector<InstPtr>& subset)
+			auto processSubset = [](const std::vector<InstPtr>& subset)
 			{
 				for (bool allFinished = false; !allFinished;)
 				{
@@ -146,12 +152,11 @@ namespace tbml
 			bool allFinished = true;
 
 			// Process generation (multi-threaded)
-			if (this->enableMultithreading)
+			if (this->enableMultithreadedStepEvaluation && step || this->enableMultithreadedFullEvaluation && !step)
 			{
 				size_t threadCount = static_cast<size_t>(std::min(static_cast<int>(threadPool.size()), this->populationSize));
 				std::vector<std::future<bool>> threadResults(threadCount);
 				int threadGenerationSubsetCount = static_cast<int>(ceil((float)this->populationSize / threadCount));
-
 				do
 				{
 					for (size_t i = 0; i < threadCount; i++)
@@ -160,8 +165,8 @@ namespace tbml
 						int endIndex = static_cast<int>(std::min(startIndex + threadGenerationSubsetCount, this->populationSize));
 						const std::vector<InstPtr> threadGenerationSubset(this->currentGeneration.begin() + startIndex, this->currentGeneration.begin() + endIndex);
 
-						if (this->linkMultithreadedSteps) threadResults[i] = threadPool.enqueue([&] { return stepSubset(threadGenerationSubset); });
-						else threadResults[i] = threadPool.enqueue([&] { return processSubset(threadGenerationSubset); });
+						if (step || multithreadSyncSteps) threadResults[i] = threadPool.enqueue([=] { return stepSubset(threadGenerationSubset); });
+						else threadResults[i] = threadPool.enqueue([=] { return processSubset(threadGenerationSubset); });
 					}
 
 					for (auto&& result : threadResults) allFinished &= result.get();
@@ -222,8 +227,8 @@ namespace tbml
 				// [CROSSOVER], [MUTATION] Create new genetic data
 				const DataPtr& dataA = pickRandomData();
 				const DataPtr& dataB = pickRandomData();
-				DataPtr newData = dataA->crossover(dataB, this->mutationRate);
-				newInstances[i] = createInstance(std::move(newData));
+				const DataPtr newData = dataA->crossover(dataB, this->mutationRate);
+				newInstances[i] = createInstance(newData);
 			}
 
 			// Keep the best data
