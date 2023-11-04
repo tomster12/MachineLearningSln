@@ -1,8 +1,8 @@
-
+/*
 #pragma once
 
 #include "GenepoolSimulation.h"
-#include "CommonGeneticDatas.h"
+#include "CommonImpl.h"
 
 // https://researchbank.swinburne.edu.au/file/62a8df69-4a2c-407f-8040-5ac533fc2787/1/PDF%20(12%20pages).pdf
 class NeuralPoleBalancerGS;
@@ -70,3 +70,4 @@ protected:
 	NeuralGD* createData() override;
 	NeuralPoleBalancerGI* createInstance(NeuralGD* data) override;
 };
+*/

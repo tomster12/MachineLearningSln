@@ -1,361 +1,322 @@
 
 #pragma once
 
+#include "stdafx.h"
 #include "UtilityFunctions.h"
 #include "ThreadPool.h"
 
 namespace tbml
 {
-	class IGenepoolSimulation
-	{
-	public:
-		virtual void update() = 0;
-		virtual void render(sf::RenderWindow* window) = 0;
-
-		virtual void restartGenepool(int generationCount, float mutationRate) = 0;
-		virtual void initGeneration() = 0;
-		virtual void stepGeneration() = 0;
-		virtual void processGeneration() = 0;
-		virtual void finishGeneration() = 0;
-
-		virtual bool getAutoStep() = 0;
-		virtual bool getAutoFinish() = 0;
-		virtual bool getAutoProcess() = 0;
-
-		virtual void setStepping(bool isStepping) = 0;
-		virtual void setAutoStep(bool autoStep) = 0;
-		virtual void setAutoFinish(bool autoFinish) = 0;
-		virtual void setAutoProcess(bool autoProcess) = 0;
-	};
-
-	template<class D> // D: GeneticData<D>
+	template<class Data>
 	class GeneticData
 	{
+	protected:
+		using DataPtr = std::shared_ptr<const Data>;
+
 	public:
-		virtual void randomize() = 0;
-		virtual void mutate(float chance) = 0;
-		virtual D* crossover(D* data) = 0;
-		virtual D* clone() = 0;
+		virtual DataPtr crossover(const DataPtr& otherData, float mutateChance = 0.0f) const = 0;
 	};
 
-	template<class D> // D: GeneticData<D>
+	template<class Data> // Data: GeneticData<Data>
 	class GeneticInstance
 	{
 	protected:
-		D* geneticData;
-		bool instanceFinished;
-		float instanceFitness;
+		using DataPtr = std::shared_ptr<const Data>;
+
+		const DataPtr geneticData = nullptr;
+		bool instanceFinished = false;
+		float instanceFitness = 0;
 
 	public:
-		GeneticInstance(D* geneticData) : geneticData(geneticData), instanceFinished(false), instanceFitness(0.0f) {};
-		~GeneticInstance() { delete this->geneticData; }
+		GeneticInstance(const DataPtr&& geneticData) : geneticData(geneticData), instanceFinished(false), instanceFitness(0.0f) {};
 
 		virtual bool step() = 0;
 		virtual void render(sf::RenderWindow* window) = 0;
 
-		D* getData() { return this->geneticData; };
-		bool getFinished() { return this->instanceFinished; };
-		float getFitness() { return this->instanceFitness; };
+		const DataPtr& getData() const { return this->geneticData; };
+		bool getFinished() const { return this->instanceFinished; };
+		float getFitness() const { return this->instanceFitness; };
 	};
 
-	template<class D, class I> // D: GeneticData<D>, I: GeneticInstance<D>
+	class IGenepoolSimulation
+	{
+	public:
+		virtual void render(sf::RenderWindow* window) = 0;
+
+		virtual void resetGenepool(int populationSize, float mutationRate) = 0;
+		virtual void initGeneration() = 0;
+		virtual void evaluateGeneration(bool step = false) = 0;
+		virtual void iterateGeneration() = 0;
+
+		virtual bool getInitialized() const = 0;
+		virtual bool getGenerationEvaluated() const = 0;
+	};
+
+	using IGenepoolSimulationPtr = std::unique_ptr<IGenepoolSimulation>;
+
+	template<class Data, class Inst> // Data: GeneticData<Data>, Inst: GeneticInstance<Data>
 	class GenepoolSimulation : public IGenepoolSimulation
 	{
 	protected:
-		bool linkedSteps;
-		bool enableMultithreadedStep;
-		bool enableMultithreadedProcess;
-		int generationCount;
-		float mutationRate;
-		bool isInitialized;
-		int generationNumber;
-		int generationStep;
-		bool isStepping;
-		bool isFinished;
-		bool autoStep;
-		bool autoFinish;
-		bool autoProcess;
+		using DataPtr = std::shared_ptr<const Data>;
+		using InstPtr = std::shared_ptr<Inst>;
 
+		bool enableMultithreading = false;
+		bool linkMultithreadedSteps = false;
+
+		bool isInitialized = false;
+		int populationSize = 0;
+		float mutationRate = 0.0f;
+
+		int generationNumber = 0;
+		int generationStepNumber = 0;
+		std::vector<InstPtr> currentGeneration;
+		bool isGenerationEvaluated = false;
+		DataPtr bestCurrentData = nullptr;
+		float bestCurrentFitness = 0.0f;
 		ThreadPool threadPool;
-		std::vector<I*> currentGeneration;
-		D* bestCurrentData;
-		float bestCurrentFitness;
 
-		virtual D* createData()
-		{
-			// Create, randomize and return data
-			D* data = new D();
-			data->randomize();
-			return data;
-		}
+		virtual DataPtr createData() { return std::make_shared<Data>(); }
 
-		virtual I* createInstance(D* data)
-		{
-			// Create and return instance
-			I* inst = new I(data);
-			return inst;
-		}
+		virtual InstPtr createInstance(const DataPtr&& data) { return std::make_shared<Inst>(std::move(data)); }
 
 	public:
-		GenepoolSimulation(bool linkedSteps = false, bool enableMultithreadedStep = false, bool enableMultithreadedProcess = true)
+		GenepoolSimulation(bool enableMultithreading = false, bool linkMultithreadedSteps = false)
 		{
-			// Initialize variables
-			this->linkedSteps = linkedSteps;
-			this->enableMultithreadedStep = enableMultithreadedStep;
-			this->enableMultithreadedProcess = enableMultithreadedProcess;
-			this->generationCount = 0;
-			this->mutationRate = 0;
-			this->isInitialized = false;
-			this->generationNumber = 0;
-			this->generationStep = 0;
-			this->isStepping = false;
-			this->isFinished = false;
-			this->autoStep = false;
-			this->autoFinish = false;
-			this->autoProcess = false;
+			this->enableMultithreading = enableMultithreading;
+			this->linkMultithreadedSteps = linkMultithreadedSteps;
 		}
-
-		~GenepoolSimulation()
-		{
-			// Delete all instances
-			if (this->isInitialized)
-			{
-				for (int i = 0; i < generationCount; i++) delete this->currentGeneration[i];
-			}
-		}
-
-		void update()
-		{
-			if (!this->isInitialized) throw std::runtime_error("tbml::GenepoolSimulation: Cannot update because uninitialized.");
-
-			// Step / complete generation then check for auto finish
-			if (this->isFinished || !this->isStepping) return;
-			if (this->autoProcess) processGeneration();
-			else stepGeneration();
-			if (this->autoFinish && this->isFinished) finishGeneration();
-		};
 
 		void render(sf::RenderWindow* window)
 		{
 			if (!this->isInitialized) throw std::runtime_error("tbml::GenepoolSimulation: Cannot render because uninitialized.");
 
-			// Render all instances
 			for (auto inst : currentGeneration) inst->render(window);
 		};
 
-		void restartGenepool(int generationCount, float mutationRate)
+		void resetGenepool(int populationSize, float mutationRate)
 		{
-			// Delete all current instances
-			if (this->isInitialized)
-			{
-				for (int i = 0; i < generationCount; i++) delete this->currentGeneration[i];
-			}
-
 			// [INITIALIZATION] Initialize new instances
 			this->currentGeneration.clear();
-			for (int i = 0; i < generationCount; i++)
+			for (int i = 0; i < populationSize; i++)
 			{
-				D* data = createData();
-				this->currentGeneration.push_back(createInstance(data));
+				DataPtr geneticData = createData();
+				InstPtr geneticInstance = createInstance(std::move(geneticData));
+				this->currentGeneration.push_back(geneticInstance);
 			}
 
-			// Initialize variables
-			this->generationCount = generationCount;
-			this->mutationRate = mutationRate;
 			this->isInitialized = true;
+			this->populationSize = populationSize;
+			this->mutationRate = mutationRate;
+
 			this->generationNumber = 1;
-			this->generationStep = 0;
-			this->isStepping = false;
-			this->isFinished = false;
-			this->autoStep = false;
-			this->autoFinish = false;
-			this->autoProcess = false;
+			this->generationStepNumber = 0;
+			this->isGenerationEvaluated = false;
+			this->bestCurrentData = nullptr;
+			this->bestCurrentFitness = 0.0f;
+
 			initGeneration();
 		};
 
 		void initGeneration() {}
 
-		void stepGeneration()
+		void evaluateGeneration(bool step)
 		{
-			if (!this->isInitialized) throw std::runtime_error("tbml::GenepoolSimulation: Cannot stepGeneration because uninitialized.");
-
-			// Only step if currently stepping and not finished
-			if (!this->isStepping || this->isFinished) return;
-
-			// Helper function
-			auto stepSubset = [=](std::vector<I*> subset)
-			{
-				bool allFinished = true;
-				for (auto& inst : subset) allFinished &= inst->step();
-				return allFinished;
-			};
-
-			// Split up generation and step each
-			bool allFinished = true;
-			if (this->enableMultithreadedStep)
-			{
-				size_t threadCount = static_cast<size_t>(std::min(static_cast<int>(threadPool.size()), this->generationCount));
-				std::vector<std::future<bool>> results(threadCount);
-				int gap = static_cast<int>(ceil((float)this->generationCount / threadCount));
-				for (size_t i = 0; i < threadCount; i++)
-				{
-					int start = i * gap;
-					int end = static_cast<int>(std::min(start + gap, this->generationCount));
-					std::vector<I*> subset(this->currentGeneration.begin() + start, this->currentGeneration.begin() + end);
-					results[i] = threadPool.enqueue([=] { return stepSubset(subset); });
-				}
-				for (auto&& result : results) allFinished &= result.get();
-			}
-
-			// Step entire generation without multithreading
-			else
-			{
-				allFinished = stepSubset(this->currentGeneration);
-			}
-
-			// Once all finished update variables
-			this->generationStep++;
-			if (allFinished)
-			{
-				this->isFinished = true;
-				this->isStepping = false;
-			}
-		}
-
-		void processGeneration()
-		{
-			if (!this->isInitialized) throw std::runtime_error("tbml::GenepoolSimulation: Cannot processGeneration because uninitialized.");
-
-			// Only process if not finished
-			if (this->isFinished) return;
+			if (!this->isInitialized) throw std::runtime_error("tbml::GenepoolSimulation: Cannot evaluateGeneration because uninitialized.");
+			if (this->isGenerationEvaluated) return;
 
 			// Helper functions
-			auto stepSubset = [=](std::vector<I*> subset)
+			auto stepSubset = [&](const std::vector<InstPtr>& subset)
 			{
 				bool allFinished = true;
-				for (auto& inst : subset) allFinished &= inst->step();
+				for (const auto& inst : subset) allFinished &= inst->step();
 				return allFinished;
 			};
-
-			auto processSubset = [=](std::vector<I*> subset)
+			auto processSubset = [&](const std::vector<InstPtr>& subset)
 			{
 				for (bool allFinished = false; !allFinished;)
 				{
 					allFinished = true;
-					for (auto& inst : subset) allFinished &= inst->step();
+					for (const auto& inst : subset) allFinished &= inst->step();
 				}
 				return true;
 			};
 
-			// Start timer
-			//std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
+			std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
+			bool allFinished = true;
 
-			// Split up generation and process each
-			if (this->enableMultithreadedProcess)
+			// Process generation (multi-threaded)
+			if (this->enableMultithreading)
 			{
-				size_t threadCount = static_cast<size_t>(std::min(static_cast<int>(threadPool.size()), this->generationCount));
-				std::vector<std::future<bool>> results(threadCount);
-				int gap = static_cast<int>(ceil((float)this->generationCount / threadCount));
-				for (bool allFinished = false; !allFinished;)
+				size_t threadCount = static_cast<size_t>(std::min(static_cast<int>(threadPool.size()), this->populationSize));
+				std::vector<std::future<bool>> threadResults(threadCount);
+				int threadGenerationSubsetCount = static_cast<int>(ceil((float)this->populationSize / threadCount));
+
+				do
 				{
 					for (size_t i = 0; i < threadCount; i++)
 					{
-						int start = i * gap;
-						int end = static_cast<int>(std::min(start + gap, this->generationCount));
-						std::vector<I*> subset(this->currentGeneration.begin() + start, this->currentGeneration.begin() + end);
-						if (this->linkedSteps) results[i] = threadPool.enqueue([=] { return stepSubset(subset); });
-						else results[i] = threadPool.enqueue([=] { return processSubset(subset); });
+						int startIndex = i * threadGenerationSubsetCount;
+						int endIndex = static_cast<int>(std::min(startIndex + threadGenerationSubsetCount, this->populationSize));
+						const std::vector<InstPtr> threadGenerationSubset(this->currentGeneration.begin() + startIndex, this->currentGeneration.begin() + endIndex);
+
+						if (this->linkMultithreadedSteps) threadResults[i] = threadPool.enqueue([&] { return stepSubset(threadGenerationSubset); });
+						else threadResults[i] = threadPool.enqueue([&] { return processSubset(threadGenerationSubset); });
 					}
-					allFinished = true;
-					for (auto&& result : results) allFinished &= result.get();
-					if (this->linkedSteps) this->generationStep++;
-				}
+
+					for (auto&& result : threadResults) allFinished &= result.get();
+					this->generationStepNumber++;
+
+				} while (!step && !allFinished);
 			}
 
-			// Process full generation without multithreading
-			else processSubset(this->currentGeneration);
+			// Process generation (single-threaded)
+			else
+			{
+				if (step) allFinished = stepSubset(this->currentGeneration);
+				else allFinished = processSubset(this->currentGeneration);
+				this->generationStepNumber++;
+			}
 
-			// Stop timer and print
-			//std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-			//auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0);
-			//std::cout << "Processed generation: " << us.count() / 1000.0f << "ms" << std::endl;
-
-			// Finish up running
-			this->isFinished = true;
-			this->isStepping = false;
-			if (this->autoFinish) finishGeneration();
+			std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+			auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0);
+			// std::cout << "Processed generation: " << us.count() / 1000.0f << "ms" << std::endl;
+			this->generationStepNumber++;
+			if (allFinished) this->isGenerationEvaluated = true;
 		}
 
-		void finishGeneration()
+		void iterateGeneration()
 		{
-			if (!this->isInitialized) throw std::runtime_error("tbml::GenepoolSimulation: Cannot finishGeneration because uninitialized.");
-
-			// Only finish if not currently stepping and finished
-			if (this->isStepping || !this->isFinished) return;
+			if (!this->isInitialized) throw std::runtime_error("tbml::GenepoolSimulation: Cannot iterateGeneration because uninitialized.");
+			if (!this->isGenerationEvaluated) return;
 
 			// [SELECTION] Sort, then cull the bottom half of the generation
 			std::sort(this->currentGeneration.begin(), this->currentGeneration.end(), [this](auto a, auto b) { return a->getFitness() < b->getFitness(); });
 			int selectAmount = static_cast<int>(ceil(this->currentGeneration.size() / 2.0f));
-			std::vector<I*> selectedGeneration(this->currentGeneration.end() - selectAmount, this->currentGeneration.end());
+			std::vector<InstPtr> selectedInstances(this->currentGeneration.end() - selectAmount, this->currentGeneration.end());
 
 			// get best instance
-			I* bestInstance = selectedGeneration[selectAmount - 1];
+			InstPtr bestInstance = selectedInstances[selectAmount - 1];
 			std::cout << "Generation: " << this->generationNumber << ", best fitness: " << bestInstance->getFitness() << std::endl;
 
 			// setup parent selection function
 			auto transformFitness = [](float f) { return f * f; };
 			float totalFitness = 0.0f;
-			for (auto& inst : selectedGeneration) totalFitness += (transformFitness(inst->getFitness()));
-			auto pickRandomData = [selectedGeneration, totalFitness, transformFitness]()
+			for (const auto& inst : selectedInstances) totalFitness += (transformFitness(inst->getFitness()));
+			const auto& pickRandomData = [selectedInstances, totalFitness, transformFitness]()
 			{
 				float r = getRandomFloat() * totalFitness;
 				float cumSum = 0.0f;
-				for (auto& inst : selectedGeneration)
+				for (const auto& inst : selectedInstances)
 				{
 					cumSum += transformFitness(inst->getFitness());
 					if (r <= cumSum) return inst->getData();
 				}
-				return selectedGeneration[selectedGeneration.size() - 1]->getData();
+				return selectedInstances[selectedInstances.size() - 1]->getData();
 			};
 
 			// Create the next generation
-			std::vector<I*> newGeneration(this->generationCount);
-			for (int i = 0; i < this->generationCount - 1; i++)
+			std::vector<InstPtr> newInstances(this->populationSize);
+			for (int i = 0; i < this->populationSize - 1; i++)
 			{
 				// [CROSSOVER], [MUTATION] Create new genetic data
-				D* dataA = pickRandomData();
-				D* dataB = pickRandomData();
-				D* newData = dataA->crossover(dataB);
-				newData->mutate(this->mutationRate);
-				newGeneration[i] = createInstance(newData);
+				const DataPtr& dataA = pickRandomData();
+				const DataPtr& dataB = pickRandomData();
+				DataPtr newData = dataA->crossover(dataB, this->mutationRate);
+				newInstances[i] = createInstance(std::move(newData));
 			}
 
-			// Keep the best data and delete the old instances
-			newGeneration[this->generationCount - 1] = createInstance(bestInstance->getData()->clone());
-			for (int i = 0; i < generationCount; i++) delete this->currentGeneration[i];
+			// Keep the best data
+			newInstances[this->populationSize - 1] = createInstance(std::move(bestInstance->getData()));
 
 			// Set to new generation and update variables
-			this->currentGeneration = newGeneration;
+			this->currentGeneration = newInstances;
 			this->generationNumber++;
-			this->isFinished = false;
+			this->isGenerationEvaluated = false;
 			initGeneration();
-
-			// Handle auto start
-			if (this->autoStep) setStepping(true);
 		};
 
-		bool getAutoStep() { return this->autoStep; };
+		bool getInitialized() const { return this->isInitialized; }
 
-		bool getAutoFinish() { return this->autoFinish; };
+		bool getGenerationEvaluated() const { return this->isGenerationEvaluated; }
+	};
 
-		bool getAutoProcess() { return this->autoProcess; };
+	class GenepoolSimulationController
+	{
+	protected:
+		IGenepoolSimulationPtr genepool = nullptr;
 
-		void setStepping(bool isStepping) { if (!this->isFinished) this->isStepping = isStepping; }
+		bool isRunning = false;
+		bool autoStepEvaluate = false;
+		bool autoFullEvaluate = false;
+		bool autoIterate = false;
 
-		void setAutoStep(bool autoStep) { this->autoStep = autoStep; if (!this->isStepping && this->autoStep) this->setStepping(true); };
+	public:
+		GenepoolSimulationController() {}
 
-		void setAutoProcess(bool autoProcess) { this->autoProcess = autoProcess; if (this->autoProcess) this->processGeneration(); }
+		GenepoolSimulationController(IGenepoolSimulationPtr genepool)
+			: genepool(std::move(genepool))
+		{}
 
-		void setAutoFinish(bool autoFinish) { this->autoFinish = autoFinish; if (this->isFinished && this->autoFinish) this->finishGeneration(); }
+		void update()
+		{
+			if (!this->genepool->getInitialized()) throw std::runtime_error("tbml::GenepoolSimulationController: Cannot update because uninitialized.");
+			if (this->genepool->getGenerationEvaluated() || !this->isRunning) return;
+
+			this->evaluateGeneration(!this->autoFullEvaluate);
+		};
+
+		void render(sf::RenderWindow* window)
+		{
+			if (!this->genepool->getInitialized()) throw std::runtime_error("tbml::GenepoolSimulation: Cannot render because uninitialized.");
+
+			this->genepool->render(window);
+		};
+
+		void evaluateGeneration(bool step = false)
+		{
+			if (!this->genepool->getInitialized()) throw std::runtime_error("tbml::GenepoolSimulationController: Cannot evaluateGeneration because uninitialized.");
+			if (this->genepool->getGenerationEvaluated()) return;
+
+			this->genepool->evaluateGeneration(step);
+			if (this->autoIterate && this->genepool->getGenerationEvaluated()) this->iterateGeneration();
+		}
+
+		void iterateGeneration()
+		{
+			if (!this->genepool->getInitialized()) throw std::runtime_error("tbml::GenepoolSimulationController: Cannot iterateGeneration because uninitialized.");
+			if (!this->genepool->getGenerationEvaluated()) return;
+
+			this->genepool->iterateGeneration();
+			this->setRunning(this->autoStepEvaluate || this->autoFullEvaluate);
+		}
+
+		bool getStepping() const { return this->isRunning; };
+
+		bool getAutoStep() const { return this->autoStepEvaluate; };
+
+		bool getAutoFinish() const { return this->autoIterate; };
+
+		bool getAutoProcess() const { return this->autoFullEvaluate; };
+
+		void setRunning(bool isRunning) { this->isRunning = isRunning; }
+
+		void setAutoStepEvaluate(bool autoStepEvaluate)
+		{
+			this->autoStepEvaluate = autoStepEvaluate;
+			if (!this->isRunning && this->autoStepEvaluate) this->setRunning(true);
+		};
+
+		void setAutoFullEvaluate(bool autoFullEvaluate)
+		{
+			this->autoFullEvaluate = autoFullEvaluate;
+			this->setRunning(this->autoStepEvaluate || this->autoFullEvaluate);
+		}
+
+		void setAutoIterate(bool autoIterate)
+		{
+			this->autoIterate = autoIterate;
+			if (this->autoIterate && this->genepool->getGenerationEvaluated()) this->iterateGeneration();
+		}
 	};
 }

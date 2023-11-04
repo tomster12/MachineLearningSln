@@ -1,6 +1,6 @@
 
 #include "stdafx.h"
-#include "NeuralPoleBalancerGS.h"
+/*#include "NeuralPoleBalancerGS.h"
 #include "UtilityFunctions.h"
 
 
@@ -130,3 +130,4 @@ NeuralPoleBalancerGI* NeuralPoleBalancerGS::createInstance(NeuralGD* data)
 }
 
 #pragma endregion
+*/

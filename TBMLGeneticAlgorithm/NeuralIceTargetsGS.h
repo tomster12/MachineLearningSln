@@ -1,8 +1,8 @@
-
+/*
 #pragma once
 
 #include "GenepoolSimulation.h"
-#include "CommonGeneticDatas.h"
+#include "CommonImpl.h"
 
 class NeuralIceTargetsGS;
 class NeuralIceTargetsGI : public tbml::GeneticInstance<NeuralGD>
@@ -62,3 +62,4 @@ protected:
 	NeuralGD* createData() override;
 	NeuralIceTargetsGI* createInstance(NeuralGD* data) override;
 };
+*/

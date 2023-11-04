@@ -7,7 +7,7 @@ namespace global
 	bool showVisuals = true;
 	sf::Font font;
 
-	void initGlobal()
+	void initialize()
 	{
 		// Initialize global member variables
 		font.loadFromFile("assets/arial.ttf");

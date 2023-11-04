@@ -27,6 +27,8 @@ namespace tbml
 
 		std::vector<Matrix>& getWeights();
 		std::vector<Matrix>& getBias();
+		const std::vector<Matrix>& getWeights() const;
+		const std::vector<Matrix>& getBias() const;
 		afptr getActivator() const;
 		size_t getLayerCount() const;
 		std::vector<size_t> getLayerSizes() const;

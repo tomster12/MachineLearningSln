@@ -164,7 +164,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="CommonGeneticDatas.cpp" />
+    <ClCompile Include="CommonImpl.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="global.cpp" />
     <ClCompile Include="main.cpp" />
@@ -181,7 +181,7 @@
     <ClCompile Include="VectorListTargetGS.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CommonGeneticDatas.h" />
+    <ClInclude Include="CommonImpl.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="global.h" />
     <ClInclude Include="NeuralIceTargetsGS.h" />

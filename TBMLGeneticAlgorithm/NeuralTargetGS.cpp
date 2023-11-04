@@ -1,9 +1,9 @@
 
 #include "stdafx.h"
-#include "global.h"
+/*#include "global.h"
 #include "NeuralTargetGS.h"
 #include "UtilityFunctions.h"
-#include "CommonGeneticDatas.h"
+#include "CommonImpl.h"
 #include "Matrix.h"
 
 #pragma region - NeuralTargetGI
@@ -159,3 +159,4 @@ sf::Vector2f NeuralTargetGS::getTargetPos() { return this->targetPos; }
 float NeuralTargetGS::getTargetRadius() { return this->targetRadius; }
 
 #pragma endregion
+*/

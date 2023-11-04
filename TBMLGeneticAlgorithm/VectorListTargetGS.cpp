@@ -1,13 +1,13 @@
 
 #include "stdafx.h"
 #include "VectorListTargetGS.h"
-#include "CommonGeneticDatas.h"
+#include "CommonImpl.h"
 #include "UtilityFunctions.h"
 
 #pragma region - VectorListTargetGI
 
-VectorListTargetGI::VectorListTargetGI(VectorListTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc, VectorListGD* geneticData)
-	: GeneticInstance(geneticData), sim(sim), pos(startPos), radius(radius), moveAcc(moveAcc), currentIndex(0)
+VectorListTargetGI::VectorListTargetGI(VectorListTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc, const VectorListTargetGI::DataPtr&& geneticData)
+	: GeneticInstance(std::move(geneticData)), sim(sim), pos(startPos), radius(radius), moveAcc(moveAcc), currentIndex(0)
 {
 	// Initialize variables
 	if (global::showVisuals) initVisual();
@@ -109,19 +109,14 @@ VectorListTargetGS::VectorListTargetGS(
 	this->target.setPosition(this->targetPos);
 };
 
-VectorListGD* VectorListTargetGS::createData()
+VectorListTargetGS::DataPtr VectorListTargetGS::createData()
 {
-	// Create, randomize and return data
-	VectorListGD* data = new VectorListGD(this->dataSize);
-	data->randomize();
-	return data;
+	return std::make_shared<VectorListGD>(this->dataSize);
 };
 
-VectorListTargetGI* VectorListTargetGS::createInstance(VectorListGD* data)
+VectorListTargetGS::InstPtr VectorListTargetGS::createInstance(const VectorListTargetGS::DataPtr&& data)
 {
-	// Create and return instance
-	VectorListTargetGI* inst = new VectorListTargetGI(this, this->instanceStartPos, this->instanceRadius, this->instancemoveAcc, data);
-	return inst;
+	return std::make_shared<VectorListTargetGI>(this, this->instanceStartPos, this->instanceRadius, this->instancemoveAcc, std::move(data));
 };
 
 void VectorListTargetGS::render(sf::RenderWindow* window)

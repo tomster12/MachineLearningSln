@@ -2,14 +2,14 @@
 #pragma once
 
 #include "GenepoolSimulation.h"
-#include "CommonGeneticDatas.h"
+#include "CommonImpl.h"
 
 class VectorListTargetGS;
 class VectorListTargetGI : public tbml::GeneticInstance<VectorListGD>
 {
 public:
-	VectorListTargetGI(VectorListGD* geneticData) : GeneticInstance(geneticData), sim(nullptr), moveAcc(0), radius(0), currentIndex(-1) {};
-	VectorListTargetGI(VectorListTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc, VectorListGD* geneticData);
+	VectorListTargetGI(const VectorListTargetGI::DataPtr&& geneticData) : GeneticInstance(std::move(geneticData)), sim(nullptr), moveAcc(0), radius(0), currentIndex(-1) {};
+	VectorListTargetGI(VectorListTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc, const VectorListTargetGI::DataPtr&& geneticData);
 	void initVisual();
 
 	bool step() override;
@@ -28,7 +28,6 @@ private:
 	float radius;
 	int currentIndex;
 };
-
 
 class VectorListTargetGS : public tbml::GenepoolSimulation<VectorListGD, VectorListTargetGI>
 {
@@ -53,6 +52,6 @@ protected:
 	float instancemoveAcc = 0.0f;
 	int dataSize = 0;
 
-	VectorListGD* createData() override;
-	VectorListTargetGI* createInstance(VectorListGD* data) override;
+	DataPtr createData() override;
+	InstPtr createInstance(const DataPtr&& data) override;
 };

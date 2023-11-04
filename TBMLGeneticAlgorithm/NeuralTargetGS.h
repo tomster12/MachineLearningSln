@@ -1,8 +1,8 @@
-
+/*
 #pragma once
 
 #include "GenepoolSimulation.h"
-#include "CommonGeneticDatas.h"
+#include "CommonImpl.h"
 
 class NeuralTargetGS;
 class NeuralTargetGI : public tbml::GeneticInstance<NeuralGD>
@@ -63,3 +63,4 @@ protected:
 
 	sf::Vector2f getRandomTargetPos();
 };
+*/

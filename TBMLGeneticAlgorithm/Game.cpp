@@ -6,29 +6,26 @@
 #include "GenepoolSimulation.h"
 
 #include "VectorListTargetGS.h"
-#include "NeuralTargetGS.h"
-#include "NeuralIceTargetsGS.h"
-#include "NeuralPoleBalancerGS.h"
+//#include "NeuralTargetGS.h"
+//#include "NeuralIceTargetsGS.h"
+//#include "NeuralPoleBalancerGS.h"
 
 Game::Game()
+	: window(NULL), dt(0)
 {
-	this->initVariables();
+	this->initialize();
 }
 
 Game::~Game()
 {
 	delete this->window;
-	delete this->genepool;
 }
 
-void Game::initVariables()
+void Game::initialize()
 {
-	// Initialize variables
-	this->window = NULL;
-	this->dt = 0.0f;
 	srand(0);
 
-	// Setup default options
+	// Initialize window
 	sf::VideoMode windowMode = sf::VideoMode::getDesktopMode();
 	windowMode.width = 1400;
 	windowMode.height = 1000;
@@ -37,94 +34,75 @@ void Game::initVariables()
 	unsigned framerateLimit = 60;
 	bool verticalSyncEnabled = false;
 
-	// Setup window using default settings
 	if (fullscreen) this->window = new sf::RenderWindow(windowMode, title, sf::Style::Fullscreen);
 	else this->window = new sf::RenderWindow(windowMode, title, sf::Style::Titlebar | sf::Style::Close);
 	this->window->setFramerateLimit(framerateLimit);
 	this->window->setVerticalSyncEnabled(verticalSyncEnabled);
 
-	// Setup genepool structure
-	//this->genepool = new VectorListTargetGS({ 700.0f, 600.0f }, 4.0f, 4.0f, 500, { 700.0f, 100.0f }, 20.0f);
-	//this->genepool = new NeuralTargetGS({ 700.0f, 850.0f }, 2.0f, 2.0f, 1000, { 2, 2 }, 20.0f, { 700.0f, 150.0f }, 500.0f);
-	//this->genepool = new NeuralIceTargetsGS({ 700.0f, 850.0f }, 300.0f, 3000, { 4, 4, 2 }, { { 150.0f, 150.0f }, { 920.0f, 400.0f }, { 300.0f, 850.0f }, { 550.0f, 320.0f } }, 20.0f);
-	this->genepool = new NeuralPoleBalancerGS(1.0f, 0.1f, 0.5f, 2.0f, 0.6f, 0.25f, 20.0f, { 4, 1 }, tbml::tanh);
+	// Initialize genepool object
+	tbml::IGenepoolSimulationPtr genepool(new VectorListTargetGS(
+		{ 700.0f, 600.0f }, 4.0f, 4.0f, 500, { 700.0f, 100.0f }, 20.0f));
+	//tbml::IGenepoolSimulationPtr genepool(new NeuralTargetGS(
+	//	{ 700.0f, 850.0f }, 2.0f, 2.0f, 1000, { 2, 2 }, 20.0f, { 700.0f, 150.0f }, 500.0f));
+	//tbml::IGenepoolSimulationPtr genepool(new NeuralIceTargetsGS(
+	//	{ 700.0f, 850.0f }, 300.0f, 3000, { 4, 4, 2 }, { { 150.0f, 150.0f }, { 920.0f, 400.0f }, { 300.0f, 850.0f }, { 550.0f, std::unique_ptr<320.0f } }, 20.0f));
+	//tbml::IGenepoolSimulationPtr genepool(new NeuralPoleBalancerGS(
+	//	1.0f, 0.1f, 0.5f, 2.0f, 0.6f, 0.25f, 20.0f, { 4, 1 }, tbml::tanh));
 
-	// Restart the genepool
-	this->genepool->restartGenepool(2000, 0.05f);
+	genepool->resetGenepool(2000, 0.05f);
+	this->genepoolController = std::make_unique<tbml::GenepoolSimulationController>(std::move(genepool));
 
 	// Initialize UI
-	this->uiManager = UIManager();
-	float spacing = 6.0f;
-	float size = 30.0f;
-	this->uiManager.addElement(new UIButton(this->window, { spacing + 0 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "assets/startstepping.png",
-		[this]() { this->genepool->setStepping(true); }
-	));
-	this->uiManager.addElement(new UIButton(this->window, { spacing + 1 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "assets/pausestepping.png",
-		[this]() { this->genepool->setStepping(false); }
-	));
-	this->uiManager.addElement(new UIButton(this->window, { spacing + 2 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "assets/process.png",
-		[this]() { this->genepool->processGeneration(); }
-	));
-	this->uiManager.addElement(new UIButton(this->window, { spacing + 3 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "assets/finish.png",
-		[this]() { this->genepool->finishGeneration(); }
-	));
-	this->uiManager.addElement(new UIToggleButton(this->window, { spacing + 4 * (spacing + size), spacing + 0 * (spacing + size) }, { size, size }, "assets/hide.png", false,
-		[this](bool toggled) { global::showVisuals = !toggled; }
-	));
-	this->uiManager.addElement(new UIToggleButton(this->window, { spacing + 0 * (spacing + size), spacing + 1 * (spacing + size) }, { size, size }, "assets/autostep.png", false,
-		[this](bool toggled) { this->genepool->setAutoStep(toggled); }
-	));
-	this->uiManager.addElement(new UIToggleButton(this->window, { spacing + 2 * (spacing + size), spacing + 1 * (spacing + size) }, { size, size }, "assets/autoprocess.png", false,
-		[this](bool toggled) { this->genepool->setAutoProcess(toggled); }
-	));
-	this->uiManager.addElement(new UIToggleButton(this->window, { spacing + 3 * (spacing + size), spacing + 1 * (spacing + size) }, { size, size }, "assets/autofinish.png", false,
-		[this](bool toggled) { this->genepool->setAutoFinish(toggled); }
-	));
+	this->uiManager = std::make_unique<UIManager>();
+	float sp = 6.0f;
+	float sz = 30.0f;
+	std::vector<UIElement*> elements = {
+		new UIButton(this->window, { sp + 0 * (sp + sz), sp + 0 * (sp + sz) }, { sz, sz }, "assets/startstepping.png", [this]() { this->genepoolController->setRunning(true); }),
+		new UIButton(this->window, { sp + 1 * (sp + sz), sp + 0 * (sp + sz) }, { sz, sz }, "assets/pausestepping.png", [this]() { this->genepoolController->setRunning(false); }),
+		new UIButton(this->window, { sp + 2 * (sp + sz), sp + 0 * (sp + sz) }, { sz, sz }, "assets/process.png", [this]() { this->genepoolController->evaluateGeneration(); }),
+		new UIButton(this->window, { sp + 3 * (sp + sz), sp + 0 * (sp + sz) }, { sz, sz }, "assets/finish.png", [this]() { this->genepoolController->iterateGeneration(); }),
+		new UIToggleButton(this->window, { sp + 4 * (sp + sz), sp + 0 * (sp + sz) }, { sz, sz }, "assets/hide.png", false, [this](bool toggled) { global::showVisuals = !toggled; }),
+		new UIToggleButton(this->window, { sp + 0 * (sp + sz), sp + 1 * (sp + sz) }, { sz, sz }, "assets/autostep.png", false, [this](bool toggled) { this->genepoolController->setAutoStepEvaluate(toggled); }),
+		new UIToggleButton(this->window, { sp + 2 * (sp + sz), sp + 1 * (sp + sz) }, { sz, sz }, "assets/autoprocess.png", false, [this](bool toggled) { this->genepoolController->setAutoFullEvaluate(toggled); }),
+		new UIToggleButton(this->window, { sp + 3 * (sp + sz), sp + 1 * (sp + sz) }, { sz, sz }, "assets/autofinish.png", false, [this](bool toggled) { this->genepoolController->setAutoIterate(toggled); })
+	};
+	for (auto e : elements) this->uiManager->addElement(e);
+}
+
+void Game::run()
+{
+	while (this->window->isOpen())
+	{
+		this->update();
+		this->render();
+	}
 }
 
 void Game::update()
 {
-	// Update delta time using dtClock
 	this->dt = this->dtClock.restart().asSeconds();
 
-	// Poll Events
 	while (this->window->pollEvent(this->sfEvent))
 	{
 		switch (this->sfEvent.type)
 		{
 
-			// Closed window
 		case sf::Event::Closed:
 			this->window->close();
 			break;
 		}
 	}
 
-	// Update genepool
-	this->genepool->update();
-	this->uiManager.update();
+	this->genepoolController->update();
+	this->uiManager->update();
 }
 
 void Game::render()
 {
-	// Reset window background
 	window->clear();
 
-	// Render genepool
-	if (global::showVisuals) this->genepool->render(window);
-	this->uiManager.render(window);
+	if (global::showVisuals) this->genepoolController->render(window);
+	this->uiManager->render(window);
 
-	// Display current draw window
 	window->display();
-}
-
-
-void Game::run()
-{
-	// Run game loop
-	while (this->window->isOpen())
-	{
-		this->update();
-		this->render();
-	}
 }

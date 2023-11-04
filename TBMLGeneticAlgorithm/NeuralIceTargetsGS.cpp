@@ -1,8 +1,8 @@
 
 #include "stdafx.h"
-#include "global.h"
+/*#include "global.h"
 #include "NeuralIceTargetsGS.h"
-#include "CommonGeneticDatas.h"
+#include "CommonImpl.h"
 #include "UtilityFunctions.h"
 #include "Matrix.h"
 
@@ -169,3 +169,4 @@ size_t NeuralIceTargetsGS::getTargetCount() { return this->targetPos.size(); }
 float NeuralIceTargetsGS::getTargetRadius() { return this->targetRadius; }
 
 #pragma endregion
+*/

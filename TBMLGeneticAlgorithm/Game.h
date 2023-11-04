@@ -21,10 +21,10 @@ private:
 	sf::Clock dtClock;
 	float dt;
 
-	tbml::IGenepoolSimulation* genepool;
-	UIManager uiManager;
+	std::unique_ptr<tbml::GenepoolSimulationController> genepoolController;
+	std::unique_ptr<UIManager> uiManager;
 
-	void initVariables();
+	void initialize();
 	void update();
 	void render();
 };

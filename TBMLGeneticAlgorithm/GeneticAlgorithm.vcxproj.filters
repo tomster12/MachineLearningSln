@@ -48,7 +48,7 @@
     <ClCompile Include="NeuralIceTargetsGS.cpp">
       <Filter>Implementation\Neural Ice Targets</Filter>
     </ClCompile>
-    <ClCompile Include="CommonGeneticDatas.cpp">
+    <ClCompile Include="CommonImpl.cpp">
       <Filter>Implementation</Filter>
     </ClCompile>
     <ClCompile Include="NeuralPoleBalancerGS.cpp">
@@ -77,7 +77,7 @@
     <ClInclude Include="NeuralIceTargetsGS.h">
       <Filter>Implementation\Neural Ice Targets</Filter>
     </ClInclude>
-    <ClInclude Include="CommonGeneticDatas.h">
+    <ClInclude Include="CommonImpl.h">
       <Filter>Implementation</Filter>
     </ClInclude>
     <ClInclude Include="NeuralPoleBalancerGS.h">

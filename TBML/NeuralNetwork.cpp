@@ -91,6 +91,10 @@ namespace tbml
 
 	std::vector<Matrix>& NeuralNetwork::getBias() { return bias; }
 
+	const std::vector<Matrix>& NeuralNetwork::getWeights() const { return weights; }
+
+	const std::vector<Matrix>& NeuralNetwork::getBias() const { return bias; }
+
 	afptr NeuralNetwork::getActivator() const { return activator; }
 
 	size_t NeuralNetwork::getLayerCount() const { return layerCount; }
