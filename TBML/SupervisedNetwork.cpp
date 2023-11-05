@@ -28,30 +28,28 @@ namespace tbml
 
 	void SupervisedNetwork::train(const Matrix& input, const Matrix& expected, const TrainingConfig& config)
 	{
-		// Split input and expected
+		// Split input and expected into batches
 		size_t batchCount;
-		std::vector<Matrix> splitInput, splitExpected;
+		std::vector<Matrix> batchInputs, batchExpected;
 		if (config.batchSize == -1)
 		{
-			splitInput = std::vector<Matrix>({ input });
-			splitExpected = std::vector<Matrix>({ expected });
+			batchInputs = std::vector<Matrix>({ input });
+			batchExpected = std::vector<Matrix>({ expected });
 			batchCount = 1;
 		}
 		else
 		{
-			splitInput = input.splitRows(config.batchSize);
-			splitExpected = expected.splitRows(config.batchSize);
-			batchCount = splitInput.size();
+			batchInputs = input.getSplitRows(config.batchSize);
+			batchExpected = expected.getSplitRows(config.batchSize);
+			batchCount = config.batchSize;
 		}
 
-		// Setup variables
 		std::mutex updateMutex;
 		std::vector<Matrix> weightsMomentum = std::vector<Matrix>(layerCount);
 		std::vector<Matrix> biasMomentum = std::vector<Matrix>(layerCount);
 		int maxEpochs = (config.epochs == -1 && config.errorExit > 0.0f) ? MAX_MAX_ITERATIONS : config.epochs;
 		int epoch = 0;
 
-		// Main timed training loop
 		//ThreadPool threadPool;
 		std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
 		std::chrono::steady_clock::time_point tepoch = t0;
@@ -59,11 +57,13 @@ namespace tbml
 		for (; epoch < maxEpochs; epoch++)
 		{
 			float epochError = 0.0f;
-			std::vector<std::future<float>> results(batchCount);
+			//std::vector<std::future<float>> results(batchCount);
+
+			// Process each batch
 			for (size_t batch = 0; batch < batchCount; batch++)
 			{
-				const Matrix& input = splitInput[batch];
-				const Matrix& expected = splitExpected[batch];
+				const Matrix& input = batchInputs[batch];
+				const Matrix& expected = batchExpected[batch];
 				//results[batch] = threadPool.enqueue([=]
 				//{
 				float batchError = trainBatch(input, expected, config, weightsMomentum, biasMomentum, updateMutex);
@@ -119,11 +119,11 @@ namespace tbml
 			Matrix biasDelta = backpropogateCache.pdBias[layer][0];
 			for (size_t input = 1; input < backpropogateCache.pdWeights[layer].size(); input++)
 			{
-				derivativeDelta.iadd(backpropogateCache.pdWeights[layer][input]);
-				biasDelta.iadd(backpropogateCache.pdBias[layer][input]);
+				derivativeDelta += backpropogateCache.pdWeights[layer][input];
+				biasDelta += backpropogateCache.pdBias[layer][input];
 			}
-			derivativeDelta.iscale(-config.learningRate / backpropogateCache.pdWeights[layer].size());
-			biasDelta.iscale(-config.learningRate / backpropogateCache.pdWeights[layer].size());
+			derivativeDelta *= -config.learningRate / backpropogateCache.pdWeights[layer].size();
+			biasDelta *= -config.learningRate / backpropogateCache.pdWeights[layer].size();
 
 			// Carry forward momentum
 			{
@@ -131,15 +131,15 @@ namespace tbml
 
 				if (!weightsMomentum[layer].getEmpty())
 				{
-					weightsMomentum[layer].iscale(config.momentumRate);
-					biasMomentum[layer].iscale(config.momentumRate);
-					derivativeDelta.iadd(weightsMomentum[layer]);
-					biasDelta.iadd(biasMomentum[layer]);
+					weightsMomentum[layer] *= config.momentumRate;
+					biasMomentum[layer] *= config.momentumRate;
+					derivativeDelta += weightsMomentum[layer];
+					biasDelta += biasMomentum[layer];
 				}
 				weightsMomentum[layer] = derivativeDelta;
 				biasMomentum[layer] = biasDelta;
-				weights[layer].iadd(derivativeDelta);
-				bias[layer].iadd(biasDelta);
+				weights[layer] += derivativeDelta;
+				bias[layer] += biasDelta;
 			}
 		}
 
@@ -181,10 +181,10 @@ namespace tbml
 			Matrix& pdNeuronIn = backpropogateCache.pdNeuronIn[layer + 1];
 
 			// - Loop over each input
-			size_t inputCount = expected.getRows();
+			size_t inputCount = expected.getRowCount();
 			if (backpropogateCache.pdWeights[layer].size() != inputCount) backpropogateCache.pdWeights[layer] = std::vector<Matrix>(inputCount);
 			if (backpropogateCache.pdBias[layer].size() != inputCount) backpropogateCache.pdBias[layer] = std::vector<Matrix>(inputCount);
-			for (size_t input = 0; input < expected.getRows(); input++)
+			for (size_t input = 0; input < expected.getRowCount(); input++)
 			{
 				// - Calculate weight derivatives
 				std::vector<std::vector<float>> pdWeightData = std::vector<std::vector<float>>(layerSizes[layer]);
@@ -193,8 +193,7 @@ namespace tbml
 					pdWeightData[row] = std::vector<float>(layerSizes[layer + 1]);
 					for (size_t col = 0; col < layerSizes[layer + 1]; col++)
 					{
-						float val = neuronOut.get(input, row) * pdNeuronIn.get(input, col);
-						pdWeightData[row][col] = val;
+						pdWeightData[row][col] = neuronOut(input, row) * pdNeuronIn(input, col);
 					}
 				}
 				backpropogateCache.pdWeights[layer][input] = Matrix(pdWeightData);
@@ -204,8 +203,7 @@ namespace tbml
 				pdBiasData[0] = std::vector<float>(layerSizes[layer + 1]);
 				for (size_t col = 0; col < layerSizes[layer + 1]; col++)
 				{
-					float val = pdNeuronIn.get(input, col);
-					pdBiasData[0][col] = val;
+					pdBiasData[0][col] = pdNeuronIn(input, col);
 				}
 				backpropogateCache.pdBias[layer][input] = Matrix(pdBiasData);
 			}
@@ -221,8 +219,8 @@ namespace tbml
 		// (δE / δnetⱼ) = (δE / δoⱼ) * (δoⱼ / δnetᵢⱼ)
 		calculatePdErrorToOut(layer, predictedCache, backpropogateCache);
 		Matrix& pdToOut = backpropogateCache.pdNeuronOut[layer];
-		Matrix pdToIn = predictedCache.neuronOutput[layer].map(activatorPd);
-		pdToIn.itimes(pdToOut);
+		Matrix pdToIn = predictedCache.neuronOutput[layer].mapped(activatorPd);
+		pdToIn *= pdToOut;
 		backpropogateCache.pdNeuronIn[layer] = pdToIn;
 	}
 
@@ -236,7 +234,7 @@ namespace tbml
 		else if (layer < layerCount - 1)
 		{
 			calculatePdErrorToIn(layer + 1, predictedCache, backpropogateCache);
-			Matrix wt = weights[layer].transpose();
+			Matrix wt = weights[layer].transposed();
 			backpropogateCache.pdNeuronOut[layer] = backpropogateCache.pdNeuronIn[layer + 1].cross(wt);
 		}
 

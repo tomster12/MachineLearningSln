@@ -17,7 +17,7 @@ void testMNIST();
 
 int main()
 {
-	testBackprop();
+	testTime();
 	return 0;
 }
 
@@ -39,7 +39,7 @@ void testTime()
 	// Create network and inputs
 	tbml::NeuralNetwork network(std::vector<size_t>({ 8, 8, 8, 1 }));
 	tbml::Matrix input = tbml::Matrix({ { 1, 0, -1, 0.2f, 0.7f, -0.3f, -1, -1 } });
-	size_t epoch = 10'000'000;
+	size_t epoch = 1; // 10'000'000;
 
 	// Number of epochs propogation timing
 	// -----------
@@ -53,6 +53,7 @@ void testTime()
 	std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
 	tbml::PropogateCache cache;
 	for (size_t i = 0; i < epoch; i++) network.propogate(input, cache);
+	std::cout << cache.neuronOutput[3](0, 0) << std::endl;
 	std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 	auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0);
 
@@ -138,8 +139,8 @@ void testMNIST()
 	tbml::Matrix expected = tbml::Matrix(imageCount, 10);
 	for (size_t i = 0; i < imageCount; i++)
 	{
-		for (size_t o = 0; o < imageSize; o++) input.set(i, o, (float)imageDataset[i][o] / 255.0f);
-		expected.set(i, labelDataset[i], 1);
+		for (size_t o = 0; o < imageSize; o++) input(i, o) = (float)imageDataset[i][o] / 255.0f;
+		expected(i, labelDataset[i]) = 1;
 		delete imageDataset[i];
 	}
 	delete imageDataset;

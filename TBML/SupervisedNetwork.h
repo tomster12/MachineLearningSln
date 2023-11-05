@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include<mutex>
+#include <mutex>
 #include "Matrix.h"
 #include "NeuralNetwork.h"
 

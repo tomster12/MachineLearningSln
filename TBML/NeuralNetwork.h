@@ -25,20 +25,20 @@ namespace tbml
 		void propogate(const Matrix& input, PropogateCache& cache) const;
 		void printLayers() const;
 
-		std::vector<Matrix>& getWeights();
-		std::vector<Matrix>& getBias();
-		const std::vector<Matrix>& getWeights() const;
-		const std::vector<Matrix>& getBias() const;
-		afptr getActivator() const;
-		size_t getLayerCount() const;
-		std::vector<size_t> getLayerSizes() const;
-		size_t getInputSize() const;
+		std::vector<Matrix>& getWeights() { return weights; }
+		std::vector<Matrix>& getBias() { return bias; }
+		const std::vector<Matrix>& getWeights() const { return weights; }
+		const std::vector<Matrix>& getBias() const { return bias; }
+		afptr getActivator() const { return activator; }
+		size_t getLayerCount() const { return layerCount; }
+		std::vector<size_t> getLayerSizes() const { return layerSizes; }
+		size_t getInputSize() const { return layerSizes[0]; }
 
 	protected:
-		size_t layerCount;
+		size_t layerCount = 0;
 		std::vector<size_t> layerSizes;
 		std::vector<Matrix> weights;
 		std::vector<Matrix> bias;
-		float (*activator)(float);
+		float (*activator)(float) = nullptr;
 	};
 }

@@ -4,234 +4,139 @@
 
 namespace tbml
 {
-#pragma region Setup
-
 	Matrix::Matrix()
 	{
-		// Initialize variables
-		data = std::vector<std::vector<float>>();
-		rows = 0;
-		cols = 0;
+		this->data = std::vector<float>();
 	}
 
-	Matrix::Matrix(std::vector<std::vector<float>> data)
+	Matrix::Matrix(const std::vector<std::vector<float>>& data)
 	{
-		// Initialize variables
-		this->data = data;
 		this->rows = data.size();
 		this->cols = (rows > 0) ? data[0].size() : 0;
+		this->data = std::vector<float>(rows * cols);
+		for (size_t i = 0; i < rows; i++)
+		{
+			for (size_t j = 0; j < cols; j++)
+			{
+				this->data[i * cols + j] = data[i][j];
+			}
+		}
+	}
+
+	Matrix::Matrix(std::vector<float>&& data, size_t rows, size_t cols)
+	{
+		this->rows = rows;
+		this->cols = cols;
+		this->data = std::move(data);
 	}
 
 	Matrix::Matrix(size_t rows, size_t cols)
 	{
-		// Initialize variables
 		resize(rows, cols);
 	}
 
 	void Matrix::resize(size_t rows, size_t cols)
 	{
-		// Set to a specific size and zero
 		this->rows = rows;
 		this->cols = cols;
-		data = std::vector<std::vector<float>>(rows);
-		for (size_t row = 0; row < rows; row++)
-		{
-			data[row] = std::vector<float>(cols);
-			for (size_t col = 0; col < cols; col++) data[row][col] = 0.0f;
-		}
+		data = std::vector<float>(rows * cols);
+		for (size_t i = 0; i < rows * cols; i++) data[i] = 0.0f;
 	}
 
 	void Matrix::clear()
 	{
-		// Clear out matrix
-		data.clear();
 		rows = 0;
 		cols = 0;
+		data.clear();
 	}
 
-#pragma endregion
-
-#pragma region Arithmetic
-
-	Matrix Matrix::cross(const Matrix& other) const
+	Matrix& Matrix::map(std::function<float(float)> func)
 	{
-		// Create new matrix and inplace cross with other
-		Matrix newMatrix = *this;
-		newMatrix.icross(other);
-		return newMatrix;
+		for (size_t i = 0; i < rows; i++)
+		{
+			for (size_t j = 0; j < cols; j++)
+			{
+				data[i * cols + j] = func(data[i * cols + j]);
+			}
+		}
+		return *this;
 	}
 
-	Matrix* Matrix::icross(const Matrix& other)
+	Matrix& Matrix::ewise(Matrix const& m, std::function<float(float, float)> func)
 	{
-		size_t oRows = other.getRows();
-		size_t oCols = other.getCols();
+		for (size_t i = 0; i < rows; i++)
+		{
+			for (size_t j = 0; j < cols; j++)
+			{
+				data[i * cols + j] = func(data[i * cols + j], m.data[(i % m.rows) * m.cols + (j % m.cols)]);
+			}
+		}
+		return *this;
+	}
 
+	Matrix& Matrix::transpose()
+	{
+		std::vector<float> newData(rows * cols);
+		for (size_t i = 0; i < rows; i++)
+		{
+			for (size_t j = 0; j < cols; j++)
+			{
+				newData[j * rows + i] = data[i * cols + j];
+			}
+		}
+		data = std::move(newData);
+		size_t tmp = rows;
+		rows = cols;
+		cols = tmp;
+		return *this;
+	}
+
+	Matrix& Matrix::cross(Matrix const& m)
+	{
 		// Massive speedup but cannot parrellelise or const
 		// static std::vector<float> calcRow(oCols);
 		//if (calcRow.size() != oCols) calcRow.resize(oCols);
 
-		// Inplace cross with other
-		std::vector<float> calcRow(oCols);
-		for (size_t row = 0; row < rows; row++)
+		std::vector<float> newData(rows * m.cols);
+
+		for (size_t i = 0; i < rows; i++)
 		{
-			for (size_t oCol = 0; oCol < oCols; oCol++)
+			for (size_t mj = 0; mj < m.cols; mj++)
 			{
 				float sum = 0;
-				for (size_t i = 0; i < cols; i++) sum += data[row][i] * other.get(i, oCol);
-				calcRow[oCol] = sum;
+				for (size_t j = 0; j < cols; j++) sum += data[i * cols + j] * m.data[j * m.cols + mj];
+				newData[i * m.cols + mj] = sum;
 			}
-			data[row] = calcRow;
 		}
 
-		// Update variables and return
-		rows = rows;
-		cols = oCols;
-		return this;
-	}
-
-	Matrix Matrix::transpose() const
-	{
-		// Create new matrix and inplace tranpose
-		Matrix newMatrix = *this;
-		newMatrix.itranspose();
-		return newMatrix;
-	}
-
-	Matrix* Matrix::itranspose()
-	{
-		// Inplace tranpose this
-		std::vector<std::vector<float>> newData(cols);
-		for (size_t row = 0; row < cols; row++)
-		{
-			std::vector<float> newRow(rows);
-			for (size_t col = 0; col < rows; col++)
-			{
-				newRow[col] = data[col][row];
-			}
-			newData[row] = newRow;
-		}
-
-		// Update variables and return
-		data = newData;
-		size_t tmp = rows;
-		rows = cols;
-		cols = tmp;
-		return this;
+		data = std::move(newData);
+		cols = m.cols;
+		return *this;
 	}
 
 	float Matrix::acc(std::function<float(float, float)> func, float initial) const
 	{
-		// Apply function to each element in matrix
 		float current = initial;
-		for (size_t row = 0; row < rows; row++)
+		for (size_t i = 0; i < rows; i++)
 		{
-			for (size_t col = 0; col < cols; col++)
+			for (size_t j = 0; j < cols; j++)
 			{
-				current = func(data[row][col], current);
+				current = func(data[i * cols + j], current);
 			}
 		}
 		return current;
 	}
 
-	Matrix Matrix::map(std::function<float(float)> func) const
-	{
-		// Create new matrix and inplace map
-		Matrix newMatrix = *this;
-		newMatrix.imap(func);
-		return newMatrix;
-	}
-
-	Matrix* Matrix::imap(std::function<float(float)> func)
-	{
-		// Apply function to each element
-		for (size_t row = 0; row < rows; row++)
-		{
-			for (size_t col = 0; col < cols; col++)
-			{
-				data[row][col] = func(data[row][col]);
-			}
-		}
-		return this;
-	}
-
-	Matrix Matrix::ewise(const Matrix& other, std::function<float(float, float)> func) const
-	{
-		// Create new matrix and inplace map
-		Matrix newMatrix = *this;
-		newMatrix.iewise(other, func);
-		return newMatrix;
-	}
-
-	Matrix* Matrix::iewise(const Matrix& other, std::function<float(float, float)> func)
-	{
-		size_t oRows = other.getRows();
-		size_t oCols = other.getCols();
-
-		// Inplace add to other matrix
-		for (size_t row = 0; row < rows; row++)
-		{
-			for (size_t col = 0; col < cols; col++)
-			{
-				float value = data[row][col];
-				float oValue = other.get(row < oRows ? row : oRows - 1, col < oCols ? col : oCols - 1);
-				data[row][col] = func(value, oValue);
-			}
-		}
-		return this;
-	}
-
-	Matrix Matrix::scale(float val) const
-	{
-		// Create new matrix and inplace scale
-		Matrix newMatrix = *this;
-		newMatrix.iscale(val);
-		return newMatrix;
-	}
-
-	Matrix* Matrix::iscale(float val)
-	{
-		// Apply function to matrix
-		for (size_t row = 0; row < rows; row++)
-		{
-			for (size_t col = 0; col < cols; col++)
-			{
-				data[row][col] = data[row][col] * val;
-			}
-		}
-		return this;
-	}
-
-	Matrix Matrix::sub(const Matrix& other) const { return ewise(other, [](float x, float y) { return x - y; }); }
-
-	Matrix* Matrix::isub(const Matrix& other) { return iewise(other, [](float x, float y) { return x - y; }); }
-
-	Matrix Matrix::add(const Matrix& other) const { return ewise(other, [](float x, float y) { return x + y; }); }
-
-	Matrix* Matrix::iadd(const Matrix& other) { return iewise(other, [](float x, float y) { return x + y; }); }
-
-	Matrix Matrix::times(const Matrix& other) const { return ewise(other, [](float x, float y) { return x * y; }); }
-
-	Matrix* Matrix::itimes(const Matrix& other) { return iewise(other, [](float x, float y) { return x * y; }); }
-
-	Matrix Matrix::div(const Matrix& other) const { return ewise(other, [](float x, float y) { return x / y; }); }
-
-	Matrix* Matrix::idiv(const Matrix& other) { return iewise(other, [](float x, float y) { return x / y; }); }
-
-#pragma endregion
-
-#pragma region Main
-
 	void Matrix::printValues(std::string tag) const
 	{
-		// Print each layers values
 		std::cout << tag << std::endl;
-		for (size_t row = 0; row < rows; row++)
+		for (size_t i = 0; i < rows; i++)
 		{
 			std::cout << "  ";
-			for (size_t col = 0; col < cols; col++)
+			for (size_t j = 0; j < cols; j++)
 			{
-				char prefix = (data[row][col] >= 0) ? ' ' : '\0';
-				std::cout << prefix << std::fixed << std::setprecision(4) << data[row][col] << " ";
+				char prefix = (data[i * cols + j] >= 0) ? ' ' : '\0';
+				std::cout << prefix << std::fixed << std::setprecision(4) << data[i * cols + j] << " ";
 			}
 			std::cout << std::endl;
 		}
@@ -240,57 +145,31 @@ namespace tbml
 
 	void Matrix::printDims(std::string tag) const
 	{
-		// Print dimensions
 		std::cout << tag << rows << " x " << cols << std::endl;
 	}
 
-	std::vector<Matrix> Matrix::splitRows(size_t splitSize) const
+	std::vector<Matrix> Matrix::getSplitRows(size_t splitSize) const
 	{
-		// Initialize variables
-		size_t splitCount = (int)(rows / splitSize);
-		std::vector<Matrix> splits = std::vector<Matrix>(splitCount + ((rows % splitSize == 0) ? 0 : 1));
+		size_t splitCount = (size_t)(ceil((float)rows / splitSize));
+		std::vector<Matrix> splits = std::vector<Matrix>(splitCount);
 
-		// Loop over each split and copy rows
-		for (size_t i = 0; i < splitCount; i++)
+		for (size_t si = 0; si < splitCount; si++)
 		{
-			std::vector<std::vector<float>> splitData = std::vector<std::vector<float>>(splitSize);
-			for (size_t o = 0; o < splitSize; o++) splitData[o] = data[i * splitSize + o];
-			splits[i] = Matrix(splitData);
+			size_t splitRows = (si < splitCount - 1) ? splitSize : (rows % splitSize);
+			std::vector<float> splitData = std::vector<float>(splitRows * cols);
+
+			for (size_t i = 0; i < splitRows; i++)
+			{
+				for (size_t j = 0; j < cols; j++)
+				{
+					splitData[i * cols + j] = data[(si * splitSize + i) * cols + j];
+
+				}
+			}
+
+			splits[si] = Matrix(std::move(splitData), splitRows, cols);
 		}
 
-		// Copy rows for last split
-		if ((rows % splitSize) != 0)
-		{
-			std::vector<std::vector<float>> splitData = std::vector<std::vector<float>>(rows % splitSize);
-			for (size_t o = 0; o < rows % splitSize; o++) splitData[o] = data[splitCount * splitSize + o];
-			splits[splitCount] = Matrix(splitData);
-		}
-
-		// Return splits
 		return splits;
 	}
-
-	std::vector<std::vector<float>>& Matrix::getData() { return data; }
-
-	size_t Matrix::getRows() const { return rows; }
-
-	size_t Matrix::getCols() const { return cols; }
-
-	float Matrix::get(size_t row, size_t col) const { return data[row][col]; }
-
-	void Matrix::set(size_t row, size_t col, float val) { data[row][col] = val; }
-
-	//float& Matrix::operator()(size_t row, size_t col)
-	//{
-	//	return mData[i * mCols + j];
-	//}
-
-	//double Matrix::operator()(size_t i, size_t j) const
-	//{
-	//	return mData[i * mCols + j];
-	//}
-
-	bool Matrix::getEmpty() const { return rows == 0 || cols == 0; }
-
-#pragma endregion
 }

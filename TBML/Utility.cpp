@@ -28,18 +28,18 @@ namespace tbml
 	float calcErrSqDiff(const Matrix& predicted, const Matrix& expected)
 	{
 		float error = 0;
-		for (size_t row = 0; row < predicted.getRows(); row++)
+		for (size_t i = 0; i < predicted.getRowCount(); i++)
 		{
-			for (size_t col = 0; col < predicted.getCols(); col++)
+			for (size_t j = 0; j < predicted.getColCount(); j++)
 			{
-				float diff = expected.get(row, col) - predicted.get(row, col);
+				float diff = expected(i, j) - predicted(i, j);
 				error += diff * diff;
 			}
 		}
 		return 0.5f * error;
 	}
 
-	Matrix calcErrSqDiffPd(const Matrix& predicted, const Matrix& expected) { return predicted.sub(expected); }
+	Matrix calcErrSqDiffPd(const Matrix& predicted, const Matrix& expected) { return predicted - expected; }
 
 	float getRandomFloat() { return static_cast<float>(rand()) / static_cast<float>(RAND_MAX); }
 }
