@@ -32,6 +32,7 @@ namespace tbml
 		afptr getActivator() const;
 		size_t getLayerCount() const;
 		std::vector<size_t> getLayerSizes() const;
+		size_t getInputSize() const;
 
 	protected:
 		size_t layerCount;

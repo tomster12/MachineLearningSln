@@ -34,6 +34,7 @@ public:
 	void print() const;
 
 	NeuralGD::DataPtr crossover(const NeuralGD::DataPtr& otherData, float mutateChance) const override;
+	size_t getInputSize() const { return this->network.getInputSize(); }
 
 private:
 	tbml::NeuralNetwork network;

@@ -100,4 +100,6 @@ namespace tbml
 	size_t NeuralNetwork::getLayerCount() const { return layerCount; }
 
 	std::vector<size_t> NeuralNetwork::getLayerSizes() const { return layerSizes; }
+
+	size_t NeuralNetwork::getInputSize() const { return layerSizes[0]; }
 }

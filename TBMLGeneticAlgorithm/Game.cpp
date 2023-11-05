@@ -42,7 +42,7 @@ void Game::initialize()
 	// Initialize genepool object
 	//tbml::IGenepoolSimulationPtr genepool(new VectorListTargetGS({ 700.0f, 600.0f }, 4.0f, 4.0f, 500, { 700.0f, 100.0f }, 20.0f));
 	//tbml::IGenepoolSimulationPtr genepool(new NeuralTargetGS({ 700.0f, 850.0f }, 2.0f, 2.0f, 1000, { 2, 2 }, 20.0f, { 700.0f, 150.0f }, 500.0f));
-	tbml::IGenepoolSimulationPtr genepool(new NeuralIceTargetsGS({ 700.0f, 850.0f }, 2.0f, 400.0f, 0.995f, 3000, { 6, 4, 2 }, { { 300.0f, 150.0f }, { 1100.0f, 400.0f }, { 450.0f, 850.0f }, { 700.0f, 320.0f } }, 4.0f, tbml::tanh));
+	tbml::IGenepoolSimulationPtr genepool(new NeuralIceTargetsGS({ 700.0f, 850.0f }, 2.0f, 400.0f, 0.995f, 3000, { 6, 2 }, { { 300.0f, 150.0f }, { 1100.0f, 400.0f }, { 450.0f, 850.0f }, { 700.0f, 320.0f } }, 4.0f, tbml::tanh));
 	//tbml::IGenepoolSimulationPtr genepool(new NeuralPoleBalancerGS(1.0f, 0.1f, 0.5f, 2.0f, 0.6f, 0.25f, 20.0f, { 4, 1 }, tbml::tanh));
 
 	genepool->resetGenepool(2000, 0.05f);

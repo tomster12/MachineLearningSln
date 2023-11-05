@@ -9,7 +9,7 @@
 #pragma region - NeuralIceTargetsGI
 
 NeuralIceTargetsGI::NeuralIceTargetsGI(const NeuralIceTargetsGS* sim, sf::Vector2f startPos, float radius, float moveAcc, float moveDrag, int maxIterations, NeuralIceTargetsGI::DataPtr&& geneticData)
-	: GeneticInstance(std::move(geneticData)), sim(sim), netInput(1, 4), pos(startPos), radius(radius), moveAcc(moveAcc), moveDrag(moveDrag), maxIterations(maxIterations), currentIteration(0), currentTarget(0), vel(), anger(0.0f)
+	: GeneticInstance(std::move(geneticData)), sim(sim), netInput(1, 6), pos(startPos), radius(radius), moveAcc(moveAcc), moveDrag(moveDrag), maxIterations(maxIterations), currentIteration(0), currentTarget(0), vel(), anger(0.0f)
 {
 	if (global::showVisuals) initVisual();
 }
