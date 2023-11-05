@@ -2,7 +2,7 @@
 #include "stdafx.h"
 #include "VectorListTargetGS.h"
 #include "CommonImpl.h"
-#include "UtilityFunctions.h"
+#include "Utility.h"
 
 #pragma region - VectorListTargetGI
 

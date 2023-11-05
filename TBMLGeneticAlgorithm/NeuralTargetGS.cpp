@@ -2,7 +2,7 @@
 #include "stdafx.h"
 #include "global.h"
 #include "NeuralTargetGS.h"
-#include "UtilityFunctions.h"
+#include "Utility.h"
 #include "CommonImpl.h"
 #include "Matrix.h"
 

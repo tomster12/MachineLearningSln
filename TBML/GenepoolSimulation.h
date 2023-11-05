@@ -2,7 +2,7 @@
 #pragma once
 
 #include "stdafx.h"
-#include "UtilityFunctions.h"
+#include "Utility.h"
 #include "ThreadPool.h"
 
 namespace tbml

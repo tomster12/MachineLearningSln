@@ -1,7 +1,7 @@
 
 #include "stdafx.h"
 #include "NeuralPoleBalancerGS.h"
-#include "UtilityFunctions.h"
+#include "Utility.h"
 
 
 #pragma region - NeuralPoleBalancerGI

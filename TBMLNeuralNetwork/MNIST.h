@@ -45,9 +45,9 @@ public:
 				file.read((char*)_dataset[i], imageSize);
 			}
 			return _dataset;
-
-			// File reading error
 		}
+
+		// File reading error
 		else throw std::runtime_error("Cannot open file `" + path + "`!");
 	}
 
@@ -80,9 +80,9 @@ public:
 			for (size_t i = 0; i < labelCount; i++)
 				file.read((char*)&_dataset[i], 1);
 			return _dataset;
-
-			// File reading error
 		}
+
+		// File reading error
 		else throw std::runtime_error("Unable to open file `" + path + "`!");
 	}
 };

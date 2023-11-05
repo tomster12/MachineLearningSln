@@ -280,6 +280,16 @@ namespace tbml
 
 	void Matrix::set(size_t row, size_t col, float val) { data[row][col] = val; }
 
+	//float& Matrix::operator()(size_t row, size_t col)
+	//{
+	//	return mData[i * mCols + j];
+	//}
+
+	//double Matrix::operator()(size_t i, size_t j) const
+	//{
+	//	return mData[i * mCols + j];
+	//}
+
 	bool Matrix::getEmpty() const { return rows == 0 || cols == 0; }
 
 #pragma endregion

@@ -2,7 +2,7 @@
 #include "stdafx.h"
 #include "Game.h"
 
-#include "UtilityFunctions.h"
+#include "Utility.h"
 #include "GenepoolSimulation.h"
 
 //#include "VectorListTargetGS.h"

@@ -3,7 +3,7 @@
 #include "global.h"
 #include "NeuralIceTargetsGS.h"
 #include "CommonImpl.h"
-#include "UtilityFunctions.h"
+#include "Utility.h"
 #include "Matrix.h"
 
 #pragma region - NeuralIceTargetsGI

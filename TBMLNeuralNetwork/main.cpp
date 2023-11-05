@@ -4,7 +4,7 @@
 #include <chrono>
 
 #include "Matrix.h"
-#include "UtilityFunctions.h"
+#include "Utility.h"
 #include "SupervisedNetwork.h"
 #include "MNIST.h"
 #include "ThreadPool.h"
@@ -17,7 +17,7 @@ void testMNIST();
 
 int main()
 {
-	testMNIST();
+	testBackprop();
 	return 0;
 }
 
@@ -160,6 +160,6 @@ void testMNIST()
 	//	- GPU Parallelism
 	//	- Small optimizations in Matrix class
 	//	- More complex architecture involving convolutions
-	tbml::SupervisedNetwork network(std::vector<size_t>({ imageSize, 100, 10 }), tbml::tanh, tbml::tanhPd);
+	tbml::SupervisedNetwork network({ imageSize, 100, 10 }, tbml::tanh, tbml::tanhPd);
 	network.train(input, expected, { 10, 128, 0.15f, 0.8f, 0.01f, 2 });
 }

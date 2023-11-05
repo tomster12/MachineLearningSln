@@ -2,7 +2,7 @@
 #include "stdafx.h"
 #include "NeuralNetwork.h"
 #include "Matrix.h"
-#include "UtilityFunctions.h"
+#include "Utility.h"
 
 namespace tbml
 {

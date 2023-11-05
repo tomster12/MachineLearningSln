@@ -166,7 +166,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="GenepoolSimulation.h" />
-    <ClInclude Include="UtilityFunctions.h" />
+    <ClInclude Include="Utility.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="NeuralNetwork.h" />
     <ClInclude Include="stdafx.h" />
@@ -174,7 +174,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ThreadPool.h" />
-    <ClCompile Include="UtilityFunctions.cpp" />
+    <ClCompile Include="Utility.cpp" />
     <ClCompile Include="Matrix.cpp" />
     <ClCompile Include="NeuralNetwork.cpp" />
     <ClCompile Include="stdafx.cpp" />

@@ -6,7 +6,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="UtilityFunctions.h">
+    <ClInclude Include="Utility.h">
       <Filter>Library</Filter>
     </ClInclude>
     <ClInclude Include="Matrix.h">
@@ -26,7 +26,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="UtilityFunctions.cpp">
+    <ClCompile Include="Utility.cpp">
       <Filter>Library</Filter>
     </ClCompile>
     <ClCompile Include="Matrix.cpp">

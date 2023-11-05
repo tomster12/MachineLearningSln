@@ -2,7 +2,7 @@
 #pragma once
 
 #include "Matrix.h"
-#include "UtilityFunctions.h"
+#include "Utility.h"
 
 namespace tbml
 {
