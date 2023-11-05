@@ -9,7 +9,8 @@
 #include <vector>
 #include <string>
 #include <mutex>
-#include<algorithm>
+#include <algorithm>
+#include <functional>
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>

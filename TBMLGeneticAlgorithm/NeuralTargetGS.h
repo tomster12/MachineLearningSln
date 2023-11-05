@@ -1,4 +1,4 @@
-/*
+
 #pragma once
 
 #include "GenepoolSimulation.h"
@@ -8,8 +8,8 @@ class NeuralTargetGS;
 class NeuralTargetGI : public tbml::GeneticInstance<NeuralGD>
 {
 public:
-	NeuralTargetGI(NeuralGD* geneticData) : tbml::GeneticInstance<NeuralGD>(geneticData) {};
-	NeuralTargetGI(NeuralTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc, int maxIterations, NeuralGD* geneticData);
+	NeuralTargetGI(NeuralTargetGI::DataPtr&& geneticData) : GeneticInstance(std::move(geneticData)) {};
+	NeuralTargetGI(const NeuralTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc, int maxIterations, NeuralTargetGI::DataPtr&& geneticData);
 	void initVisual();
 
 	bool step() override;
@@ -19,7 +19,7 @@ public:
 	float calculateFitness();
 
 private:
-	NeuralTargetGS* sim;
+	const NeuralTargetGS* sim = nullptr;
 	sf::CircleShape shape;
 
 	sf::Vector2f startPos;
@@ -43,8 +43,8 @@ public:
 
 	void initGeneration() override;
 
-	sf::Vector2f getTargetPos();
-	float getTargetRadius();
+	sf::Vector2f getTargetPos() const;
+	float getTargetRadius() const;
 
 protected:
 	sf::CircleShape target;
@@ -58,9 +58,8 @@ protected:
 	float targetRandomRadius = 0.0f;
 	sf::Vector2f targetPos;
 
-	NeuralGD* createData() override;
-	NeuralTargetGI* createInstance(NeuralGD* data) override;
+	DataPtr createData() const override;
+	InstPtr createInstance(DataPtr&& data) const override;
 
-	sf::Vector2f getRandomTargetPos();
+	sf::Vector2f getRandomTargetPos() const;
 };
-*/

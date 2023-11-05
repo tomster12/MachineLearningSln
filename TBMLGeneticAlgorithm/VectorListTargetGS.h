@@ -8,8 +8,8 @@ class VectorListTargetGS;
 class VectorListTargetGI : public tbml::GeneticInstance<VectorListGD>
 {
 public:
-	VectorListTargetGI(const VectorListTargetGI::DataPtr geneticData) : GeneticInstance(geneticData), sim(nullptr), moveAcc(0), radius(0), currentIndex(-1) {};
-	VectorListTargetGI(VectorListTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc, const VectorListTargetGI::DataPtr geneticData);
+	VectorListTargetGI(VectorListTargetGI::DataPtr&& geneticData) : GeneticInstance(std::move(geneticData)) {};
+	VectorListTargetGI(VectorListTargetGI::DataPtr&& geneticData, const VectorListTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc);
 	void initVisual();
 
 	bool step() override;
@@ -19,14 +19,14 @@ public:
 	float calculateFitness();
 
 private:
-	VectorListTargetGS* sim;
+	const VectorListTargetGS* sim = nullptr;
 	sf::CircleShape shape;
 
 	sf::Vector2f startPos;
 	sf::Vector2f pos;
-	float moveAcc;
-	float radius;
-	int currentIndex;
+	float moveAcc = 0.0f;
+	float radius = 0.0f;
+	int currentIndex = -1;
 };
 
 class VectorListTargetGS : public tbml::GenepoolSimulation<VectorListGD, VectorListTargetGI>
@@ -40,8 +40,8 @@ public:
 
 	void render(sf::RenderWindow* window) override;
 
-	sf::Vector2f getTargetPos();
-	float getTargetRadius();
+	sf::Vector2f getTargetPos() const;
+	float getTargetRadius() const;
 
 protected:
 	sf::CircleShape target;
@@ -52,6 +52,6 @@ protected:
 	float instancemoveAcc = 0.0f;
 	int dataSize = 0;
 
-	DataPtr createData() override;
-	InstPtr createInstance(const DataPtr data) override;
+	DataPtr createData() const override;
+	InstPtr createInstance(DataPtr&& data) const override;
 };

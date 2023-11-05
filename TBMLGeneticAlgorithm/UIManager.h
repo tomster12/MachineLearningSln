@@ -53,16 +53,29 @@ private:
 	bool isPressed;
 };
 
+class UIDynamicText : public UIElement
+{
+public:
+	UIDynamicText(sf::RenderWindow* window, sf::Vector2f pos, size_t fontSize, std::function<std::string(void)> textFunc);
+
+	void update() override {};
+	void render(sf::RenderWindow* window) override;
+
+private:
+	sf::RenderWindow* window;
+	sf::Vector2f pos;
+	sf::Text text;
+	std::function<std::string(void)> textFunc;
+};
+
 class UIManager
 {
 public:
-	~UIManager();
-
 	void update();
 	void render(sf::RenderWindow* window);
 
-	void addElement(UIElement* uiElement);
+	void addElement(std::shared_ptr<UIElement>&& uiElement);
 
 private:
-	std::vector<UIElement*> uiElements;
+	std::vector<std::shared_ptr<UIElement>> uiElements;
 };

@@ -1,4 +1,4 @@
-/*
+
 #pragma once
 
 #include "GenepoolSimulation.h"
@@ -9,11 +9,11 @@ class NeuralPoleBalancerGS;
 class NeuralPoleBalancerGI : public tbml::GeneticInstance<NeuralGD>
 {
 public:
-	NeuralPoleBalancerGI(NeuralGD* geneticData) : tbml::GeneticInstance<NeuralGD>(geneticData) {};
+	NeuralPoleBalancerGI(NeuralPoleBalancerGI::DataPtr&& geneticData) : GeneticInstance(std::move(geneticData)) {};
 	NeuralPoleBalancerGI(
 		float cartMass, float poleMass, float poleLength, float force,
 		float trackLimit, float angleLimit, float timeLimit,
-		NeuralGD* geneticData);
+		NeuralPoleBalancerGI::DataPtr&& geneticData);
 	void initVisual();
 
 	bool step() override;
@@ -67,7 +67,6 @@ protected:
 	std::vector<size_t> dataLayerSizes;
 	float (*dataActivator)(float);
 
-	NeuralGD* createData() override;
-	NeuralPoleBalancerGI* createInstance(NeuralGD* data) override;
+	DataPtr createData() const override;
+	InstPtr createInstance(DataPtr&& data) const override;
 };
-*/

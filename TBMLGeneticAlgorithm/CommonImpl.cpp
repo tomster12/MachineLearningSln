@@ -16,10 +16,10 @@ VectorListGD::VectorListGD(int dataSize)
 	}
 }
 
-VectorListGD::VectorListGD(std::vector<sf::Vector2f> values)
+VectorListGD::VectorListGD(std::vector<sf::Vector2f>&& values)
 {
 	this->dataSize = values.size();
-	this->values = values;
+	this->values = std::move(values);
 }
 
 const std::vector<sf::Vector2f>& VectorListGD::getValues() const { return values; };
@@ -46,96 +46,60 @@ VectorListGD::DataPtr VectorListGD::crossover(const VectorListGD::DataPtr& other
 		}
 	}
 
-	return std::make_shared<VectorListGD>(newValues);
+	return std::make_shared<VectorListGD>(std::move(newValues));
 }
 
 #pragma endregion
 
-/*
 #pragma region - NeuralGD
 
 NeuralGD::NeuralGD(std::vector<size_t> layerSizes, float (*activator)(float))
 	: network(layerSizes, activator, false)
+{
+	this->network.randomize();
+}
+
+NeuralGD::NeuralGD(tbml::NeuralNetwork&& network)
+	: network(std::move(network))
 {}
 
-NeuralGD::NeuralGD(tbml::NeuralNetwork network)
-	: network(network)
-{}
-
-tbml::Matrix NeuralGD::propogate(tbml::Matrix& input) { return this->network.propogate(input); }
+tbml::Matrix NeuralGD::propogate(tbml::Matrix& input) const { return this->network.propogate(input); }
 
 void NeuralGD::print() const { this->network.printLayers(); }
 
-void NeuralGD::randomize() { this->network.randomize(); };
-
-void NeuralGD::mutate(float chance)
-{
-	// Mutate all weights
-	// - Cannot use imap because cannot have capture chance into a lambda
-	std::vector<tbml::Matrix>& weights = this->network.getWeights();
-	for (auto& layer : weights)
-	{
-		std::vector<std::vector<float>>& data = layer.getData();
-		for (size_t row = 0; row < layer.getRows(); row++)
-		{
-			for (size_t col = 0; col < layer.getCols(); col++)
-			{
-				if (tbml::getRandomFloat() < chance) data[row][col] = -1.0f + 2.0f * tbml::getRandomFloat();
-			}
-		}
-	}
-
-	// Mutate all bias
-	std::vector<tbml::Matrix>& bias = this->network.getBias();
-	for (auto& layer : bias)
-	{
-		std::vector<std::vector<float>>& data = layer.getData();
-		for (size_t row = 0; row < layer.getRows(); row++)
-		{
-			for (size_t col = 0; col < layer.getCols(); col++)
-			{
-				if (tbml::getRandomFloat() < chance) data[row][col] = -1.0f + 2.0f * tbml::getRandomFloat();
-			}
-		}
-	}
-};
-
-NeuralGD::DataPtr NeuralGD::crossover(NeuralGD::DataPtr otherData) const
+NeuralGD::DataPtr NeuralGD::crossover(const NeuralGD::DataPtr& otherData, float mutateChance) const
 {
 	// Crossover weights
 	const std::vector<tbml::Matrix>& weights = this->network.getWeights();
 	const std::vector<tbml::Matrix>& oWeights = otherData->network.getWeights();
-	std::vector<tbml::Matrix> newWeights = std::vector<tbml::Matrix>();
+
+	std::vector<tbml::Matrix> newWeights = std::vector<tbml::Matrix>(weights.size());
 	for (size_t i = 0; i < weights.size(); i++)
 	{
-		newWeights.push_back(weights[i].ewise(oWeights[i], [](float a, float b)
+		newWeights[i] = weights[i].ewise(oWeights[i], [mutateChance](float a, float b)
 		{
-			return tbml::getRandomFloat() < 0.5f ? a : b;
-		}));
+			if (tbml::getRandomFloat() < mutateChance) return -1.0f + 2.0f * tbml::getRandomFloat();
+			else return tbml::getRandomFloat() < 0.5f ? a : b;
+		});
 	}
 
 	// Crossover bias
 	const std::vector<tbml::Matrix>& bias = network.getBias();
 	const std::vector<tbml::Matrix>& oBias = otherData->network.getBias();
-	std::vector<tbml::Matrix> newBias = std::vector<tbml::Matrix>();
+
+	std::vector<tbml::Matrix> newBias = std::vector<tbml::Matrix>(bias.size());
 	for (size_t i = 0; i < bias.size(); i++)
 	{
-		newBias.push_back(bias[i].ewise(oBias[i], [](float a, float b)
+		newBias[i] = bias[i].ewise(oBias[i], [mutateChance](float a, float b)
 		{
-			return tbml::getRandomFloat() < 0.5f ? a : b;
-		}));
+			if (tbml::getRandomFloat() < mutateChance) return -1.0f + 2.0f * tbml::getRandomFloat();
+			else return tbml::getRandomFloat() < 0.5f ? a : b;
+		});
 	}
 
 	// Create new network and return
 	tbml::NeuralNetwork network(std::move(newWeights), std::move(newBias), this->network.getActivator());
-	return std::make_shared<NeuralGD>(network);
+	return std::make_shared<NeuralGD>(std::move(network));
 };
 
-NeuralGD::DataPtr NeuralGD::clone() const
-{
-	// Create a new data, pass values by value
-	return std::make_shared<NeuralGD>(network);
-}
-
 #pragma endregion
-*/

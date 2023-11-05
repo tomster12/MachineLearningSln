@@ -119,7 +119,7 @@ namespace tbml
 		return this;
 	}
 
-	float Matrix::acc(float (*func)(float, float), float initial) const
+	float Matrix::acc(std::function<float(float, float)> func, float initial) const
 	{
 		// Apply function to each element in matrix
 		float current = initial;
@@ -133,7 +133,7 @@ namespace tbml
 		return current;
 	}
 
-	Matrix Matrix::map(float (*func)(float)) const
+	Matrix Matrix::map(std::function<float(float)> func) const
 	{
 		// Create new matrix and inplace map
 		Matrix newMatrix = *this;
@@ -141,7 +141,7 @@ namespace tbml
 		return newMatrix;
 	}
 
-	Matrix* Matrix::imap(float (*func)(float))
+	Matrix* Matrix::imap(std::function<float(float)> func)
 	{
 		// Apply function to each element
 		for (size_t row = 0; row < rows; row++)
@@ -154,7 +154,7 @@ namespace tbml
 		return this;
 	}
 
-	Matrix Matrix::ewise(const Matrix& other, float (*func)(float, float)) const
+	Matrix Matrix::ewise(const Matrix& other, std::function<float(float, float)> func) const
 	{
 		// Create new matrix and inplace map
 		Matrix newMatrix = *this;
@@ -162,7 +162,7 @@ namespace tbml
 		return newMatrix;
 	}
 
-	Matrix* Matrix::iewise(const Matrix& other, float (*func)(float, float))
+	Matrix* Matrix::iewise(const Matrix& other, std::function<float(float, float)> func)
 	{
 		size_t oRows = other.getRows();
 		size_t oCols = other.getCols();

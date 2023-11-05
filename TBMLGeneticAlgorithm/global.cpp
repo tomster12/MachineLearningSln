@@ -9,7 +9,6 @@ namespace global
 
 	void initialize()
 	{
-		// Initialize global member variables
 		font.loadFromFile("assets/arial.ttf");
 	}
 }

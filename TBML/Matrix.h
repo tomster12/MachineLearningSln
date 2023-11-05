@@ -18,11 +18,11 @@ namespace tbml
 		Matrix transpose() const;
 		Matrix* itranspose();
 
-		float acc(float (*func)(float, float), float initial) const;
-		Matrix map(float (*func)(float)) const;
-		Matrix* imap(float (*func)(float));
-		Matrix ewise(const Matrix& other, float (*func)(float, float)) const;
-		Matrix* iewise(const Matrix& other, float (*func)(float, float));
+		float acc(std::function<float(float, float)> func, float initial) const;
+		Matrix map(std::function<float(float)> func) const;
+		Matrix* imap(std::function<float(float)> func);
+		Matrix ewise(const Matrix& other, std::function<float(float, float)> func) const;
+		Matrix* iewise(const Matrix& other, std::function<float(float, float)> func);
 
 		Matrix scale(float val) const;
 		Matrix* iscale(float val);

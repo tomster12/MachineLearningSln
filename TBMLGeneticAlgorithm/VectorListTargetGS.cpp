@@ -6,16 +6,15 @@
 
 #pragma region - VectorListTargetGI
 
-VectorListTargetGI::VectorListTargetGI(VectorListTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc, const VectorListTargetGI::DataPtr geneticData)
-	: GeneticInstance(geneticData), sim(sim), pos(startPos), radius(radius), moveAcc(moveAcc), currentIndex(0)
+VectorListTargetGI::VectorListTargetGI(
+	VectorListTargetGI::DataPtr&& geneticData, const VectorListTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc)
+	: GeneticInstance(std::move(geneticData)), sim(sim), pos(startPos), radius(radius), moveAcc(moveAcc), currentIndex(0)
 {
-	// Initialize variables
 	if (global::showVisuals) initVisual();
 }
 
 void VectorListTargetGI::initVisual()
 {
-	// Initialize all visual variables
 	this->shape.setRadius(this->radius);
 	this->shape.setOrigin(this->radius, this->radius);
 	this->shape.setFillColor(sf::Color::Transparent);
@@ -96,8 +95,7 @@ VectorListTargetGS::VectorListTargetGS(
 	sf::Vector2f instanceStartPos, float instanceRadius,
 	float instancemoveAcc, int dataSize,
 	sf::Vector2f targetPos, float targetRadius)
-	: GenepoolSimulation(false, true, false),
-	instanceStartPos(instanceStartPos), instanceRadius(instanceRadius),
+	: instanceStartPos(instanceStartPos), instanceRadius(instanceRadius),
 	instancemoveAcc(instancemoveAcc), dataSize(dataSize),
 	targetPos(targetPos), targetRadius(targetRadius)
 {
@@ -110,14 +108,14 @@ VectorListTargetGS::VectorListTargetGS(
 	this->target.setPosition(this->targetPos);
 };
 
-VectorListTargetGS::DataPtr VectorListTargetGS::createData()
+VectorListTargetGS::DataPtr VectorListTargetGS::createData() const
 {
 	return std::make_shared<VectorListGD>(this->dataSize);
 };
 
-VectorListTargetGS::InstPtr VectorListTargetGS::createInstance(const VectorListTargetGS::DataPtr data)
+VectorListTargetGS::InstPtr VectorListTargetGS::createInstance(VectorListTargetGS::DataPtr&& data) const
 {
-	return std::make_shared<VectorListTargetGI>(this, this->instanceStartPos, this->instanceRadius, this->instancemoveAcc, data);
+	return std::make_unique<VectorListTargetGI>(std::move(data), this, this->instanceStartPos, this->instanceRadius, this->instancemoveAcc);
 };
 
 void VectorListTargetGS::render(sf::RenderWindow* window)
@@ -128,8 +126,8 @@ void VectorListTargetGS::render(sf::RenderWindow* window)
 	window->draw(this->target);
 }
 
-sf::Vector2f VectorListTargetGS::getTargetPos() { return this->targetPos; }
+sf::Vector2f VectorListTargetGS::getTargetPos() const { return this->targetPos; }
 
-float VectorListTargetGS::getTargetRadius() { return this->targetRadius; }
+float VectorListTargetGS::getTargetRadius() const { return this->targetRadius; }
 
 #pragma endregion

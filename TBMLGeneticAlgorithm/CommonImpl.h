@@ -10,7 +10,7 @@ class VectorListGD : public tbml::GeneticData<VectorListGD>
 public:
 	VectorListGD() {}
 	VectorListGD(int dataSize);
-	VectorListGD(std::vector<sf::Vector2f> values);
+	VectorListGD(std::vector<sf::Vector2f>&& values);
 
 	const std::vector<sf::Vector2f>& getValues() const;
 	const sf::Vector2f getValue(int index) const;
@@ -23,23 +23,18 @@ private:
 	int dataSize = 0;
 };
 
-/*
 class NeuralGD : public tbml::GeneticData<NeuralGD>
 {
 public:
 	NeuralGD() {};
-	NeuralGD(std::vector<size_t> layerSizes, float (*activator)(float) = tbml::sigmoid);
-	NeuralGD(tbml::NeuralNetwork network);
+	NeuralGD(std::vector<size_t> layerSizes, float (*activator)(float) = tbml::tanh);
+	NeuralGD(tbml::NeuralNetwork&& network);
 
-	tbml::Matrix propogate(tbml::Matrix& input);
+	tbml::Matrix propogate(tbml::Matrix& input) const;
 	void print() const;
 
-	void randomize() override;
-	void mutate(float chance) override;
-	NeuralGD::DataPtr crossover(NeuralGD::DataPtr otherData) const override;
-	NeuralGD::DataPtr clone() const override;
+	NeuralGD::DataPtr crossover(const NeuralGD::DataPtr& otherData, float mutateChance) const override;
 
 private:
 	tbml::NeuralNetwork network;
 };
-*/

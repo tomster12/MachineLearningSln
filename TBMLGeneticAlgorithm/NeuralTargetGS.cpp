@@ -1,6 +1,6 @@
 
 #include "stdafx.h"
-/*#include "global.h"
+#include "global.h"
 #include "NeuralTargetGS.h"
 #include "UtilityFunctions.h"
 #include "CommonImpl.h"
@@ -8,8 +8,8 @@
 
 #pragma region - NeuralTargetGI
 
-NeuralTargetGI::NeuralTargetGI(NeuralTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc, int maxIterations, NeuralGD* geneticData)
-	: GeneticInstance(geneticData), sim(sim), pos(startPos), radius(radius), moveAcc(moveAcc), maxIterations(maxIterations), currentIteration(0)
+NeuralTargetGI::NeuralTargetGI(const NeuralTargetGS* sim, sf::Vector2f startPos, float radius, float moveAcc, int maxIterations, NeuralTargetGI::DataPtr&& geneticData)
+	: GeneticInstance(std::move(geneticData)), sim(sim), pos(startPos), radius(radius), moveAcc(moveAcc), maxIterations(maxIterations), currentIteration(0)
 {
 	// Initialize variables
 	if (global::showVisuals) initVisual();
@@ -100,7 +100,6 @@ NeuralTargetGS::NeuralTargetGS(
 	sf::Vector2f instanceStartPos, float instanceRadius,
 	float instancemoveAcc, int instancemaxIterations, std::vector<size_t> dataLayerSizes,
 	float targetRadius, sf::Vector2f targetRandomCentre, float targetRandomRadius)
-
 	: instanceStartPos(instanceStartPos), instanceRadius(instanceRadius),
 	instancemoveAcc(instancemoveAcc), instancemaxIterations(instancemaxIterations), dataLayerSizes(dataLayerSizes),
 	targetRadius(targetRadius), targetRandomCentre(targetRandomCentre), targetRandomRadius(targetRandomRadius)
@@ -115,19 +114,14 @@ NeuralTargetGS::NeuralTargetGS(
 	this->target.setPosition(this->targetPos);
 };
 
-NeuralGD* NeuralTargetGS::createData()
+NeuralTargetGS::DataPtr NeuralTargetGS::createData() const
 {
-	// Create, randomize and return data
-	NeuralGD* data = new NeuralGD(this->dataLayerSizes);
-	data->randomize();
-	return data;
+	return std::make_shared<NeuralGD>(this->dataLayerSizes);
 };
 
-NeuralTargetGI* NeuralTargetGS::createInstance(NeuralGD* data)
+NeuralTargetGS::InstPtr NeuralTargetGS::createInstance(NeuralTargetGS::DataPtr&& data) const
 {
-	// Create and return instance
-	NeuralTargetGI* inst = new NeuralTargetGI(this, this->instanceStartPos, this->instanceRadius, this->instancemoveAcc, this->instancemaxIterations, data);
-	return inst;
+	return std::make_unique<NeuralTargetGI>(this, this->instanceStartPos, this->instanceRadius, this->instancemoveAcc, this->instancemaxIterations, std::move(data));;
 };
 
 void NeuralTargetGS::render(sf::RenderWindow* window)
@@ -145,7 +139,11 @@ void NeuralTargetGS::initGeneration()
 	this->target.setPosition(this->targetPos);
 }
 
-sf::Vector2f NeuralTargetGS::getRandomTargetPos()
+sf::Vector2f NeuralTargetGS::getTargetPos() const { return this->targetPos; }
+
+float NeuralTargetGS::getTargetRadius() const { return this->targetRadius; }
+
+sf::Vector2f NeuralTargetGS::getRandomTargetPos() const
 {
 	// Return a random position within random target area
 	return {
@@ -154,9 +152,4 @@ sf::Vector2f NeuralTargetGS::getRandomTargetPos()
 	};
 }
 
-sf::Vector2f NeuralTargetGS::getTargetPos() { return this->targetPos; }
-
-float NeuralTargetGS::getTargetRadius() { return this->targetRadius; }
-
 #pragma endregion
-*/

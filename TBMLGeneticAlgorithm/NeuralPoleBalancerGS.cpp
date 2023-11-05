@@ -1,6 +1,6 @@
 
 #include "stdafx.h"
-/*#include "NeuralPoleBalancerGS.h"
+#include "NeuralPoleBalancerGS.h"
 #include "UtilityFunctions.h"
 
 
@@ -9,8 +9,8 @@
 NeuralPoleBalancerGI::NeuralPoleBalancerGI(
 	float cartMass, float poleMass, float poleLength, float force,
 	float trackLimit, float angleLimit, float timeLimit,
-	NeuralGD* geneticData)
-	: tbml::GeneticInstance<NeuralGD>(geneticData),
+	NeuralPoleBalancerGI::DataPtr&& geneticData)
+	: tbml::GeneticInstance<NeuralGD>(std::move(geneticData)),
 	cartMass(cartMass), poleMass(poleMass), poleLength(poleLength), force(force),
 	trackLimit(trackLimit), angleLimit(angleLimit), timeLimit(timeLimit),
 	netInput(1, 4), poleAngle(0.1f)
@@ -20,7 +20,6 @@ NeuralPoleBalancerGI::NeuralPoleBalancerGI(
 
 void NeuralPoleBalancerGI::initVisual()
 {
-	// Initialize all visual variables
 	this->cartShape.setSize({ 0.3f * METRE_TO_UNIT, 0.22f * METRE_TO_UNIT });
 	this->cartShape.setOrigin(0.5f * (0.3f * METRE_TO_UNIT), 0.5f * (0.32f * METRE_TO_UNIT));
 	this->cartShape.setFillColor(sf::Color::Transparent);
@@ -34,7 +33,6 @@ void NeuralPoleBalancerGI::initVisual()
 	this->poleShape.setOutlineThickness(1.0f);
 }
 
-
 bool NeuralPoleBalancerGI::step()
 {
 	if (this->instanceFinished) return true;
@@ -47,11 +45,11 @@ bool NeuralPoleBalancerGI::step()
 	tbml::Matrix output = this->geneticData->propogate(netInput);
 	float ft = output.get(0, 0) > 0.5f ? force : -force;
 
-	// Update cart
+	// Calculate acceleration
 	cartAcceleration = (ft + poleMass * poleLength * (poleVelocity * poleVelocity * sin(poleAngle) - poleAcceleration * cos(poleAngle))) / (cartMass + poleMass);
 	poleAcceleration = g * (sin(poleAngle) + cos(poleAngle) * (-ft - poleMass * poleLength * poleVelocity * poleVelocity * sin(poleAngle)) / (cartMass + poleMass)) / (poleLength * (4.0f / 3.0f - (poleMass * cos(poleAngle) * cos(poleAngle)) / (cartMass + poleMass)));
 
-	// Update pole
+	// Update dynamics
 	cartPosition = cartPosition + cartVelocity * timeStep;
 	poleAngle = poleAngle + poleVelocity * timeStep;
 	cartVelocity += cartAcceleration * timeStep;
@@ -85,10 +83,8 @@ void NeuralPoleBalancerGI::render(sf::RenderWindow* window)
 	window->draw(this->poleShape);
 }
 
-
 float NeuralPoleBalancerGI::calculateFitness()
 {
-	// Dont calculate once finished
 	if (this->instanceFinished) return this->instanceFitness;
 
 	// Update and return
@@ -97,7 +93,6 @@ float NeuralPoleBalancerGI::calculateFitness()
 }
 
 #pragma endregion
-
 
 #pragma region - NeuralPoleBalancerGI
 
@@ -110,24 +105,17 @@ NeuralPoleBalancerGS::NeuralPoleBalancerGS(
 	dataLayerSizes(dataLayerSizes), dataActivator(dataActivator)
 {}
 
-
-NeuralGD* NeuralPoleBalancerGS::createData()
+NeuralPoleBalancerGS::DataPtr NeuralPoleBalancerGS::createData() const
 {
-	// Create, randomize and return data
-	NeuralGD* data = new NeuralGD(dataLayerSizes, dataActivator);
-	data->randomize();
-	return data;
-}
+	return std::make_shared<NeuralGD>(this->dataLayerSizes, dataActivator);
+};
 
-NeuralPoleBalancerGI* NeuralPoleBalancerGS::createInstance(NeuralGD* data)
+NeuralPoleBalancerGS::InstPtr NeuralPoleBalancerGS::createInstance(NeuralPoleBalancerGS::DataPtr&& data) const
 {
-	// Create and return instance
-	NeuralPoleBalancerGI* inst = new NeuralPoleBalancerGI(
+	return std::make_unique<NeuralPoleBalancerGI>(
 		cartMass, poleMass, poleLength, force,
 		trackLimit, angleLimit, timeLimit,
-		data);
-	return inst;
-}
+		std::move(data));
+};
 
 #pragma endregion
-*/
