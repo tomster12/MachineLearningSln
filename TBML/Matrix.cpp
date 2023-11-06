@@ -1,6 +1,7 @@
 
 #include "stdafx.h"
 #include "Matrix.h"
+#include <omp.h>
 
 namespace tbml
 {
@@ -50,6 +51,114 @@ namespace tbml
 		data.clear();
 	}
 
+	Matrix& Matrix::addBounded(Matrix const& m)
+	{
+		for (size_t i = 0; i < rows; i++)
+		{
+			for (size_t j = 0; j < cols; j++)
+			{
+				data[i * cols + j] = data[i * cols + j] + m.data[std::min(i, m.rows - 1) * m.cols + std::min(j, m.cols - 1)];
+			}
+		}
+		return *this;
+	}
+
+	Matrix& Matrix::operator+=(Matrix const& m)
+	{
+		for (size_t i = 0; i < rows; i++)
+		{
+			for (size_t j = 0; j < cols; j++)
+			{
+				data[i * cols + j] += m.data[i * cols + j];
+			}
+		}
+		return *this;
+	}
+
+	Matrix& Matrix::operator+=(float v)
+	{
+		for (size_t i = 0; i < rows; i++)
+		{
+			for (size_t j = 0; j < cols; j++)
+			{
+				data[i * cols + j] += v;
+			}
+		}
+		return *this;
+	}
+
+	Matrix& Matrix::operator-=(Matrix const& m)
+	{
+		for (size_t i = 0; i < rows; i++)
+		{
+			for (size_t j = 0; j < cols; j++)
+			{
+				data[i * cols + j] -= m.data[i * cols + j];
+			}
+		}
+		return *this;
+	}
+
+	Matrix& Matrix::operator-=(float v)
+	{
+		for (size_t i = 0; i < rows; i++)
+		{
+			for (size_t j = 0; j < cols; j++)
+			{
+				data[i * cols + j] -= v;
+			}
+		}
+		return *this;
+	}
+
+	Matrix& Matrix::operator*=(Matrix const& m)
+	{
+		for (size_t i = 0; i < rows; i++)
+		{
+			for (size_t j = 0; j < cols; j++)
+			{
+				data[i * cols + j] *= m.data[i * cols + j];
+			}
+		}
+		return *this;
+	}
+
+	Matrix& Matrix::operator*=(float v)
+	{
+		for (size_t i = 0; i < rows; i++)
+		{
+			for (size_t j = 0; j < cols; j++)
+			{
+				data[i * cols + j] *= v;
+			}
+		}
+		return *this;
+	}
+
+	Matrix& Matrix::operator/=(Matrix const& m)
+	{
+		for (size_t i = 0; i < rows; i++)
+		{
+			for (size_t j = 0; j < cols; j++)
+			{
+				data[i * cols + j] /= m.data[i * cols + j];
+			}
+		}
+		return *this;
+	}
+
+	Matrix& Matrix::operator/=(float v)
+	{
+		for (size_t i = 0; i < rows; i++)
+		{
+			for (size_t j = 0; j < cols; j++)
+			{
+				data[i * cols + j] /= v;
+			}
+		}
+		return *this;
+	}
+
 	Matrix& Matrix::map(std::function<float(float)> func)
 	{
 		for (size_t i = 0; i < rows; i++)
@@ -68,7 +177,7 @@ namespace tbml
 		{
 			for (size_t j = 0; j < cols; j++)
 			{
-				data[i * cols + j] = func(data[i * cols + j], m.data[std::min(i, m.rows - 1) * m.cols + std::min(j, m.cols - 1)]);
+				data[i * cols + j] = func(data[i * cols + j], m.data[i * m.cols + j]);
 			}
 		}
 		return *this;
@@ -93,23 +202,23 @@ namespace tbml
 
 	Matrix& Matrix::cross(Matrix const& m)
 	{
-		// Massive speedup but cannot parrellelise or const
-		// static std::vector<float> calcRow(oCols);
-		//if (calcRow.size() != oCols) calcRow.resize(oCols);
+		const std::vector<float>& a = data;
+		const std::vector<float>& b = m.data;
+		std::vector<float> c(rows * m.cols);
 
-		std::vector<float> newData(rows * m.cols);
-
-		for (size_t i = 0; i < rows; i++)
+		//#pragma omp parallel for
+		for (uint16_t i = 0; i < rows; i++)
 		{
-			for (size_t mj = 0; mj < m.cols; mj++)
+			for (uint16_t mj = 0; mj < m.cols; mj++)
 			{
-				float sum = 0;
-				for (size_t j = 0; j < cols; j++) sum += data[i * cols + j] * m.data[j * m.cols + mj];
-				newData[i * m.cols + mj] = sum;
+				for (uint16_t j = 0; j < cols; j++)
+				{
+					c[i * m.cols + mj] += a[i * cols + j] * b[j * m.cols + mj];
+				}
 			}
 		}
 
-		data = std::move(newData);
+		data = std::move(c);
 		cols = m.cols;
 		return *this;
 	}

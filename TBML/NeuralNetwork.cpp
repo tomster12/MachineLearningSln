@@ -52,7 +52,7 @@ namespace tbml
 		for (size_t layer = 0; layer < weights.size(); layer++)
 		{
 			current.cross(weights[layer]);
-			current += bias[layer];
+			current.addBounded(bias[layer]);
 			current.map(activator);
 			cache.neuronOutput[layer + 1] = current;
 		}

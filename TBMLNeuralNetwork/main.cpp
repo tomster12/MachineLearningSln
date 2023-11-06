@@ -2,6 +2,7 @@
 #include <vector>
 #include <iostream>
 #include <chrono>
+#include <omp.h>
 
 #include "Matrix.h"
 #include "Utility.h"

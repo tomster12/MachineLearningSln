@@ -57,14 +57,14 @@ namespace tbml
 		for (; epoch < maxEpochs; epoch++)
 		{
 			float epochError = 0.0f;
-			//std::vector<std::future<float>> results(batchCount);
+			std::vector<std::future<float>> results(batchCount);
 
 			// Process each batch
 			for (size_t batch = 0; batch < batchCount; batch++)
 			{
 				const Matrix& input = batchInputs[batch];
 				const Matrix& expected = batchExpected[batch];
-				//results[batch] = threadPool.enqueue([=]
+				//results[batch] = threadPool.enqueue([&, batch]
 				//{
 				float batchError = trainBatch(input, expected, config, weightsMomentum, biasMomentum, updateMutex);
 				epochError += batchError;
@@ -115,8 +115,8 @@ namespace tbml
 		for (size_t layer = 0; layer < layerCount - 1; layer++)
 		{
 			// Calculate scaled average of derivatives
-			Matrix derivativeDelta = backpropogateCache.pdWeights[layer][0];
-			Matrix biasDelta = backpropogateCache.pdBias[layer][0];
+			Matrix derivativeDelta = std::move(backpropogateCache.pdWeights[layer][0]);
+			Matrix biasDelta = std::move(backpropogateCache.pdBias[layer][0]);
 			for (size_t input = 1; input < backpropogateCache.pdWeights[layer].size(); input++)
 			{
 				derivativeDelta += backpropogateCache.pdWeights[layer][input];
@@ -187,25 +187,23 @@ namespace tbml
 			for (size_t input = 0; input < expected.getRowCount(); input++)
 			{
 				// - Calculate weight derivatives
-				std::vector<std::vector<float>> pdWeightData = std::vector<std::vector<float>>(layerSizes[layer]);
+				std::vector<float> pdWeightData = std::vector<float>(layerSizes[layer] * layerSizes[layer + 1]);
 				for (size_t row = 0; row < layerSizes[layer]; row++)
 				{
-					pdWeightData[row] = std::vector<float>(layerSizes[layer + 1]);
 					for (size_t col = 0; col < layerSizes[layer + 1]; col++)
 					{
-						pdWeightData[row][col] = neuronOut(input, row) * pdNeuronIn(input, col);
+						pdWeightData[row * layerSizes[layer + 1] + col] = neuronOut(input, row) * pdNeuronIn(input, col);
 					}
 				}
-				backpropogateCache.pdWeights[layer][input] = Matrix(pdWeightData);
+				backpropogateCache.pdWeights[layer][input] = Matrix(std::move(pdWeightData), layerSizes[layer], layerSizes[layer + 1]);
 
 				// - Calculate bias derivatives
-				std::vector<std::vector<float>> pdBiasData = std::vector<std::vector<float>>(1);
-				pdBiasData[0] = std::vector<float>(layerSizes[layer + 1]);
+				std::vector<float> pdBiasData = std::vector<float>(layerSizes[layer + 1]);
 				for (size_t col = 0; col < layerSizes[layer + 1]; col++)
 				{
-					pdBiasData[0][col] = pdNeuronIn(input, col);
+					pdBiasData[col] = pdNeuronIn(input, col);
 				}
-				backpropogateCache.pdBias[layer][input] = Matrix(pdBiasData);
+				backpropogateCache.pdBias[layer][input] = Matrix(std::move(pdBiasData), 1, layerSizes[layer + 1]);
 			}
 		}
 	}

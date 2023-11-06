@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.32106.194
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33516.290
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TBML", "TBML\MachineLearning.vcxproj", "{55C5EA16-0F23-47BD-9C28-5AAAA4A9A9F7}"
 EndProject
@@ -19,24 +19,24 @@ Global
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{55C5EA16-0F23-47BD-9C28-5AAAA4A9A9F7}.Debug|x64.ActiveCfg = Debug|x64
 		{55C5EA16-0F23-47BD-9C28-5AAAA4A9A9F7}.Debug|x64.Build.0 = Debug|x64
-		{55C5EA16-0F23-47BD-9C28-5AAAA4A9A9F7}.Debug|x86.ActiveCfg = Debug|Win32
-		{55C5EA16-0F23-47BD-9C28-5AAAA4A9A9F7}.Debug|x86.Build.0 = Debug|Win32
+		{55C5EA16-0F23-47BD-9C28-5AAAA4A9A9F7}.Debug|x86.ActiveCfg = Release|Win32
+		{55C5EA16-0F23-47BD-9C28-5AAAA4A9A9F7}.Debug|x86.Build.0 = Release|Win32
 		{55C5EA16-0F23-47BD-9C28-5AAAA4A9A9F7}.Release|x64.ActiveCfg = Release|x64
 		{55C5EA16-0F23-47BD-9C28-5AAAA4A9A9F7}.Release|x64.Build.0 = Release|x64
 		{55C5EA16-0F23-47BD-9C28-5AAAA4A9A9F7}.Release|x86.ActiveCfg = Release|Win32
 		{55C5EA16-0F23-47BD-9C28-5AAAA4A9A9F7}.Release|x86.Build.0 = Release|Win32
 		{29421366-BCD8-451A-8951-C8E8F7DD2CDB}.Debug|x64.ActiveCfg = Debug|x64
 		{29421366-BCD8-451A-8951-C8E8F7DD2CDB}.Debug|x64.Build.0 = Debug|x64
-		{29421366-BCD8-451A-8951-C8E8F7DD2CDB}.Debug|x86.ActiveCfg = Debug|Win32
-		{29421366-BCD8-451A-8951-C8E8F7DD2CDB}.Debug|x86.Build.0 = Debug|Win32
+		{29421366-BCD8-451A-8951-C8E8F7DD2CDB}.Debug|x86.ActiveCfg = Release|Win32
+		{29421366-BCD8-451A-8951-C8E8F7DD2CDB}.Debug|x86.Build.0 = Release|Win32
 		{29421366-BCD8-451A-8951-C8E8F7DD2CDB}.Release|x64.ActiveCfg = Release|x64
 		{29421366-BCD8-451A-8951-C8E8F7DD2CDB}.Release|x64.Build.0 = Release|x64
 		{29421366-BCD8-451A-8951-C8E8F7DD2CDB}.Release|x86.ActiveCfg = Release|Win32
 		{29421366-BCD8-451A-8951-C8E8F7DD2CDB}.Release|x86.Build.0 = Release|Win32
 		{2F757529-EEE4-4C2E-860E-B72B94E97B93}.Debug|x64.ActiveCfg = Debug|x64
 		{2F757529-EEE4-4C2E-860E-B72B94E97B93}.Debug|x64.Build.0 = Debug|x64
-		{2F757529-EEE4-4C2E-860E-B72B94E97B93}.Debug|x86.ActiveCfg = Debug|Win32
-		{2F757529-EEE4-4C2E-860E-B72B94E97B93}.Debug|x86.Build.0 = Debug|Win32
+		{2F757529-EEE4-4C2E-860E-B72B94E97B93}.Debug|x86.ActiveCfg = Release|Win32
+		{2F757529-EEE4-4C2E-860E-B72B94E97B93}.Debug|x86.Build.0 = Release|Win32
 		{2F757529-EEE4-4C2E-860E-B72B94E97B93}.Release|x64.ActiveCfg = Release|x64
 		{2F757529-EEE4-4C2E-860E-B72B94E97B93}.Release|x64.Build.0 = Release|x64
 		{2F757529-EEE4-4C2E-860E-B72B94E97B93}.Release|x86.ActiveCfg = Release|Win32

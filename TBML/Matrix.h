@@ -31,14 +31,15 @@ namespace tbml
 		Matrix transposed() const { return Matrix(*this).transpose(); }
 		Matrix crossed(Matrix const& m) const { return Matrix(*this).cross(m); }
 
-		Matrix& operator+=(Matrix const& m) { return ewise(m, [](float x, float y) { return x + y; }); }
-		Matrix& operator+=(float v) { return map([v](float x) { return x + v; }); }
-		Matrix& operator-=(Matrix const& m) { return ewise(m, [](float x, float y) { return x - y; }); }
-		Matrix& operator-=(float v) { return map([v](float x) { return x - v; }); }
-		Matrix& operator*=(Matrix const& m) { return ewise(m, [](float x, float y) { return x * y; }); }
-		Matrix& operator*=(float v) { return map([v](float x) { return x * v; }); }
-		Matrix& operator/=(Matrix const& m) { return ewise(m, [](float x, float y) { return x / y; }); }
-		Matrix& operator/=(float v) { return map([v](float x) { return x / v; }); }
+		Matrix& addBounded(Matrix const& m);
+		Matrix& operator+=(Matrix const& m);
+		Matrix& operator+=(float v);
+		Matrix& operator-=(Matrix const& m);
+		Matrix& operator-=(float v);
+		Matrix& operator*=(Matrix const& m);
+		Matrix& operator*=(float v);
+		Matrix& operator/=(Matrix const& m);
+		Matrix& operator/=(float v);
 		Matrix& map(std::function<float(float)> func);
 		Matrix& ewise(Matrix const& m, std::function<float(float, float)> func);
 		Matrix& transpose();
