@@ -68,7 +68,7 @@ namespace tbml
 		{
 			for (size_t j = 0; j < cols; j++)
 			{
-				data[i * cols + j] = func(data[i * cols + j], m.data[(i % m.rows) * m.cols + (j % m.cols)]);
+				data[i * cols + j] = func(data[i * cols + j], m.data[std::min(i, m.rows - 1) * m.cols + std::min(j, m.cols - 1)]);
 			}
 		}
 		return *this;

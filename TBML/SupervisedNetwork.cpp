@@ -235,7 +235,7 @@ namespace tbml
 		{
 			calculatePdErrorToIn(layer + 1, predictedCache, backpropogateCache);
 			Matrix wt = weights[layer].transposed();
-			backpropogateCache.pdNeuronOut[layer] = backpropogateCache.pdNeuronIn[layer + 1].cross(wt);
+			backpropogateCache.pdNeuronOut[layer] = backpropogateCache.pdNeuronIn[layer + 1].crossed(wt);
 		}
 
 		// Last layer derivative should already be calculated
