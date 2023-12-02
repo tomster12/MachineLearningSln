@@ -178,7 +178,7 @@ namespace tbml
 		{
 			calculatePdErrorToIn(layer + 1, predictedCache, backpropogateCache);
 			const Matrix& neuronOut = predictedCache.neuronOutput[layer];
-			Matrix& pdNeuronIn = backpropogateCache.pdNeuronIn[layer + 1];
+			const Matrix& pdNeuronIn = backpropogateCache.pdNeuronIn[layer + 1];
 
 			// - Loop over each input
 			size_t inputCount = expected.getRowCount();
@@ -210,13 +210,12 @@ namespace tbml
 
 	void SupervisedNetwork::calculatePdErrorToIn(size_t layer, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const
 	{
-		// Already calculated
 		if (!backpropogateCache.pdNeuronIn[layer].getEmpty()) return;
 
 		// Partial derivative of error w.r.t. to neuron in
 		// (δE / δnetⱼ) = (δE / δoⱼ) * (δoⱼ / δnetᵢⱼ)
 		calculatePdErrorToOut(layer, predictedCache, backpropogateCache);
-		Matrix& pdToOut = backpropogateCache.pdNeuronOut[layer];
+		const Matrix& pdToOut = backpropogateCache.pdNeuronOut[layer];
 		Matrix pdToIn = predictedCache.neuronOutput[layer].mapped(activatorPd);
 		pdToIn *= pdToOut;
 		backpropogateCache.pdNeuronIn[layer] = pdToIn;
@@ -224,7 +223,6 @@ namespace tbml
 
 	void SupervisedNetwork::calculatePdErrorToOut(size_t layer, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const
 	{
-		// Already calculated
 		if (!backpropogateCache.pdNeuronOut[layer].getEmpty()) return;
 
 		// Start / middle layer derivative of activator

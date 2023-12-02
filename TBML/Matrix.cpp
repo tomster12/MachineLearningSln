@@ -206,12 +206,12 @@ namespace tbml
 		const std::vector<float>& b = m.data;
 		std::vector<float> c(rows * m.cols);
 
-		//#pragma omp parallel for
-		for (uint16_t i = 0; i < rows; i++)
+		//#pragma omp parallel for num_threads(4)
+		for (size_t i = 0; i < rows; i++)
 		{
-			for (uint16_t mj = 0; mj < m.cols; mj++)
+			for (size_t mj = 0; mj < m.cols; mj++)
 			{
-				for (uint16_t j = 0; j < cols; j++)
+				for (size_t j = 0; j < cols; j++)
 				{
 					c[i * m.cols + mj] += a[i * cols + j] * b[j * m.cols + mj];
 				}

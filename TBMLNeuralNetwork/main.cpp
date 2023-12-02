@@ -18,7 +18,7 @@ void testMNIST();
 
 int main()
 {
-	testMNIST();
+	testTime();
 	return 0;
 }
 
@@ -40,7 +40,7 @@ void testTime()
 	// Create network and inputs
 	tbml::NeuralNetwork network(std::vector<size_t>({ 8, 8, 8, 1 }));
 	tbml::Matrix input = tbml::Matrix({ { 1, 0, -1, 0.2f, 0.7f, -0.3f, -1, -1 } });
-	size_t epoch = 1; // 10'000'000;
+	size_t epoch = 10'000'000;
 
 	// Number of epochs propogation timing
 	// -----------
@@ -50,6 +50,7 @@ void testTime()
 	// Release x86	3'000'000   ~1780ms		Update where icross initialises matrix
 	// Release x86	3'000'000   ~1370ms		(Reverted) Make icross storage matrix static (cannot const or thread)
 	// Release x86	10'000'000	~6000ms
+	// Release x86	10'000'000	~7800ms		1D matrix
 	// -----------
 	std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
 	tbml::PropogateCache cache;
@@ -75,6 +76,7 @@ void testTimeThreaded()
 	// Number of epochs propogation timing
 	// -----------
 	// Release x86	50'000'000   ~6500ms
+	// BROKEN NOW WITH THREADED CROSS
 	// -----------
 	std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
 	ThreadPool threadPool;
@@ -156,7 +158,8 @@ void testMNIST()
 	// Batch size to time timing
 	// -----------
 	// Release x86	128	~90ms 
-	// Release x86	128	~65ms	Slight icross improvements
+	// Release x86	128	~65ms	Cross improvements (reverted)
+	// Release x86	128	~45ms	1D matrix + omp 8 threaded cross
 	// -----------
 	// For this to work in reasonable time will need:
 	//	- GPU Parallelism

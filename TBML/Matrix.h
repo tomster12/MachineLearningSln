@@ -45,7 +45,6 @@ namespace tbml
 		Matrix& transpose();
 		Matrix& cross(Matrix const& m);
 
-		//std::vector<Matrix> splitRows(size_t splitSize) const;
 		float acc(std::function<float(float, float)> func, float initial) const;
 		float& operator()(size_t i, size_t j) { return data[i * cols + j]; }
 		float operator()(size_t i, size_t j) const { return data[i * cols + j]; }
