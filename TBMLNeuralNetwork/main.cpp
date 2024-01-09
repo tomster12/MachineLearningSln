@@ -18,7 +18,7 @@ void testMNIST();
 
 int main()
 {
-	testTime();
+	testMNIST();
 	return 0;
 }
 
