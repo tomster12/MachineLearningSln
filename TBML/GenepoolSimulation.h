@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include "stdafx.h"
@@ -170,7 +169,6 @@ namespace tbml
 
 					for (auto&& result : threadResults) allFinished &= result.get();
 					this->generationStepNumber++;
-
 				} while (!step && !allFinished);
 			}
 
@@ -211,7 +209,7 @@ namespace tbml
 			for (int i = 0; i < selectAmount; i++) totalFitness += transformFitness(this->currentGeneration[i]->getFitness());
 			const auto& pickWeightedParent = [&]()
 			{
-				float r = getRandomFloat() * totalFitness;
+				float r = fns::getRandomFloat() * totalFitness;
 				float cumSum = 0.0f;
 				for (int i = 0; i < selectAmount; i++)
 				{

@@ -1,4 +1,3 @@
-
 #include "stdafx.h"
 #include "NeuralNetwork.h"
 #include "Matrix.h"
@@ -6,10 +5,31 @@
 
 namespace tbml
 {
-	NeuralNetwork::NeuralNetwork(std::vector<size_t> layerSizes, float (*activator)(float), bool toRandomize)
-		: layerCount(layerSizes.size()), layerSizes(layerSizes), weights(), bias(), activator(activator)
+	NeuralNetwork::NeuralNetwork(std::vector<size_t> layerSizes, WeightInitType weightInitType)
+		: layerCount(layerSizes.size()), layerSizes(layerSizes), weights(), bias(), actFns(layerCount - 1)
 	{
-		// Create w + b from layer sizes
+		// Use single default activator for all layers
+		for (size_t i = 0; i < layerCount; i++) this->actFns[i] = fns::Sigmoid();
+
+		InitializeWeights(weightInitType);
+	}
+
+	NeuralNetwork::NeuralNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns, WeightInitType weightInitType)
+		: layerCount(layerSizes.size()), layerSizes(layerSizes), weights(), bias(), actFns(actFns)
+	{
+		InitializeWeights(weightInitType);
+	}
+
+	NeuralNetwork::NeuralNetwork(std::vector<Matrix> weights, std::vector<Matrix> bias, std::vector<fns::ActivationFunction> actFns)
+		: layerCount(weights.size() + 1), layerSizes(), weights(weights), bias(bias), actFns(actFns)
+	{
+		// Use passed in weights to calculate layer sizes
+		for (size_t i = 0; i < this->layerCount - 1; i++) this->layerSizes.push_back(this->weights[i].getRowCount());
+		this->layerSizes.push_back(this->weights[this->layerCount - 2].getColCount());
+	}
+
+	void NeuralNetwork::InitializeWeights(WeightInitType type)
+	{
 		weights.reserve(layerCount - 1);
 		bias.reserve(layerCount - 1);
 		for (size_t layer = 0; layer < layerCount - 1; layer++)
@@ -18,22 +38,11 @@ namespace tbml
 			bias.push_back(Matrix(1, layerSizes[layer + 1]));
 		}
 
-		if (toRandomize) this->randomize();
-	}
-
-	NeuralNetwork::NeuralNetwork(std::vector<Matrix> weights, std::vector<Matrix> bias, float (*activator)(float))
-		: layerCount(weights.size() + 1), weights(weights), bias(bias), activator(activator)
-	{
-		// Create layer sizes from w + b
-		this->layerSizes = std::vector<size_t>();
-		for (size_t i = 0; i < this->layerCount - 1; i++) this->layerSizes.push_back(this->weights[i].getRowCount());
-		this->layerSizes.push_back(this->weights[this->layerCount - 2].getColCount());
-	}
-
-	void NeuralNetwork::randomize()
-	{
-		for (auto& layer : this->weights) layer.map([](float v) { return -1.0f + 2.0f * getRandomFloat(); });
-		for (auto& layer : this->bias) layer.map([](float v) { return -1.0f + 2.0f * getRandomFloat(); });
+		if (type == RANDOM)
+		{
+			for (auto& layer : this->weights) layer.map([](float v) { return -1.0f + 2.0f * fns::getRandomFloat(); });
+			for (auto& layer : this->bias) layer.map([](float v) { return -1.0f + 2.0f * fns::getRandomFloat(); });
+		}
 	}
 
 	Matrix NeuralNetwork::propogate(const Matrix& input) const
@@ -53,7 +62,7 @@ namespace tbml
 		{
 			current.cross(weights[layer]);
 			current.addBounded(bias[layer]);
-			current.map(activator);
+			actFns[layer](current);
 			cache.neuronOutput[layer + 1] = current;
 		}
 	}

@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <mutex>
@@ -21,18 +20,16 @@ namespace tbml
 	class SupervisedNetwork : public NeuralNetwork
 	{
 	public:
-		SupervisedNetwork(std::vector<size_t> layerSizes_);
-		SupervisedNetwork(std::vector<size_t> layerSizes_, float (*activator_)(float), float (*activatorPd_)(float));
-		SupervisedNetwork(std::vector<size_t> layerSizes_, float (*calcError_)(const Matrix&, const Matrix&), Matrix(*calcErrorPd_)(const Matrix&, const Matrix&));
-		SupervisedNetwork(std::vector<size_t> layerSizes_, float (*activator_)(float), float (*activatorPd_)(float), float (*calcError_)(const Matrix&, const Matrix&), Matrix(*calcErrorPd_)(const Matrix&, const Matrix&));
+		SupervisedNetwork(std::vector<size_t> layerSizes);
+		SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns);
+		SupervisedNetwork(std::vector<size_t> layerSizes, fns::ErrorFunction errorFn);
+		SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns, fns::ErrorFunction errorFn);
 
 		void train(const Matrix& input, const Matrix& expected, const TrainingConfig& config);
 
 	private:
 		static const int MAX_MAX_ITERATIONS = 1'000'000;
-		float (*activatorPd)(float);
-		float (*calcError)(const Matrix&, const Matrix&);
-		Matrix(*calcErrorPd)(const Matrix&, const Matrix&);
+		fns::ErrorFunction errorFn;
 
 		float trainBatch(const Matrix& input, const Matrix& expected, const TrainingConfig& config, std::vector<Matrix>& pdWeightsMomentum, std::vector<Matrix>& pdBiasMomentum, std::mutex& updateMutex);
 		void backpropogate(const Matrix& expected, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const;

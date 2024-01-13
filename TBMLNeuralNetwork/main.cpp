@@ -1,5 +1,4 @@
-﻿
-#include <vector>
+﻿#include <vector>
 #include <iostream>
 #include <chrono>
 #include <omp.h>
@@ -25,7 +24,7 @@ int main()
 void testBasic()
 {
 	// Create network, inputs, and run
-	tbml::NeuralNetwork network(std::vector<size_t>({ 3, 3, 1 }));
+	tbml::NeuralNetwork network = tbml::NeuralNetwork({ { 3, 3, 1 } }, { tbml::fns::Sigmoid(), tbml::fns::Sigmoid() });
 	tbml::Matrix input = tbml::Matrix({ { 1.0f, -1.0f, 1.0f } });
 	tbml::Matrix output = network.propogate(input);
 
@@ -38,7 +37,7 @@ void testBasic()
 void testTime()
 {
 	// Create network and inputs
-	tbml::NeuralNetwork network(std::vector<size_t>({ 8, 8, 8, 1 }));
+	tbml::NeuralNetwork network({ 8, 8, 8, 1 });
 	tbml::Matrix input = tbml::Matrix({ { 1, 0, -1, 0.2f, 0.7f, -0.3f, -1, -1 } });
 	size_t epoch = 10'000'000;
 
@@ -74,9 +73,9 @@ void testTimeThreaded()
 	size_t epoch = 50'000'000;
 
 	// Number of epochs propogation timing
+	// NOTE: If using threaded cross actually slows down
 	// -----------
 	// Release x86	50'000'000   ~6500ms
-	// BROKEN NOW WITH THREADED CROSS
 	// -----------
 	std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
 	ThreadPool threadPool;
@@ -105,10 +104,7 @@ void testBackprop()
 	const float L = -1.0f, H = 1.0f;
 
 	// Create network and setup training data
-	tbml::SupervisedNetwork network(std::vector<size_t>({ 2, 2, 1 }),
-		tbml::tanh, tbml::tanhPd,
-		tbml::calcErrSqDiff, tbml::calcErrSqDiffPd
-	);
+	tbml::SupervisedNetwork network({ 2, 2, 1 }, { tbml::fns::TanH(), tbml::fns::TanH() }, tbml::fns::SquareError());
 	tbml::Matrix input = tbml::Matrix({
 		{ L, L },
 		{ L, H },
@@ -156,15 +152,15 @@ void testMNIST()
 	std::cout << std::endl;
 
 	// Batch size to time timing
+	// tbml::SupervisedNetwork network({ imageSize, 100, 10 }, tbml::tanh, tbml::tanhPd);
+	// network.train(input, expected, { 10, 128, 0.15f, 0.8f, 0.01f, 2 });
 	// -----------
-	// Release x86	128	~90ms 
-	// Release x86	128	~65ms	Cross improvements (reverted)
-	// Release x86	128	~45ms	1D matrix + omp 8 threaded cross
+	// Release x86	128	~90ms
+	// Release x86	128	~65ms					Cross improvements (reverted)
+	// Release x86	128	~45ms	~50 error		1D matrix + omp 45 threaded cross
+	// Release x86	128	~42ms	~0.001 error	Change to cross entropy + sigmoid
 	// -----------
-	// For this to work in reasonable time will need:
-	//	- GPU Parallelism
-	//	- Small optimizations in Matrix class
-	//	- More complex architecture involving convolutions
-	tbml::SupervisedNetwork network({ imageSize, 100, 10 }, tbml::tanh, tbml::tanhPd);
+
+	tbml::SupervisedNetwork network({ imageSize, 100, 10 }, { tbml::fns::Sigmoid(), tbml::fns::Sigmoid() }, tbml::fns::SquareError());
 	network.train(input, expected, { 10, 128, 0.15f, 0.8f, 0.01f, 2 });
 }

@@ -1,5 +1,4 @@
-﻿
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "SupervisedNetwork.h"
 #include "Utility.h"
 #include "Matrix.h"
@@ -7,23 +6,20 @@
 
 namespace tbml
 {
-	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes_)
-		: SupervisedNetwork(layerSizes_, tanh, tanhPd, calcErrSqDiff, calcErrSqDiffPd)
+	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes)
+		: SupervisedNetwork(layerSizes, fns::SquareError())
 	{}
 
-	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes_, float (*activator_)(float), float (*activatorPd_)(float))
-		: SupervisedNetwork(layerSizes_, activator_, activatorPd_, calcErrSqDiff, calcErrSqDiffPd)
+	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns)
+		: SupervisedNetwork(layerSizes, actFns, fns::SquareError())
 	{}
 
-	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes_, float (*calcError_)(const Matrix&, const Matrix&), Matrix(*calcErrorPd_)(const Matrix&, const Matrix&))
-		: SupervisedNetwork(layerSizes_, tanh, tanhPd, calcError_, calcErrorPd_)
+	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, fns::ErrorFunction errorFn)
+		: NeuralNetwork(layerSizes), errorFn(errorFn)
 	{}
 
-	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes_, float (*activator_)(float), float (*activatorPd_)(float), float (*calcError_)(const Matrix&, const Matrix&), Matrix(*calcErrorPd_)(const Matrix&, const Matrix&))
-		: NeuralNetwork(layerSizes_, activator_),
-		activatorPd(activatorPd_),
-		calcError(calcError_),
-		calcErrorPd(calcErrorPd_)
+	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns, fns::ErrorFunction errorFn)
+		: NeuralNetwork(layerSizes, actFns), errorFn(errorFn)
 	{}
 
 	void SupervisedNetwork::train(const Matrix& input, const Matrix& expected, const TrainingConfig& config)
@@ -53,26 +49,25 @@ namespace tbml
 		//ThreadPool threadPool;
 		std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
 		std::chrono::steady_clock::time_point tepoch = t0;
-		std::chrono::steady_clock::time_point tbatch = t0;
 		for (; epoch < maxEpochs; epoch++)
 		{
 			float epochError = 0.0f;
-			std::vector<std::future<float>> results(batchCount);
 
 			// Process each batch
+			//std::vector<std::future<float>> results(batchCount);
 			for (size_t batch = 0; batch < batchCount; batch++)
 			{
 				const Matrix& input = batchInputs[batch];
 				const Matrix& expected = batchExpected[batch];
 				//results[batch] = threadPool.enqueue([&, batch]
 				//{
+				std::chrono::steady_clock::time_point tbatch = std::chrono::steady_clock::now();
 				float batchError = trainBatch(input, expected, config, weightsMomentum, biasMomentum, updateMutex);
 				epochError += batchError;
 				std::chrono::steady_clock::time_point tnow = std::chrono::steady_clock::now();
 				auto us = std::chrono::duration_cast<std::chrono::microseconds>(tnow - tbatch);
 				std::cout << "Batch: " << batch << ", batch time: " << us.count() / 1000 << "ms | Batch Error: " << batchError << std::endl;
-				tbatch = tnow;
-				//	return batchError;
+				//return batchError;
 				//});
 			}
 			//for (auto& result : results) epochError += result.get();
@@ -144,7 +139,7 @@ namespace tbml
 		}
 
 		// Return error
-		return calcError(predictedCache.neuronOutput[layerCount - 1], expected);
+		return errorFn(predictedCache.neuronOutput[layerCount - 1], expected);
 	}
 
 	void SupervisedNetwork::backpropogate(const Matrix& expected, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const
@@ -169,7 +164,7 @@ namespace tbml
 
 		// Partial derivative of error w.r.t. to neuron out
 		// (δE / δoⱼ) = (δE / δy)
-		backpropogateCache.pdNeuronOut[layerCount - 1] = calcErrorPd(predictedCache.neuronOutput[layerCount - 1], expected);
+		backpropogateCache.pdNeuronOut[layerCount - 1] = errorFn.derive(predictedCache.neuronOutput[layerCount - 1], expected);
 
 		// Partial derivative of error w.r.t. to weight
 		// (δE / δWᵢⱼ) = (δE / δnetⱼ) * (δnetⱼ / δWᵢⱼ)
@@ -216,7 +211,7 @@ namespace tbml
 		// (δE / δnetⱼ) = (δE / δoⱼ) * (δoⱼ / δnetᵢⱼ)
 		calculatePdErrorToOut(layer, predictedCache, backpropogateCache);
 		const Matrix& pdToOut = backpropogateCache.pdNeuronOut[layer];
-		Matrix pdToIn = predictedCache.neuronOutput[layer].mapped(activatorPd);
+		Matrix pdToIn = actFns[layer - 1].derive(predictedCache.neuronOutput[layer]);
 		pdToIn *= pdToOut;
 		backpropogateCache.pdNeuronIn[layer] = pdToIn;
 	}
@@ -242,73 +237,73 @@ namespace tbml
 // --------------------------------
 //
 // 	-- Forward Propogation --
-// 
+//
 // - Overview -
-// 
+//
 // Layer Sizes:  2, 4, 1
 // Bias:		 True
 // Data Count:	 3
-// 
+//
 // - Data Layout -
-// 
+//
 // Input	= [ x00, x01 ]
 //			  [ x10, x11 ]
 //			  [ x20, x21 ]
-// 
-// 
+//
+//
 // weights l1 = [ w00 w01 w02 w03 ]
 //			    [ w10 w11 w12 w13 ]
-// 
+//
 // bias l1	  = [ b0, b1, b2, b3 ]
-// 
+//
 // Values l1  = [ x00, x01, x02, x03 ]
 //				[ x10, x11, x12, x13 ]
 //				[ x20, x21, x22, x23 ]
-// 
-// 
+//
+//
 // weight l2  = [ w00 ]
 //			    [ w10 ]
 //			    [ w20 ]
 //			    [ w30 ]
-// 
+//
 // bias l2	  = [ b0 ]
-// 
+//
 // Values l2  = [ x00 ]
 //				[ x10 ]
 //				[ x20 ]
-// 
+//
 // --------------------------------
 
 // --------------------------------
 //
 // 	-- Back Propogation --
-// 
+//
 // (δE / δWᵢⱼ)		= (δE / δoⱼ) * (δoⱼ / δnetⱼ) * (δnetⱼ / δWᵢⱼ)
-// 
+//
 // pdErrorToWeight	= pdErrorToIn * pdInToWeight
 // (δE / δWᵢⱼ)		= (δE / δnetⱼ) * (δnetⱼ / δWᵢⱼ)
 //					= (δE / δnetⱼ) * Out[j]
-// 
+//
 // pdErrorToIn		= pdErrorToOut * pdOutToIn			(Cache)
 // (δE / δnetⱼ)		= (δE / δoⱼ)   * (δoⱼ / δnetᵢⱼ)
-// 
+//
 // pdErrorToOut[last]	= predicted - expected
 // (δE / δoⱼ)			= (δE / δy)
 //						= (y - t)
-// 
+//
 // pdErrorToOut[other]	= sum(weight[J] * pdErrorToIn[J])
 // (δE / δoⱼ)			= Σ(δWᵢⱼ * (δE / δnetⱼ))
-// 
+//
 // pdOutToIn
 // (δoⱼ / δnetᵢⱼ)	= drvActivator(out[j])
-// 
+//
 // Error
 // E(y)				= 1/2 * Σ(t - y) ^ 2
 //
 // -- Gradient Descent --
-// 
+//
 // weight += derivative * learningRate
 // weight += momentum * momentumRate
 // momentum = derivative
-// 
+//
 // --------------------------------

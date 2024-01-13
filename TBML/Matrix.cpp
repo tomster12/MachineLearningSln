@@ -1,4 +1,3 @@
-
 #include "stdafx.h"
 #include "Matrix.h"
 #include <omp.h>
@@ -49,18 +48,6 @@ namespace tbml
 		rows = 0;
 		cols = 0;
 		data.clear();
-	}
-
-	Matrix& Matrix::addBounded(Matrix const& m)
-	{
-		for (size_t i = 0; i < rows; i++)
-		{
-			for (size_t j = 0; j < cols; j++)
-			{
-				data[i * cols + j] = data[i * cols + j] + m.data[std::min(i, m.rows - 1) * m.cols + std::min(j, m.cols - 1)];
-			}
-		}
-		return *this;
 	}
 
 	Matrix& Matrix::operator+=(Matrix const& m)
@@ -206,12 +193,12 @@ namespace tbml
 		const std::vector<float>& b = m.data;
 		std::vector<float> c(rows * m.cols);
 
-		//#pragma omp parallel for num_threads(4)
-		for (size_t i = 0; i < rows; i++)
+		#pragma omp parallel for num_threads(4)
+		for (int i = 0; i < (int)rows; i++)
 		{
-			for (size_t mj = 0; mj < m.cols; mj++)
+			for (int mj = 0; mj < (int)m.cols; mj++)
 			{
-				for (size_t j = 0; j < cols; j++)
+				for (int j = 0; j < (int)cols; j++)
 				{
 					c[i * m.cols + mj] += a[i * cols + j] * b[j * m.cols + mj];
 				}
@@ -234,6 +221,18 @@ namespace tbml
 			}
 		}
 		return current;
+	}
+
+	Matrix& Matrix::addBounded(Matrix const& m)
+	{
+		for (size_t i = 0; i < rows; i++)
+		{
+			for (size_t j = 0; j < cols; j++)
+			{
+				data[i * cols + j] = data[i * cols + j] + m.data[std::min(i, m.rows - 1) * m.cols + std::min(j, m.cols - 1)];
+			}
+		}
+		return *this;
 	}
 
 	void Matrix::printValues(std::string tag) const
@@ -272,7 +271,6 @@ namespace tbml
 				for (size_t j = 0; j < cols; j++)
 				{
 					splitData[i * cols + j] = data[(si * splitSize + i) * cols + j];
-
 				}
 			}
 

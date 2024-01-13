@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include "Matrix.h"
@@ -11,16 +10,17 @@ namespace tbml
 		std::vector<Matrix> neuronOutput;
 	};
 
-	typedef float (*afptr)(float);
-
 	class NeuralNetwork
 	{
 	public:
-		NeuralNetwork() {}
-		NeuralNetwork(std::vector<size_t> layerSizes, float (*activator)(float) = tbml::sigmoid, bool randomize = true);
-		NeuralNetwork(std::vector<Matrix> weights, std::vector<Matrix> bias, float (*activator)(float) = tbml::sigmoid);
+		enum WeightInitType { ZERO, RANDOM };
 
-		void randomize();
+		NeuralNetwork() {}
+		NeuralNetwork(std::vector<size_t> layerSizes, WeightInitType weightInitType = RANDOM);
+		NeuralNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns, WeightInitType weightInitType = RANDOM);
+		NeuralNetwork(std::vector<Matrix> weights, std::vector<Matrix> bias, std::vector<fns::ActivationFunction> actFns);
+
+		void InitializeWeights(WeightInitType type);
 		Matrix propogate(const Matrix& input) const;
 		void propogate(const Matrix& input, PropogateCache& cache) const;
 		void printLayers() const;
@@ -29,7 +29,7 @@ namespace tbml
 		std::vector<Matrix>& getBias() { return bias; }
 		const std::vector<Matrix>& getWeights() const { return weights; }
 		const std::vector<Matrix>& getBias() const { return bias; }
-		afptr getActivator() const { return activator; }
+		std::vector<fns::ActivationFunction> getActivationFns() const { return actFns; }
 		size_t getLayerCount() const { return layerCount; }
 		std::vector<size_t> getLayerSizes() const { return layerSizes; }
 		size_t getInputSize() const { return layerSizes[0]; }
@@ -39,6 +39,6 @@ namespace tbml
 		std::vector<size_t> layerSizes;
 		std::vector<Matrix> weights;
 		std::vector<Matrix> bias;
-		float (*activator)(float) = nullptr;
+		std::vector<fns::ActivationFunction> actFns;
 	};
 }

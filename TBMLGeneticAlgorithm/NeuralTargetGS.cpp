@@ -1,4 +1,3 @@
-
 #include "stdafx.h"
 #include "global.h"
 #include "NeuralTargetGS.h"
@@ -79,7 +78,6 @@ float NeuralTargetGI::calculateFitness()
 	{
 		fitness = 0.5f * (1.0f - dist / 500.0f);
 		fitness = fitness < 0.0f ? 0.0f : fitness;
-
 	}
 	else
 	{
@@ -147,7 +145,7 @@ sf::Vector2f NeuralTargetGS::getRandomTargetPos() const
 {
 	// Return a random position within random target area
 	return {
-		this->targetRandomCentre.x + (tbml::getRandomFloat() * 2 - 1) * this->targetRandomRadius,
+		this->targetRandomCentre.x + (tbml::functions::getRandomFloat() * 2 - 1) * this->targetRandomRadius,
 		this->targetRandomCentre.y
 	};
 }
