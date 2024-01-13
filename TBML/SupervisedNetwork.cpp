@@ -138,8 +138,7 @@ namespace tbml
 			weightsMomentum[layer] = derivativeDelta;
 			biasMomentum[layer] = biasDelta;
 
-			// Apply weight gradient clipping
-			// TODO
+			// TODO: Apply weight gradient clipping
 
 			// Apply weights delta
 			{
@@ -170,8 +169,8 @@ namespace tbml
 			for (size_t input = 0; input < expected.getRowCount(); input++)
 			{
 				// Partial derivative of error w.r.t. to weight
-				// (δE / δWᵢⱼ) = (δE / δnetⱼ) * (δnetⱼ / δWᵢⱼ)
-				//            = (δE / δnetⱼ) * (oᵢ)
+				// (δE / δWᵢⱼ) = (δE / δzⱼ) * (δzⱼ / δWᵢⱼ)
+				//            = (δE / δzⱼ) * (oᵢ)
 				std::vector<float> pdWeights = std::vector<float>(layerSizes[layer] * layerSizes[layer + 1]);
 				for (size_t row = 0; row < layerSizes[layer]; row++)
 				{
@@ -183,8 +182,8 @@ namespace tbml
 				backpropogateCache.pdWeights[layer][input] = Matrix(std::move(pdWeights), layerSizes[layer], layerSizes[layer + 1]);
 
 				// Partial derivative of error w.r.t. to bias
-				// (δE / δBᵢⱼ) = (δE / δnetⱼ) * (δnetⱼ / δBᵢⱼ)
-				//            = (δE / δnetⱼ)
+				// (δE / δBᵢⱼ) = (δE / δzⱼ) * (δzⱼ / δBᵢⱼ)
+				//            = (δE / δzⱼ)
 				std::vector<float> pdBias = std::vector<float>(layerSizes[layer + 1]);
 				for (size_t col = 0; col < layerSizes[layer + 1]; col++)
 				{
@@ -199,26 +198,18 @@ namespace tbml
 	{
 		if (!backpropogateCache.pdNeuronIn[layer].getEmpty()) return;
 
-		calculatePdErrorToOut(layer, expected, predictedCache, backpropogateCache);
-		const Matrix& pdToOut = backpropogateCache.pdNeuronOut[layer];
+		// TODO: This needs updating
+		// Meaning, each neuron in derivative (j) is the sum over (i)
+		// of the neuron out derivative (j) * the specific (δoᵢ / δzⱼ)
 
 		// Partial derivative of error w.r.t. to neuron in
-		// (δE / δnetⱼ) = (δE / δoⱼ) * (δoⱼ / δnetᵢⱼ)
-
-		// TODO: Fix Jacobian diagonal only issue
-		// - pdToOut: Nx10	    [X, X, X, ..., X]
-		// - pdNeuronIn: Nx10   [X, X, X, ..., X]
-		// - neuronOutput: Nx10 [X, X, X, ..., X]
-		// Most activation functions are like this:
-		// O -- O
-		// O -- O
-		// O -- O
-		// O -- O
-		// Each input of the activation affects only the output
-		// Therefore (δE / δnetⱼ) = (δE / δoⱼ) * (oⱼ)
-		// SoftMax is crossed over and need something more complex
-		backpropogateCache.pdNeuronIn[layer] = actFns[layer - 1].derive(predictedCache.neuronOutput[layer]);
-		backpropogateCache.pdNeuronIn[layer] *= pdToOut;
+		// In the case of regression:
+		// (δE / δzⱼ) = Σ(δE / δoᵢ) * (δoᵢ / δzⱼ)
+		// However with classification:
+		// (δE / δzⱼ) = (δE / δoⱼ) * (δoⱼ / δzⱼ)
+		calculatePdErrorToOut(layer, expected, predictedCache, backpropogateCache);
+		const Matrix& pdToOut = backpropogateCache.pdNeuronOut[layer];
+		backpropogateCache.pdNeuronIn[layer] = actFns[layer - 1].partialDerivative(predictedCache.neuronOutput[layer], pdToOut);
 	}
 
 	void SupervisedNetwork::calculatePdErrorToOut(size_t layer, const Matrix& expected, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const
@@ -238,8 +229,7 @@ namespace tbml
 		// (δE / δoⱼ) = (δE / δy)
 		else if (layer == layerCount - 1)
 		{
-			// TODO: This value is becoming enourmous
-			backpropogateCache.pdNeuronOut[layerCount - 1] = errorFn.derive(predictedCache.neuronOutput[layerCount - 1], expected);
+			backpropogateCache.pdNeuronOut[layerCount - 1] = errorFn.partialDerivative(predictedCache.neuronOutput[layerCount - 1], expected);
 		}
 	}
 
@@ -308,24 +298,24 @@ namespace tbml
 //
 // 	-- Back Propogation --
 //
-// (δE / δWᵢⱼ)		= (δE / δoⱼ) * (δoⱼ / δnetⱼ) * (δnetⱼ / δWᵢⱼ)
+// (δE / δWᵢⱼ)		= (δE / δoⱼ) * (δoⱼ / δzⱼ) * (δzⱼ / δWᵢⱼ)
 //
 // pdErrorToWeight	= pdErrorToIn * pdInToWeight
-// (δE / δWᵢⱼ)		= (δE / δnetⱼ) * (δnetⱼ / δWᵢⱼ)
-//					= (δE / δnetⱼ) * Out[j]
+// (δE / δWᵢⱼ)		= (δE / δzⱼ) * (δzⱼ / δWᵢⱼ)
+//					= (δE / δzⱼ) * Out[j]
 //
 // pdErrorToIn		= pdErrorToOut * pdOutToIn			(Cache)
-// (δE / δnetⱼ)		= (δE / δoⱼ)   * (δoⱼ / δnetᵢⱼ)
+// (δE / δzⱼ)		= (δE / δoⱼ)   * (δoⱼ / δzᵢⱼ)
 //
 // pdErrorToOut[last]	= predicted - expected
 // (δE / δoⱼ)			= (δE / δy)
 //						= (y - t)
 //
 // pdErrorToOut[other]	= sum(weight[J] * pdErrorToIn[J])
-// (δE / δoⱼ)			= Σ(δWᵢⱼ * (δE / δnetⱼ))
+// (δE / δoⱼ)			= Σ(δWᵢⱼ * (δE / δzⱼ))
 //
 // pdOutToIn
-// (δoⱼ / δnetᵢⱼ)	= drvActivator(out[j])
+// (δoⱼ / δzᵢⱼ)	= drvActivator(out[j])
 //
 // Error
 // E(y)				= 1/2 * Σ(t - y) ^ 2

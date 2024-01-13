@@ -9,6 +9,21 @@ namespace tbml
 		this->data = std::vector<float>();
 	}
 
+	Matrix::Matrix(const Matrix& m)
+	{
+		this->rows = m.getRowCount();
+		this->cols = m.getColCount();
+		this->data = std::vector<float>(rows * cols);
+
+		for (size_t row = 0; row < rows; row++)
+		{
+			for (size_t col = 0; col < cols; col++)
+			{
+				this->data[row * cols + col] = m(row, col);
+			}
+		}
+	}
+
 	Matrix::Matrix(const std::vector<std::vector<float>>& data)
 	{
 		this->rows = data.size();

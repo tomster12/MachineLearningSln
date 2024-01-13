@@ -104,7 +104,7 @@ void testBackprop()
 	const float L = -1.0f, H = 1.0f;
 
 	// Create network and setup training data
-	tbml::SupervisedNetwork network({ 2, 2, 1 }, { tbml::fns::TanH(), tbml::fns::TanH() }, tbml::fns::CrossEntropy());
+	tbml::SupervisedNetwork network({ 2, 2, 1 }, { tbml::fns::TanH(), tbml::fns::TanH() }, tbml::fns::SquareError());
 	tbml::Matrix input = tbml::Matrix({
 		{ L, L },
 		{ L, H },
@@ -151,16 +151,14 @@ void testMNIST()
 	expected.printDims("Expected Dims: ");
 	std::cout << std::endl;
 
-	// Batch size to time timing
-	// tbml::SupervisedNetwork network({ imageSize, 100, 10 }, tbml::tanh, tbml::tanhPd);
-	// network.train(input, expected, { 10, 128, 0.15f, 0.8f, 0.01f, 2 });
 	// -----------
 	// Release x86	128	~90ms
 	// Release x86	128	~65ms	Cross improvements (reverted)
-	// Release x86	128	~45ms	1D matrix + omp 45 threaded cross
-	// Release x86	128	~42ms	Change to cross entropy + sigmoid
+	// Release x86	128	~42ms	1D matrix + omp 4 threaded cross
 	// -----------
+	//tbml::SupervisedNetwork network({ imageSize, 100, 10 }, { tbml::fns::TanH(), tbml::fns::TanH() }, tbml::fns::SquareError());
+	//network.train(input, expected, { 10, 128, 0.15f, 0.8f, 0.01f, 2 });
 
 	tbml::SupervisedNetwork network({ imageSize, 200, 10 }, { tbml::fns::ReLU(), tbml::fns::SoftMax() }, tbml::fns::CrossEntropy());
-	network.train(input, expected, { 20, 128, 0.002f, 0.9f, 0.01f, 2 });
+	network.train(input, expected, { 20, 50, 0.0002f, 0.5f, 0.01f, 2 });
 }

@@ -10,6 +10,7 @@ namespace tbml
 	{
 	public:
 		Matrix();
+		Matrix(const Matrix& data);
 		Matrix(const std::vector<std::vector<float>>& data);
 		Matrix(std::vector<float>&& data, size_t rows, size_t cols);
 		Matrix(size_t rows, size_t cols);
