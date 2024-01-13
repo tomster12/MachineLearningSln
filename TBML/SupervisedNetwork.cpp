@@ -204,6 +204,19 @@ namespace tbml
 
 		// Partial derivative of error w.r.t. to neuron in
 		// (δE / δnetⱼ) = (δE / δoⱼ) * (δoⱼ / δnetᵢⱼ)
+
+		// TODO: Fix Jacobian diagonal only issue
+		// - pdToOut: Nx10	    [X, X, X, ..., X]
+		// - pdNeuronIn: Nx10   [X, X, X, ..., X]
+		// - neuronOutput: Nx10 [X, X, X, ..., X]
+		// Most activation functions are like this:
+		// O -- O
+		// O -- O
+		// O -- O
+		// O -- O
+		// Each input of the activation affects only the output
+		// Therefore (δE / δnetⱼ) = (δE / δoⱼ) * (oⱼ)
+		// SoftMax is crossed over and need something more complex
 		backpropogateCache.pdNeuronIn[layer] = actFns[layer - 1].derive(predictedCache.neuronOutput[layer]);
 		backpropogateCache.pdNeuronIn[layer] *= pdToOut;
 	}

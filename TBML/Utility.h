@@ -97,7 +97,7 @@ namespace tbml
 				{
 					for (size_t col = 0; col < cols; ++col)
 					{
-						// This is just the diagonal of the jacobian we need to include the off diagonals
+						// TODO: This is just the diagonal of the jacobian we need to include the off diagonals
 						float softmaxVal = xSoftmax(row, col);
 						result(row, col) = softmaxVal * (1.0f - softmaxVal);
 					}
