@@ -156,11 +156,11 @@ void testMNIST()
 	// network.train(input, expected, { 10, 128, 0.15f, 0.8f, 0.01f, 2 });
 	// -----------
 	// Release x86	128	~90ms
-	// Release x86	128	~65ms					Cross improvements (reverted)
-	// Release x86	128	~45ms	~50 error		1D matrix + omp 45 threaded cross
-	// Release x86	128	~42ms	~0.001 error	Change to cross entropy + sigmoid
+	// Release x86	128	~65ms	Cross improvements (reverted)
+	// Release x86	128	~45ms	1D matrix + omp 45 threaded cross
+	// Release x86	128	~42ms	Change to cross entropy + sigmoid
 	// -----------
 
-	tbml::SupervisedNetwork network({ imageSize, 100, 10 }, { tbml::fns::Sigmoid(), tbml::fns::Sigmoid() }, tbml::fns::SquareError());
-	network.train(input, expected, { 10, 128, 0.15f, 0.8f, 0.01f, 2 });
+	tbml::SupervisedNetwork network({ imageSize, 200, 10 }, { tbml::fns::ReLU(), tbml::fns::SoftMax() }, tbml::fns::CrossEntropy());
+	network.train(input, expected, { 20, 50, 0.002f, 0.9f, 0.01f, 2 });
 }

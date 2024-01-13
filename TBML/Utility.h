@@ -52,7 +52,7 @@ namespace tbml
 		public:
 			ReLU() : ActivationFunction(
 				[](Matrix& x) { x.map([](float x) { return std::max(0.0f, x); }); },
-				[](Matrix const& x) { return x.mapped([](float x) { return x > 0 ? 1.0f : 0.0f; }); })
+				[](Matrix const& x) { return x.mapped([](float v) { return v > 0 ? 1.0f : 0.0f; }); })
 			{}
 		};
 
@@ -121,6 +121,7 @@ namespace tbml
 
 				Matrix result(rows, cols);
 
+				// TODO: I think this is causing issues and producing inf's
 				for (size_t i = 0; i < rows; ++i)
 				{
 					for (size_t j = 0; j < cols; ++j)

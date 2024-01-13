@@ -6,20 +6,20 @@
 
 namespace tbml
 {
-	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes)
-		: SupervisedNetwork(layerSizes, fns::SquareError())
+	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, WeightInitType weightInitType)
+		: SupervisedNetwork(layerSizes, fns::SquareError(), weightInitType)
 	{}
 
-	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns)
-		: SupervisedNetwork(layerSizes, actFns, fns::SquareError())
+	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns, WeightInitType weightInitType)
+		: SupervisedNetwork(layerSizes, actFns, fns::SquareError(), weightInitType)
 	{}
 
-	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, fns::ErrorFunction errorFn)
-		: NeuralNetwork(layerSizes), errorFn(errorFn)
+	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, fns::ErrorFunction errorFn, WeightInitType weightInitType)
+		: NeuralNetwork(layerSizes, weightInitType), errorFn(errorFn)
 	{}
 
-	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns, fns::ErrorFunction errorFn)
-		: NeuralNetwork(layerSizes, actFns), errorFn(errorFn)
+	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns, fns::ErrorFunction errorFn, WeightInitType weightInitType)
+		: NeuralNetwork(layerSizes, actFns, weightInitType), errorFn(errorFn)
 	{}
 
 	void SupervisedNetwork::train(const Matrix& input, const Matrix& expected, const TrainingConfig& config)
@@ -66,7 +66,7 @@ namespace tbml
 				epochError += batchError;
 				std::chrono::steady_clock::time_point tnow = std::chrono::steady_clock::now();
 				auto us = std::chrono::duration_cast<std::chrono::microseconds>(tnow - tbatch);
-				std::cout << "Batch: " << batch << ", batch time: " << us.count() / 1000 << "ms | Batch Error: " << batchError << std::endl;
+				std::cout << "Epoch: " << epoch << ", Batch: " << batch << ", batch time: " << us.count() / 1000 << "ms | Batch Error: " << batchError << std::endl;
 				//return batchError;
 				//});
 			}

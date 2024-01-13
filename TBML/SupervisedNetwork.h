@@ -20,10 +20,10 @@ namespace tbml
 	class SupervisedNetwork : public NeuralNetwork
 	{
 	public:
-		SupervisedNetwork(std::vector<size_t> layerSizes);
-		SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns);
-		SupervisedNetwork(std::vector<size_t> layerSizes, fns::ErrorFunction errorFn);
-		SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns, fns::ErrorFunction errorFn);
+		SupervisedNetwork(std::vector<size_t> layerSizes, WeightInitType weightInitType = RANDOM);
+		SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns, WeightInitType weightInitType = RANDOM);
+		SupervisedNetwork(std::vector<size_t> layerSizes, fns::ErrorFunction errorFn, WeightInitType weightInitType = RANDOM);
+		SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns, fns::ErrorFunction errorFn, WeightInitType weightInitType = RANDOM);
 
 		void train(const Matrix& input, const Matrix& expected, const TrainingConfig& config);
 
