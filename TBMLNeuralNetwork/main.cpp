@@ -104,7 +104,7 @@ void testBackprop()
 	const float L = -1.0f, H = 1.0f;
 
 	// Create network and setup training data
-	tbml::SupervisedNetwork network({ 2, 2, 1 }, { tbml::fns::TanH(), tbml::fns::TanH() }, tbml::fns::SquareError());
+	tbml::SupervisedNetwork network({ 2, 2, 1 }, { tbml::fns::TanH(), tbml::fns::TanH() }, tbml::fns::CrossEntropy());
 	tbml::Matrix input = tbml::Matrix({
 		{ L, L },
 		{ L, H },
@@ -162,5 +162,5 @@ void testMNIST()
 	// -----------
 
 	tbml::SupervisedNetwork network({ imageSize, 200, 10 }, { tbml::fns::ReLU(), tbml::fns::SoftMax() }, tbml::fns::CrossEntropy());
-	network.train(input, expected, { 20, 50, 0.002f, 0.9f, 0.01f, 2 });
+	network.train(input, expected, { 20, 128, 0.002f, 0.9f, 0.01f, 2 });
 }

@@ -17,8 +17,8 @@ namespace tbml
 		void resize(size_t rows, size_t cols);
 		void clear();
 
-		float& operator()(size_t i, size_t j) { return data[i * cols + j]; }
-		float operator()(size_t i, size_t j) const { return data[i * cols + j]; }
+		float& operator()(size_t row, size_t col) { return data[row * cols + col]; }
+		float operator()(size_t row, size_t col) const { return data[row * cols + col]; }
 		Matrix& operator+=(Matrix const& m);
 		Matrix& operator+=(float v);
 		Matrix& operator-=(Matrix const& m);
@@ -53,7 +53,7 @@ namespace tbml
 		const size_t getRowCount() const { return rows; }
 		const size_t getColCount() const { return cols; }
 		bool getEmpty() const { return rows == 0 || cols == 0; }
-		std::vector<Matrix> getSplitRows(size_t splitSize) const;
+		std::vector<Matrix> groupRows(size_t splitSize) const;
 
 	private:
 		std::vector<float> data;

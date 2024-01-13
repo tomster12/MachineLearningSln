@@ -14,11 +14,12 @@ namespace tbml
 		this->rows = data.size();
 		this->cols = (rows > 0) ? data[0].size() : 0;
 		this->data = std::vector<float>(rows * cols);
-		for (size_t i = 0; i < rows; i++)
+
+		for (size_t row = 0; row < rows; row++)
 		{
-			for (size_t j = 0; j < cols; j++)
+			for (size_t col = 0; col < cols; col++)
 			{
-				this->data[i * cols + j] = data[i][j];
+				this->data[row * cols + col] = data[row][col];
 			}
 		}
 	}
@@ -40,6 +41,7 @@ namespace tbml
 		this->rows = rows;
 		this->cols = cols;
 		data = std::vector<float>(rows * cols);
+
 		for (size_t i = 0; i < rows * cols; i++) data[i] = 0.0f;
 	}
 
@@ -52,13 +54,14 @@ namespace tbml
 
 	Matrix& Matrix::operator+=(Matrix const& m)
 	{
-		for (size_t i = 0; i < rows; i++)
+		for (size_t row = 0; row < rows; row++)
 		{
 			for (size_t j = 0; j < cols; j++)
 			{
-				data[i * cols + j] += m.data[i * cols + j];
+				data[row * cols + j] += m.data[row * cols + j];
 			}
 		}
+
 		return *this;
 	}
 
@@ -71,42 +74,46 @@ namespace tbml
 				data[i * cols + j] += v;
 			}
 		}
+
 		return *this;
 	}
 
 	Matrix& Matrix::operator-=(Matrix const& m)
 	{
-		for (size_t i = 0; i < rows; i++)
+		for (size_t row = 0; row < rows; row++)
 		{
-			for (size_t j = 0; j < cols; j++)
+			for (size_t col = 0; col < cols; col++)
 			{
-				data[i * cols + j] -= m.data[i * cols + j];
+				data[row * cols + col] -= m.data[row * cols + col];
 			}
 		}
+
 		return *this;
 	}
 
 	Matrix& Matrix::operator-=(float v)
 	{
-		for (size_t i = 0; i < rows; i++)
+		for (size_t row = 0; row < rows; row++)
 		{
-			for (size_t j = 0; j < cols; j++)
+			for (size_t col = 0; col < cols; col++)
 			{
-				data[i * cols + j] -= v;
+				data[row * cols + col] -= v;
 			}
 		}
+
 		return *this;
 	}
 
 	Matrix& Matrix::operator*=(Matrix const& m)
 	{
-		for (size_t i = 0; i < rows; i++)
+		for (size_t row = 0; row < rows; row++)
 		{
-			for (size_t j = 0; j < cols; j++)
+			for (size_t col = 0; col < cols; col++)
 			{
-				data[i * cols + j] *= m.data[i * cols + j];
+				data[row * cols + col] *= m.data[row * cols + col];
 			}
 		}
+
 		return *this;
 	}
 
@@ -119,68 +126,74 @@ namespace tbml
 				data[i * cols + j] *= v;
 			}
 		}
+
 		return *this;
 	}
 
 	Matrix& Matrix::operator/=(Matrix const& m)
 	{
-		for (size_t i = 0; i < rows; i++)
+		for (size_t row = 0; row < rows; row++)
 		{
-			for (size_t j = 0; j < cols; j++)
+			for (size_t col = 0; col < cols; col++)
 			{
-				data[i * cols + j] /= m.data[i * cols + j];
+				data[row * cols + col] /= m.data[row * cols + col];
 			}
 		}
+
 		return *this;
 	}
 
 	Matrix& Matrix::operator/=(float v)
 	{
-		for (size_t i = 0; i < rows; i++)
+		for (size_t row = 0; row < rows; row++)
 		{
-			for (size_t j = 0; j < cols; j++)
+			for (size_t col = 0; col < cols; col++)
 			{
-				data[i * cols + j] /= v;
+				data[row * cols + col] /= v;
 			}
 		}
+
 		return *this;
 	}
 
 	Matrix& Matrix::map(std::function<float(float)> func)
 	{
-		for (size_t i = 0; i < rows; i++)
+		for (size_t row = 0; row < rows; row++)
 		{
-			for (size_t j = 0; j < cols; j++)
+			for (size_t col = 0; col < cols; col++)
 			{
-				data[i * cols + j] = func(data[i * cols + j]);
+				data[row * cols + col] = func(data[row * cols + col]);
 			}
 		}
+
 		return *this;
 	}
 
 	Matrix& Matrix::ewise(Matrix const& m, std::function<float(float, float)> func)
 	{
-		for (size_t i = 0; i < rows; i++)
+		for (size_t row = 0; row < rows; row++)
 		{
-			for (size_t j = 0; j < cols; j++)
+			for (size_t col = 0; col < cols; col++)
 			{
-				data[i * cols + j] = func(data[i * cols + j], m.data[i * m.cols + j]);
+				data[row * cols + col] = func(data[row * cols + col], m.data[row * m.cols + col]);
 			}
 		}
+
 		return *this;
 	}
 
 	Matrix& Matrix::transpose()
 	{
-		std::vector<float> newData(rows * cols);
-		for (size_t i = 0; i < rows; i++)
+		std::vector<float> result(rows * cols);
+		for (size_t row = 0; row < rows; row++)
 		{
-			for (size_t j = 0; j < cols; j++)
+			for (size_t col = 0; col < cols; col++)
 			{
-				newData[j * rows + i] = data[i * cols + j];
+				result[col * rows + row] = data[row * cols + col];
 			}
 		}
-		data = std::move(newData);
+
+		data = std::move(result);
 		size_t tmp = rows;
 		rows = cols;
 		cols = tmp;
@@ -191,21 +204,21 @@ namespace tbml
 	{
 		const std::vector<float>& a = data;
 		const std::vector<float>& b = m.data;
-		std::vector<float> c(rows * m.cols);
+		std::vector<float> result(rows * m.cols);
 
 		#pragma omp parallel for num_threads(4)
-		for (int i = 0; i < (int)rows; i++)
+		for (int row = 0; row < (int)rows; row++)
 		{
-			for (int mj = 0; mj < (int)m.cols; mj++)
+			for (int mcol = 0; mcol < (int)m.cols; mcol++)
 			{
-				for (int j = 0; j < (int)cols; j++)
+				for (int col = 0; col < (int)cols; col++)
 				{
-					c[i * m.cols + mj] += a[i * cols + j] * b[j * m.cols + mj];
+					result[row * m.cols + mcol] += a[row * cols + col] * b[col * m.cols + mcol];
 				}
 			}
 		}
 
-		data = std::move(c);
+		data = std::move(result);
 		cols = m.cols;
 		return *this;
 	}
@@ -213,38 +226,40 @@ namespace tbml
 	float Matrix::acc(std::function<float(float, float)> func, float initial) const
 	{
 		float current = initial;
-		for (size_t i = 0; i < rows; i++)
+		for (size_t row = 0; row < rows; row++)
 		{
-			for (size_t j = 0; j < cols; j++)
+			for (size_t col = 0; col < cols; col++)
 			{
-				current = func(data[i * cols + j], current);
+				current = func(data[row * cols + col], current);
 			}
 		}
+
 		return current;
 	}
 
 	Matrix& Matrix::addBounded(Matrix const& m)
 	{
-		for (size_t i = 0; i < rows; i++)
+		for (size_t row = 0; row < rows; row++)
 		{
-			for (size_t j = 0; j < cols; j++)
+			for (size_t col = 0; col < cols; col++)
 			{
-				data[i * cols + j] = data[i * cols + j] + m.data[std::min(i, m.rows - 1) * m.cols + std::min(j, m.cols - 1)];
+				data[row * cols + col] = data[row * cols + col] + m.data[std::min(row, m.rows - 1) * m.cols + std::min(col, m.cols - 1)];
 			}
 		}
+
 		return *this;
 	}
 
 	void Matrix::printValues(std::string tag) const
 	{
 		std::cout << tag << std::endl;
-		for (size_t i = 0; i < rows; i++)
+		for (size_t row = 0; row < rows; row++)
 		{
 			std::cout << "  ";
-			for (size_t j = 0; j < cols; j++)
+			for (size_t col = 0; col < cols; col++)
 			{
-				char prefix = (data[i * cols + j] >= 0) ? ' ' : '\0';
-				std::cout << prefix << std::fixed << std::setprecision(4) << data[i * cols + j] << " ";
+				char prefix = (data[row * cols + col] >= 0) ? ' ' : '\0';
+				std::cout << prefix << std::fixed << std::setprecision(4) << data[row * cols + col] << " ";
 			}
 			std::cout << std::endl;
 		}
@@ -256,27 +271,27 @@ namespace tbml
 		std::cout << tag << rows << " x " << cols << std::endl;
 	}
 
-	std::vector<Matrix> Matrix::getSplitRows(size_t splitSize) const
+	std::vector<Matrix> Matrix::groupRows(size_t targetGroupSize) const
 	{
-		size_t splitCount = (size_t)(ceil((float)rows / splitSize));
-		std::vector<Matrix> splits = std::vector<Matrix>(splitCount);
+		size_t groupCount = (size_t)(ceil((float)rows / targetGroupSize));
+		std::vector<Matrix> groups = std::vector<Matrix>(groupCount);
 
-		for (size_t si = 0; si < splitCount; si++)
+		for (size_t group = 0; group < groupCount; group++)
 		{
-			size_t splitRows = (si < splitCount - 1) ? splitSize : (rows % splitSize);
-			std::vector<float> splitData = std::vector<float>(splitRows * cols);
+			size_t groupSize = (group < groupCount - 1) ? targetGroupSize : (rows % targetGroupSize);
+			std::vector<float> groupData = std::vector<float>(groupSize * cols);
 
-			for (size_t i = 0; i < splitRows; i++)
+			for (size_t row = 0; row < groupSize; row++)
 			{
-				for (size_t j = 0; j < cols; j++)
+				for (size_t col = 0; col < cols; col++)
 				{
-					splitData[i * cols + j] = data[(si * splitSize + i) * cols + j];
+					groupData[row * cols + col] = data[(group * groupSize + row) * cols + col];
 				}
 			}
 
-			splits[si] = Matrix(std::move(splitData), splitRows, cols);
+			groups[group] = Matrix(std::move(groupData), groupSize, cols);
 		}
 
-		return splits;
+		return groups;
 	}
 }

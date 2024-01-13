@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 #include "Matrix.h"
@@ -77,57 +77,29 @@ namespace tbml
 			{}
 		};
 
+		// https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative/
+		// https://stats.stackexchange.com/questions/453539/softmax-derivative-implementation
 		class SoftMax : public ActivationFunction
 		{
 		public:
 			SoftMax() : ActivationFunction(
-				[](Matrix& x)
-			{
-				// Apply SoftMax to each row independently
-				for (size_t i = 0; i < x.getRowCount(); ++i)
-				{
-					// Find maximum value in the row for numerical stability
-					float maxVal = x(i, 0);
-					for (size_t j = 1; j < x.getColCount(); ++j)
-					{
-						maxVal = std::max(maxVal, x(i, j));
-					}
-
-					// Apply SoftMax to each element in the row
-					float sumExp = 0.0;
-					for (size_t j = 0; j < x.getColCount(); ++j)
-					{
-						x(i, j) = std::exp(x(i, j) - maxVal);
-						sumExp += x(i, j);
-					}
-
-					// Normalize the row
-					for (size_t j = 0; j < x.getColCount(); ++j)
-					{
-						x(i, j) /= sumExp;
-					}
-				}
-			},
-
+				[this](Matrix& x) { stableSoftmax(x); },
 				[this](Matrix const& x)
 			{
-				// SoftMax derivative is calculated differently than for other activation functions
-				// The derivative with respect to an input xi in the SoftMax layer for class k is:
-				// dSoftMax(xi)/dxi = SoftMax(xi) * (1 - SoftMax(xi))   (for i == k)
-				// dSoftMax(xi)/dxi = -SoftMax(xi) * SoftMax(xk)         (for i != k)
-
 				size_t rows = x.getRowCount();
 				size_t cols = x.getColCount();
-
 				Matrix result(rows, cols);
 
-				// TODO: I think this is causing issues and producing inf's
-				for (size_t i = 0; i < rows; ++i)
+				// Derivative of softmax uses softmax
+				Matrix xSoftmax = Matrix(x);
+				stableSoftmax(xSoftmax);
+				for (size_t row = 0; row < rows; ++row)
 				{
-					for (size_t j = 0; j < cols; ++j)
+					for (size_t col = 0; col < cols; ++col)
 					{
-						float softMax_i = std::exp(x(i, j)) / getSumExp(x, i);
-						result(i, j) = -softMax_i * getSoftMaxForClass(x, i, j);
+						// This is just the diagonal of the jacobian we need to include the off diagonals
+						float softmaxVal = xSoftmax(row, col);
+						result(row, col) = softmaxVal * (1.0f - softmaxVal);
 					}
 				}
 
@@ -136,21 +108,29 @@ namespace tbml
 			{}
 
 		private:
-			float getSumExp(const Matrix& x, size_t rowIndex) const
+			void stableSoftmax(Matrix& x)
 			{
-				float sumExp = 0.0;
-				for (size_t j = 0; j < x.getColCount(); ++j)
-				{
-					sumExp += std::exp(x(rowIndex, j));
-				}
-				return sumExp;
-			}
+				size_t rows = x.getRowCount();
+				size_t cols = x.getColCount();
 
-			float getSoftMaxForClass(const Matrix& x, size_t rowIndex, size_t classIndex) const
-			{
-				return (classIndex == rowIndex) ? (1.0f - std::exp(x(rowIndex, classIndex)) / getSumExp(x, rowIndex))
-					: (-std::exp(x(rowIndex, classIndex)) / getSumExp(x, rowIndex));
-			}
+				// Consider each row independantly
+				for (size_t row = 0; row < rows; row++)
+				{
+					// Calculate max for stability
+					float max = x(row, 0);
+					for (size_t col = 1; col < cols; col++) max = std::max(max, x(row, col));
+
+					// Apply stable SoftMax
+					// Sⱼ = eᵃʲ⁺ᴰ / Σ(Cᵃᵏ⁺ᴰ)
+					float sum = 0.0;
+					for (size_t col = 0; col < cols; col++)
+					{
+						x(row, col) = std::exp(x(row, col) - max);
+						sum += x(row, col);
+					}
+					for (size_t col = 0; col < cols; col++) x(row, col) /= sum;
+				}
+			};
 		};
 
 		class SquareError : public ErrorFunction
@@ -170,7 +150,6 @@ namespace tbml
 				}
 				return error;
 			},
-
 				[](Matrix const& predicted, Matrix const& expected)
 			{
 				return predicted - expected;
@@ -184,33 +163,36 @@ namespace tbml
 			CrossEntropy() : ErrorFunction(
 				[](Matrix const& predicted, Matrix const& expected)
 			{
+				// TODO: Check
 				size_t rows = expected.getRowCount();
 				size_t cols = expected.getColCount();
 
 				float error = 0.0;
-				for (size_t i = 0; i < rows; ++i)
+				for (size_t row = 0; row < rows; ++row)
 				{
-					for (size_t j = 0; j < cols; ++j)
+					for (size_t col = 0; col < cols; ++col)
 					{
-						error += expected(i, j) * std::log(predicted(i, j) + 1e-15f);
+						error += -expected(row, col) * std::log(predicted(row, col) + float(1e-15));
 					}
 				}
-				return -error / rows;
-			},
 
+				return error / rows;
+			},
 				[](Matrix const& predicted, Matrix const& expected)
 			{
+				// TODO: Check
 				size_t rows = expected.getRowCount();
 				size_t cols = expected.getColCount();
 
 				Matrix grad(rows, cols);
-				for (size_t i = 0; i < rows; ++i)
+				for (size_t row = 0; row < rows; row++)
 				{
-					for (size_t j = 0; j < cols; ++j)
+					for (size_t col = 0; col < cols; col++)
 					{
-						grad(i, j) = -expected(i, j) / (predicted(i, j) + 1e-15f);
+						grad(row, col) = -(expected(row, col) / (predicted(row, col) + 1e-15f));
 					}
 				}
+
 				return grad;
 			})
 			{}

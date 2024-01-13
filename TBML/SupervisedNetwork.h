@@ -33,7 +33,8 @@ namespace tbml
 
 		float trainBatch(const Matrix& input, const Matrix& expected, const TrainingConfig& config, std::vector<Matrix>& pdWeightsMomentum, std::vector<Matrix>& pdBiasMomentum, std::mutex& updateMutex);
 		void backpropogate(const Matrix& expected, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const;
-		void calculatePdErrorToIn(size_t layer, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const;
-		void calculatePdErrorToOut(size_t layer, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const;
+		void calculatePdErrorToIn(size_t layer, const Matrix& expected, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const;
+		void calculatePdErrorToOut(size_t layer, const Matrix& expected, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const;
+		void InitializeBackpropagateCache(BackpropogateCache& backpropogateCache) const;
 	};
 }
