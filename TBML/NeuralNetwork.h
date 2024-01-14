@@ -17,8 +17,8 @@ namespace tbml
 
 		NeuralNetwork() {}
 		NeuralNetwork(std::vector<size_t> layerSizes, WeightInitType weightInitType = RANDOM);
-		NeuralNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns, WeightInitType weightInitType = RANDOM);
-		NeuralNetwork(std::vector<Matrix> weights, std::vector<Matrix> bias, std::vector<fns::ActivationFunction> actFns);
+		NeuralNetwork(std::vector<size_t> layerSizes, std::vector<fn::ActivationFunction> actFns, WeightInitType weightInitType = RANDOM);
+		NeuralNetwork(std::vector<Matrix> weights, std::vector<Matrix> bias, std::vector<fn::ActivationFunction> actFns);
 
 		void InitializeWeights(WeightInitType type);
 		Matrix propogate(const Matrix& input) const;
@@ -29,7 +29,7 @@ namespace tbml
 		std::vector<Matrix>& getBias() { return bias; }
 		const std::vector<Matrix>& getWeights() const { return weights; }
 		const std::vector<Matrix>& getBias() const { return bias; }
-		std::vector<fns::ActivationFunction> getActivationFns() const { return actFns; }
+		std::vector<fn::ActivationFunction> getActivationFns() const { return actFns; }
 		size_t getLayerCount() const { return layerCount; }
 		std::vector<size_t> getLayerSizes() const { return layerSizes; }
 		size_t getInputSize() const { return layerSizes[0]; }
@@ -39,6 +39,6 @@ namespace tbml
 		std::vector<size_t> layerSizes;
 		std::vector<Matrix> weights;
 		std::vector<Matrix> bias;
-		std::vector<fns::ActivationFunction> actFns;
+		std::vector<fn::ActivationFunction> actFns;
 	};
 }

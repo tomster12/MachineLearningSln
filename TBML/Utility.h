@@ -5,7 +5,7 @@
 
 namespace tbml
 {
-	namespace fns
+	namespace fn
 	{
 		float getRandomFloat();
 
@@ -81,30 +81,29 @@ namespace tbml
 		// https://stats.stackexchange.com/questions/453539/softmax-derivative-implementation
 		// https://www.v7labs.com/blog/cross-entropy-loss-guide#h3
 		// https://stats.stackexchange.com/questions/277203/differentiation-of-cross-entropy
+		// https://shivammehta25.github.io/posts/deriving-categorical-cross-entropy-and-softmax/
 
 		class SoftMax : public ActivationFunction
 		{
 		public:
 			SoftMax() : ActivationFunction(
 				[this](Matrix& x) { stableSoftmax(x); },
-				[this](Matrix const& x, Matrix const& pdNeuronOut)
+				[this](Matrix const& s, Matrix const& pdNeuronOut)
 			{
-				size_t rows = x.getRowCount();
-				size_t cols = x.getColCount();
+				size_t rows = s.getRowCount();
+				size_t cols = s.getColCount();
 				Matrix result(rows, cols);
 
-				Matrix xSoftmax = Matrix(x);
-				stableSoftmax(xSoftmax);
 				for (size_t row = 0; row < rows; row++)
 				{
-					for (size_t col = 0; col < cols; col++) // j
+					for (size_t j = 0; j < cols; j++)
 					{
-						for (size_t outCol = 0; outCol < cols; outCol++) // i
+						float Sj = s(row, j);
+						for (size_t i = 0; i < cols; i++)
 						{
-							float softmaxVal = xSoftmax(row, col);
-							// float softmaxVal = xSoftmax(row, outCol); TODO: Which one?
-							int kroneckerDelta = col == outCol ? 1 : 0;
-							result(row, col) += (softmaxVal * (kroneckerDelta - softmaxVal)) * pdNeuronOut(row, outCol);
+							float Si = s(row, i);
+							int Dij = (j == i) ? 1 : 0;
+							result(row, j) += (Si * (Dij - Sj)) * pdNeuronOut(row, i);
 						}
 					}
 				}
@@ -196,9 +195,8 @@ namespace tbml
 					// I have an inkling that nan happens when its going well but who knows
 					for (size_t col = 0; col < cols; col++)
 					{
-						// grad(row, col) = -expected(row, col) / predicted(row, col);
-						// grad(row, col) = -expected(row, col) / (predicted(row, col) + 1e-15);
-						grad(row, col) = std::min(std::max(-expected(row, col) / (predicted(row, col) + 1e-15f), -5000.0f), 5000.0f);
+						grad(row, col) = -expected(row, col) / (predicted(row, col) + 1e-15f);
+						// grad(row, col) = std::min(std::max(-expected(row, col) / (predicted(row, col) + 1e-15f), -5000.0f), 5000.0f);
 					}
 				}
 

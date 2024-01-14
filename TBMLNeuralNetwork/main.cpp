@@ -12,6 +12,7 @@
 void testBasic();
 void testTime();
 void testTimeThreaded();
+void testDebug();
 void testBackprop();
 void testMNIST();
 
@@ -24,7 +25,7 @@ int main()
 void testBasic()
 {
 	// Create network, inputs, and run
-	tbml::NeuralNetwork network = tbml::NeuralNetwork({ { 3, 3, 1 } }, { tbml::fns::Sigmoid(), tbml::fns::Sigmoid() });
+	tbml::NeuralNetwork network = tbml::NeuralNetwork({ { 3, 3, 1 } }, { tbml::fn::Sigmoid(), tbml::fn::Sigmoid() });
 	tbml::Matrix input = tbml::Matrix({ { 1.0f, -1.0f, 1.0f } });
 	tbml::Matrix output = network.propogate(input);
 
@@ -99,12 +100,42 @@ void testTimeThreaded()
 	std::cout << "Time taken: " << us.count() / 1000.0f << "ms" << std::endl;
 }
 
+void testDebug()
+{
+	tbml::SupervisedNetwork network(
+		{ 2, 6, 6, 4 },
+		{ tbml::fn::ReLU(),
+		  tbml::fn::ReLU(),
+		  tbml::fn::SoftMax() },
+		tbml::fn::CrossEntropy(),
+		tbml::NeuralNetwork::RANDOM);
+
+	const float L = 0.0f, H = 1.0f;
+	tbml::Matrix input = tbml::Matrix({
+		{ L, L },
+		{ L, H },
+		{ H, L },
+		{ H, H } });
+	tbml::Matrix expected = tbml::Matrix({
+		{ H, L, L, L },
+		{ L, H, L, L },
+		{ L, L, H, L },
+		{ L, L, L, H } });
+
+	// Print values and train
+	input.printValues("Input:");
+	expected.printValues("Expected:");
+	network.propogate(input).printValues("Initial: ");
+	network.train(input, expected, { -1, -1, 0.2f, 0.85f, 0.01f, 2 });
+	network.propogate(input).printValues("Trained: ");
+}
+
 void testBackprop()
 {
 	const float L = -1.0f, H = 1.0f;
 
 	// Create network and setup training data
-	tbml::SupervisedNetwork network({ 2, 2, 1 }, { tbml::fns::TanH(), tbml::fns::TanH() }, tbml::fns::SquareError());
+	tbml::SupervisedNetwork network({ 2, 2, 1 }, { tbml::fn::TanH(), tbml::fn::TanH() }, tbml::fn::SquareError());
 	tbml::Matrix input = tbml::Matrix({
 		{ L, L },
 		{ L, H },
@@ -159,6 +190,6 @@ void testMNIST()
 	//tbml::SupervisedNetwork network({ imageSize, 100, 10 }, { tbml::fns::TanH(), tbml::fns::TanH() }, tbml::fns::SquareError());
 	//network.train(input, expected, { 10, 128, 0.15f, 0.8f, 0.01f, 2 });
 
-	tbml::SupervisedNetwork network({ imageSize, 200, 10 }, { tbml::fns::ReLU(), tbml::fns::SoftMax() }, tbml::fns::CrossEntropy());
-	network.train(input, expected, { 20, 50, 0.0002f, 0.5f, 0.01f, 2 });
+	tbml::SupervisedNetwork network({ imageSize, 100, 10 }, { tbml::fn::ReLU(), tbml::fn::SoftMax() }, tbml::fn::CrossEntropy());
+	network.train(input, expected, { 10, 50, 0.01f, 0.7f, 0.01f, 2 });
 }

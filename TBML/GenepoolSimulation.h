@@ -209,7 +209,7 @@ namespace tbml
 			for (int i = 0; i < selectAmount; i++) totalFitness += transformFitness(this->currentGeneration[i]->getFitness());
 			const auto& pickWeightedParent = [&]()
 			{
-				float r = fns::getRandomFloat() * totalFitness;
+				float r = fn::getRandomFloat() * totalFitness;
 				float cumSum = 0.0f;
 				for (int i = 0; i < selectAmount; i++)
 				{

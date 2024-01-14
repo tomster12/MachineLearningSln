@@ -7,18 +7,18 @@
 namespace tbml
 {
 	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, WeightInitType weightInitType)
-		: SupervisedNetwork(layerSizes, fns::SquareError(), weightInitType)
+		: SupervisedNetwork(layerSizes, fn::SquareError(), weightInitType)
 	{}
 
-	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns, WeightInitType weightInitType)
-		: SupervisedNetwork(layerSizes, actFns, fns::SquareError(), weightInitType)
+	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fn::ActivationFunction> actFns, WeightInitType weightInitType)
+		: SupervisedNetwork(layerSizes, actFns, fn::SquareError(), weightInitType)
 	{}
 
-	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, fns::ErrorFunction errorFn, WeightInitType weightInitType)
+	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, fn::ErrorFunction errorFn, WeightInitType weightInitType)
 		: NeuralNetwork(layerSizes, weightInitType), errorFn(errorFn)
 	{}
 
-	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns, fns::ErrorFunction errorFn, WeightInitType weightInitType)
+	SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fn::ActivationFunction> actFns, fn::ErrorFunction errorFn, WeightInitType weightInitType)
 		: NeuralNetwork(layerSizes, actFns, weightInitType), errorFn(errorFn)
 	{}
 
@@ -27,7 +27,7 @@ namespace tbml
 		size_t batchCount;
 		std::vector<Matrix> batchInputs, batchExpected;
 
-		// Pull data and expected into a single batch
+		// Put data and expected into a single batch
 		if (config.batchSize == -1)
 		{
 			batchInputs = std::vector<Matrix>({ input });
@@ -35,8 +35,8 @@ namespace tbml
 			batchCount = 1;
 		}
 
+		// Split input and expected into batches
 		else
-			// Split input and expected into batches
 		{
 			batchInputs = input.groupRows(config.batchSize);
 			batchExpected = expected.groupRows(config.batchSize);
@@ -170,7 +170,6 @@ namespace tbml
 			{
 				// Partial derivative of error w.r.t. to weight
 				// (δE / δWᵢⱼ) = (δE / δzⱼ) * (δzⱼ / δWᵢⱼ)
-				//            = (δE / δzⱼ) * (oᵢ)
 				std::vector<float> pdWeights = std::vector<float>(layerSizes[layer] * layerSizes[layer + 1]);
 				for (size_t row = 0; row < layerSizes[layer]; row++)
 				{
@@ -183,7 +182,6 @@ namespace tbml
 
 				// Partial derivative of error w.r.t. to bias
 				// (δE / δBᵢⱼ) = (δE / δzⱼ) * (δzⱼ / δBᵢⱼ)
-				//            = (δE / δzⱼ)
 				std::vector<float> pdBias = std::vector<float>(layerSizes[layer + 1]);
 				for (size_t col = 0; col < layerSizes[layer + 1]; col++)
 				{

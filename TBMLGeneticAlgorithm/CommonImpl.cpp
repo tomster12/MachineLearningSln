@@ -10,8 +10,8 @@ VectorListGD::VectorListGD(int dataSize)
 	this->values = std::vector<sf::Vector2f>(dataSize);
 	for (int i = 0; i < this->dataSize; i++)
 	{
-		this->values[i].x = tbml::fns::getRandomFloat() * 2 - 1;
-		this->values[i].y = tbml::fns::getRandomFloat() * 2 - 1;
+		this->values[i].x = tbml::fn::getRandomFloat() * 2 - 1;
+		this->values[i].y = tbml::fn::getRandomFloat() * 2 - 1;
 	}
 }
 
@@ -33,10 +33,10 @@ VectorListGD::DataPtr VectorListGD::crossover(const VectorListGD::DataPtr& other
 
 	for (size_t i = 0; i < this->getSize(); i++)
 	{
-		if (tbml::fns::getRandomFloat() < mutateChance)
+		if (tbml::fn::getRandomFloat() < mutateChance)
 		{
-			newValues[i].x = tbml::fns::getRandomFloat() * 2 - 1;
-			newValues[i].y = tbml::fns::getRandomFloat() * 2 - 1;
+			newValues[i].x = tbml::fn::getRandomFloat() * 2 - 1;
+			newValues[i].y = tbml::fn::getRandomFloat() * 2 - 1;
 		}
 		else
 		{
@@ -77,8 +77,8 @@ NeuralGD::DataPtr NeuralGD::crossover(const NeuralGD::DataPtr& otherData, float 
 	{
 		newWeights[i] = weights[i].ewise(oWeights[i], [mutateChance](float a, float b)
 		{
-			if (tbml::fns::getRandomFloat() < mutateChance) return -1.0f + 2.0f * tbml::fns::getRandomFloat();
-			else return tbml::fns::getRandomFloat() < 0.5f ? a : b;
+			if (tbml::fn::getRandomFloat() < mutateChance) return -1.0f + 2.0f * tbml::fn::getRandomFloat();
+			else return tbml::fn::getRandomFloat() < 0.5f ? a : b;
 		});
 	}
 
@@ -91,8 +91,8 @@ NeuralGD::DataPtr NeuralGD::crossover(const NeuralGD::DataPtr& otherData, float 
 	{
 		newBias[i] = bias[i].ewise(oBias[i], [mutateChance](float a, float b)
 		{
-			if (tbml::fns::getRandomFloat() < mutateChance) return -1.0f + 2.0f * tbml::fns::getRandomFloat();
-			else return tbml::fns::getRandomFloat() < 0.5f ? a : b;
+			if (tbml::fn::getRandomFloat() < mutateChance) return -1.0f + 2.0f * tbml::fn::getRandomFloat();
+			else return tbml::fn::getRandomFloat() < 0.5f ? a : b;
 		});
 	}
 

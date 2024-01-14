@@ -21,15 +21,15 @@ namespace tbml
 	{
 	public:
 		SupervisedNetwork(std::vector<size_t> layerSizes, WeightInitType weightInitType = RANDOM);
-		SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns, WeightInitType weightInitType = RANDOM);
-		SupervisedNetwork(std::vector<size_t> layerSizes, fns::ErrorFunction errorFn, WeightInitType weightInitType = RANDOM);
-		SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns, fns::ErrorFunction errorFn, WeightInitType weightInitType = RANDOM);
+		SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fn::ActivationFunction> actFns, WeightInitType weightInitType = RANDOM);
+		SupervisedNetwork(std::vector<size_t> layerSizes, fn::ErrorFunction errorFn, WeightInitType weightInitType = RANDOM);
+		SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fn::ActivationFunction> actFns, fn::ErrorFunction errorFn, WeightInitType weightInitType = RANDOM);
 
 		void train(const Matrix& input, const Matrix& expected, const TrainingConfig& config);
 
 	private:
 		static const int MAX_MAX_ITERATIONS = 1'000'000;
-		fns::ErrorFunction errorFn;
+		fn::ErrorFunction errorFn;
 
 		float trainBatch(const Matrix& input, const Matrix& expected, const TrainingConfig& config, std::vector<Matrix>& pdWeightsMomentum, std::vector<Matrix>& pdBiasMomentum, std::mutex& updateMutex);
 		void backpropogate(const Matrix& expected, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const;

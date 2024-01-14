@@ -9,18 +9,18 @@ namespace tbml
 		: layerCount(layerSizes.size()), layerSizes(layerSizes), weights(), bias(), actFns(layerCount - 1)
 	{
 		// Use single default activator for all layers
-		for (size_t i = 0; i < layerCount; i++) this->actFns[i] = fns::Sigmoid();
+		for (size_t i = 0; i < layerCount; i++) this->actFns[i] = fn::Sigmoid();
 
 		InitializeWeights(weightInitType);
 	}
 
-	NeuralNetwork::NeuralNetwork(std::vector<size_t> layerSizes, std::vector<fns::ActivationFunction> actFns, WeightInitType weightInitType)
+	NeuralNetwork::NeuralNetwork(std::vector<size_t> layerSizes, std::vector<fn::ActivationFunction> actFns, WeightInitType weightInitType)
 		: layerCount(layerSizes.size()), layerSizes(layerSizes), weights(), bias(), actFns(actFns)
 	{
 		InitializeWeights(weightInitType);
 	}
 
-	NeuralNetwork::NeuralNetwork(std::vector<Matrix> weights, std::vector<Matrix> bias, std::vector<fns::ActivationFunction> actFns)
+	NeuralNetwork::NeuralNetwork(std::vector<Matrix> weights, std::vector<Matrix> bias, std::vector<fn::ActivationFunction> actFns)
 		: layerCount(weights.size() + 1), layerSizes(), weights(weights), bias(bias), actFns(actFns)
 	{
 		// Use passed in weights to calculate layer sizes
@@ -40,8 +40,8 @@ namespace tbml
 
 		if (type == RANDOM)
 		{
-			for (auto& layer : this->weights) layer.map([](float v) { return -1.0f + 2.0f * fns::getRandomFloat(); });
-			for (auto& layer : this->bias) layer.map([](float v) { return -1.0f + 2.0f * fns::getRandomFloat(); });
+			for (auto& layer : this->weights) layer.map([](float v) { return -1.0f + 2.0f * fn::getRandomFloat(); });
+			for (auto& layer : this->bias) layer.map([](float v) { return -1.0f + 2.0f * fn::getRandomFloat(); });
 		}
 	}
 
