@@ -185,7 +185,7 @@ void testMNIST()
 	// std::cout << "Trainable Parameters: " << network.getParameterCount() << std::endl << std::endl;
 	// network.train(trainInput, trainExpected, { 10, 128, 0.15f, 0.8f, 0.01f, 3 });
 
-	// Epochs = 15, accuracy = 81.93%,920ms
+	// Epochs = 15, accuracy = 81.93%
 	tbml::SupervisedNetwork network({ trainImageSize, 100, 10 }, { tbml::fn::ReLU(), tbml::fn::SoftMax() }, tbml::fn::CrossEntropy());
 	network.train(trainInput, trainExpected, { 15, 50, 0.02f, 0.8f, 0.01f, 2 });
 
