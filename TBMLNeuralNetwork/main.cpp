@@ -181,13 +181,13 @@ void testMNIST()
 	// -----------
 
 	// Epochs = 10, accuracy = 75.98%
-	tbml::SupervisedNetwork network({ trainImageSize, 100, 10 }, { tbml::fn::TanH(), tbml::fn::TanH() }, tbml::fn::SquareError());
-	std::cout << "Trainable Parameters: " << network.getParameterCount() << std::endl << std::endl;
-	network.train(trainInput, trainExpected, { 10, 128, 0.15f, 0.8f, 0.01f, 3 });
+	// tbml::SupervisedNetwork network({ trainImageSize, 100, 10 }, { tbml::fn::TanH(), tbml::fn::TanH() }, tbml::fn::SquareError());
+	// std::cout << "Trainable Parameters: " << network.getParameterCount() << std::endl << std::endl;
+	// network.train(trainInput, trainExpected, { 10, 128, 0.15f, 0.8f, 0.01f, 3 });
 
-	// Epochs = 15, accuracy = 81.93%
-	// tbml::SupervisedNetwork network({ trainImageSize, 100, 10 }, { tbml::fn::ReLU(), tbml::fn::SoftMax() }, tbml::fn::CrossEntropy());
-	// network.train(trainInput, trainExpected, { 15, 50, 0.02f, 0.8f, 0.01f, 2 });
+	// Epochs = 15, accuracy = 81.93%,920ms
+	tbml::SupervisedNetwork network({ trainImageSize, 100, 10 }, { tbml::fn::ReLU(), tbml::fn::SoftMax() }, tbml::fn::CrossEntropy());
+	network.train(trainInput, trainExpected, { 15, 50, 0.02f, 0.8f, 0.01f, 2 });
 
 	// Epochs = 10, accuracy = 90.68%
 	// tbml::SupervisedNetwork network({ trainImageSize, 200, 10 }, { tbml::fn::ReLU(), tbml::fn::SoftMax() }, tbml::fn::CrossEntropy());
