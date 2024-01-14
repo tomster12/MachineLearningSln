@@ -33,6 +33,7 @@ namespace tbml
 		size_t getLayerCount() const { return layerCount; }
 		std::vector<size_t> getLayerSizes() const { return layerSizes; }
 		size_t getInputSize() const { return layerSizes[0]; }
+		size_t getParameterCount() const;
 
 	protected:
 		size_t layerCount = 0;

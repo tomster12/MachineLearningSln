@@ -128,37 +128,78 @@ void testBackprop()
 
 void testMNIST()
 {
-	// Read dataset
-	size_t imageCount, imageSize, labelCount;
-	uchar** imageDataset = MNIST::readImages("MNIST/train-images.idx3-ubyte", imageCount, imageSize);
-	uchar* labelDataset = MNIST::readLabels("MNIST/train-labels.idx1-ubyte", labelCount);
+	// Read training dataset
+	size_t trainImageCount, trainImageSize, trainLabelCount;
+	uchar** trainImageDataset = MNIST::readImages("MNIST/train-images.idx3-ubyte", trainImageCount, trainImageSize);
+	uchar* trainLabelDataset = MNIST::readLabels("MNIST/train-labels.idx1-ubyte", trainLabelCount);
 
-	// Parse dataset into input / training and cleanup
-	tbml::Matrix input = tbml::Matrix(imageCount, imageSize);
-	tbml::Matrix expected = tbml::Matrix(imageCount, 10);
-	for (size_t i = 0; i < imageCount; i++)
+	// Parse training dataset into input / training and cleanup
+	tbml::Matrix trainInput = tbml::Matrix(trainImageCount, trainImageSize);
+	tbml::Matrix trainExpected = tbml::Matrix(trainImageCount, 10);
+	for (size_t i = 0; i < trainImageCount; i++)
 	{
-		for (size_t o = 0; o < imageSize; o++) input(i, o) = (float)imageDataset[i][o] / 255.0f;
-		expected(i, labelDataset[i]) = 1;
-		delete imageDataset[i];
+		for (size_t o = 0; o < trainImageSize; o++) trainInput(i, o) = (float)trainImageDataset[i][o] / 255.0f;
+		trainExpected(i, trainLabelDataset[i]) = 1;
+		delete trainImageDataset[i];
 	}
-	delete imageDataset;
-	delete labelDataset;
+	delete trainImageDataset;
+	delete trainLabelDataset;
 
-	// Print data
+	// Read test dataset
+	size_t testImageCount, testImageSize, testLabelCount;
+	uchar** testImageDataset = MNIST::readImages("MNIST/t10k-images.idx3-ubyte", testImageCount, testImageSize);
+	uchar* testLabelDataset = MNIST::readLabels("MNIST/t10k-labels.idx1-ubyte", testLabelCount);
+
+	// Parse testing dataset into input / testing and cleanup
+	tbml::Matrix testInput = tbml::Matrix(testImageCount, testImageSize);
+	tbml::Matrix testExpected = tbml::Matrix(testImageCount, 10);
+	for (size_t i = 0; i < testImageCount; i++)
+	{
+		for (size_t o = 0; o < testImageSize; o++) testInput(i, o) = (float)testImageDataset[i][o] / 255.0f;
+		testExpected(i, testLabelDataset[i]) = 1;
+		delete testImageDataset[i];
+	}
+	delete testImageDataset;
+	delete testLabelDataset;
+
+	// Print data info
 	std::cout << std::endl;
-	input.printDims("Input Dims: ");
-	expected.printDims("Expected Dims: ");
+	std::cout << "Training Image Count: " << trainImageCount << std::endl;
+	trainInput.printDims("Training Input Dims: ");
+	trainExpected.printDims("Training Expected Dims: ");
+	std::cout << std::endl;
+	std::cout << "Test Image Count: " << testImageCount << std::endl;
+	testInput.printDims("Test Input Dims: ");
+	testExpected.printDims("Test Expected Dims: ");
 	std::cout << std::endl;
 
+	// Optimising TanH + TanH + SE, batchSize = 128
 	// -----------
-	// Release x86	128	~90ms
-	// Release x86	128	~65ms	Cross improvements (reverted)
-	// Release x86	128	~42ms	1D matrix + omp 4 threaded cross
+	// Release x86	~90ms
+	// Release x86	~65ms	Cross improvements (reverted)
+	// Release x86	~42ms	1D matrix + omp 4 threaded cross
 	// -----------
-	//tbml::SupervisedNetwork network({ imageSize, 100, 10 }, { tbml::fns::TanH(), tbml::fns::TanH() }, tbml::fns::SquareError());
-	//network.train(input, expected, { 10, 128, 0.15f, 0.8f, 0.01f, 2 });
 
-	tbml::SupervisedNetwork network({ imageSize, 100, 10 }, { tbml::fn::ReLU(), tbml::fn::SoftMax() }, tbml::fn::CrossEntropy());
-	network.train(input, expected, { 10, 50, 0.02f, 0.8f, 0.01f, 2 });
+	// Epochs = 10, accuracy = 75.98%
+	tbml::SupervisedNetwork network({ trainImageSize, 100, 10 }, { tbml::fn::TanH(), tbml::fn::TanH() }, tbml::fn::SquareError());
+	std::cout << "Trainable Parameters: " << network.getParameterCount() << std::endl << std::endl;
+	network.train(trainInput, trainExpected, { 10, 128, 0.15f, 0.8f, 0.01f, 3 });
+
+	// Epochs = 15, accuracy = 81.93%
+	// tbml::SupervisedNetwork network({ trainImageSize, 100, 10 }, { tbml::fn::ReLU(), tbml::fn::SoftMax() }, tbml::fn::CrossEntropy());
+	// network.train(trainInput, trainExpected, { 15, 50, 0.02f, 0.8f, 0.01f, 2 });
+
+	// Epochs = 10, accuracy = 90.68%
+	// tbml::SupervisedNetwork network({ trainImageSize, 200, 10 }, { tbml::fn::ReLU(), tbml::fn::SoftMax() }, tbml::fn::CrossEntropy());
+	// network.train(trainInput, trainExpected, { 10, 128, 0.02f, 0.8f, 0.01f, 2 });
+
+	// Epochs = 10, accuracy = 93.28%
+	// tbml::SupervisedNetwork network({ trainImageSize, 250, 80, 10 }, { tbml::fn::ReLU(), tbml::fn::ReLU(), tbml::fn::SoftMax() }, tbml::fn::CrossEntropy());
+	// std::cout << "Trainable Parameters: " << network.getParameterCount() << std::endl << std::endl;
+	// network.train(trainInput, trainExpected, { 10, 128, 0.02f, 0.8f, 0.01f, 2 });
+
+	// Test network against test data
+	tbml::Matrix output = network.propogate(testInput);
+	float accuracy = tbml::fn::calculateAccuracy(output, testExpected);
+	std::cout << "t10k Accuracy = " << (accuracy * 100) << "%" << std::endl;
 }

@@ -1,4 +1,5 @@
-﻿#include "stdafx.h"
+﻿#include <iomanip>
+#include "stdafx.h"
 #include "SupervisedNetwork.h"
 #include "Utility.h"
 #include "Matrix.h"
@@ -25,84 +26,105 @@ namespace tbml
 	void SupervisedNetwork::train(const Matrix& input, const Matrix& expected, const TrainingConfig& config)
 	{
 		size_t batchCount;
-		std::vector<Matrix> batchInputs, batchExpected;
+		std::vector<Matrix> inputBatches, expectedBatches;
 
-		// Put data and expected into a single batch
+		// Do not batch data
 		if (config.batchSize == -1)
 		{
-			batchInputs = std::vector<Matrix>({ input });
-			batchExpected = std::vector<Matrix>({ expected });
+			inputBatches = std::vector<Matrix>({ input });
+			expectedBatches = std::vector<Matrix>({ expected });
 			batchCount = 1;
 		}
 
 		// Split input and expected into batches
 		else
 		{
-			batchInputs = input.groupRows(config.batchSize);
-			batchExpected = expected.groupRows(config.batchSize);
+			inputBatches = input.groupRows(config.batchSize);
+			expectedBatches = expected.groupRows(config.batchSize);
 			batchCount = config.batchSize;
 		}
 
 		// Initialize training loop variables
-		std::mutex updateMutex;
 		std::vector<Matrix> weightsMomentum = std::vector<Matrix>(layerCount);
 		std::vector<Matrix> biasMomentum = std::vector<Matrix>(layerCount);
 		int maxEpochs = (config.epochs == -1 && config.errorExit > 0.0f) ? MAX_MAX_ITERATIONS : config.epochs;
 		int epoch = 0;
 
-		//ThreadPool threadPool;
-		std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
-		std::chrono::steady_clock::time_point tepoch = t0;
+		if (config.logLevel >= 1)
+		{
+			std::cout << "Training Started" << std::endl;
+		}
+
+		std::chrono::steady_clock::time_point tTrainStart = std::chrono::steady_clock::now();
+		std::chrono::steady_clock::time_point tEpochStart = tTrainStart;
+		std::chrono::steady_clock::time_point tBatchStart = tTrainStart;
+
+		// For each epoch, for each mini-batch, train and then track error
 		for (; epoch < maxEpochs; epoch++)
 		{
-			float epochError = 0.0f;
-
-			// Process each batch
-			//std::vector<std::future<float>> results(batchCount);
+			float epochLoss = 0.0f;
 			for (size_t batch = 0; batch < batchCount; batch++)
 			{
-				const Matrix& input = batchInputs[batch];
-				const Matrix& expected = batchExpected[batch];
-				//results[batch] = threadPool.enqueue([&, batch]
-				//{
-				std::chrono::steady_clock::time_point tbatch = std::chrono::steady_clock::now();
+				float batchLoss = trainBatch(inputBatches[batch], expectedBatches[batch], config, weightsMomentum, biasMomentum);
+				epochLoss += batchLoss / batchCount;
 
-				float batchError = trainBatch(input, expected, config, weightsMomentum, biasMomentum, updateMutex);
-				epochError += batchError;
+				if (config.logLevel == 3)
+				{
+					std::chrono::steady_clock::time_point tBatchFinish = std::chrono::steady_clock::now();
 
-				std::chrono::steady_clock::time_point tnow = std::chrono::steady_clock::now();
-				auto us = std::chrono::duration_cast<std::chrono::microseconds>(tnow - tbatch);
-				std::cout << "Epoch: " << epoch << ", Batch: " << batch << ", batch time: " << us.count() / 1000 << "ms | Batch Error: " << batchError << std::endl;
-				//return batchError;
-				//});
+					Matrix predicted = propogate(inputBatches[batch]);
+					float accuracy = fn::calculateAccuracy(predicted, expectedBatches[batch]);
+
+					auto us = std::chrono::duration_cast<std::chrono::microseconds>(tBatchFinish - tBatchStart);
+					std::cout << std::setw(20) << ("Batch = " + std::to_string(batch + 1) + " / " + std::to_string(batchCount))
+						<< std::setw(24) << ("Epoch = " + std::to_string(epoch + 1) + " / " + std::to_string(maxEpochs))
+						<< std::setw(24) << ("Duration = " + std::to_string(us.count() / 1000) + "ms")
+						<< std::setw(29) << ("Batch Loss = " + std::to_string(batchLoss))
+						<< std::setw(35) << ("Batch Accuracy = " + std::to_string(accuracy * 100) + "%")
+						<< std::endl;
+
+					tBatchStart = std::chrono::steady_clock::now();
+				}
 			}
-			//for (auto& result : results) epochError += result.get();
 
-			// Log curret epoch
-			if (config.logLevel >= 2)
+			if (config.logLevel == 2)
 			{
-				std::chrono::steady_clock::time_point tnow = std::chrono::steady_clock::now();
-				auto us = std::chrono::duration_cast<std::chrono::microseconds>(tnow - tepoch);
-				std::cout << "Epoch: " << epoch << ", epoch time: " << us.count() / 1000 << "ms | Epoch Error: " << epochError << std::endl;
-				tepoch = tnow;
+				std::chrono::steady_clock::time_point tEpochFinish = std::chrono::steady_clock::now();
+
+				Matrix predicted = propogate(input);
+				float accuracy = fn::calculateAccuracy(predicted, expected);
+
+				auto us = std::chrono::duration_cast<std::chrono::microseconds>(tEpochFinish - tEpochStart);
+				std::cout << std::setw(20) << ("Epoch = " + std::to_string(epoch + 1) + " / " + std::to_string(maxEpochs))
+					<< std::setw(24) << ("Duration = " + std::to_string(us.count() / 1000) + "ms")
+					<< std::setw(35) << ("Avg. Batch Loss = " + std::to_string(epochLoss))
+					<< std::setw(35) << ("Epoch Accuracy = " + std::to_string(accuracy * 100) + "%")
+					<< std::endl;
+
+				tEpochStart = std::chrono::steady_clock::now();
 			}
 
 			// Exit early if error below certain amount
-			if (epochError < config.errorExit) { epoch++; break; }
+			if (epochLoss < config.errorExit) { epoch++; break; }
 		}
 
-		// Print training outcome
 		if (config.logLevel >= 1)
 		{
-			std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-			auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0);
-			std::cout << std::endl << "-- Finished training --" << std::endl;
-			std::cout << "Epochs: " << epoch << std::endl;
-			std::cout << "Time taken: " << us.count() / 1000 << "ms" << std::endl << std::endl;
+			std::chrono::steady_clock::time_point tTrainFinish = std::chrono::steady_clock::now();
+
+			Matrix predicted = propogate(input);
+			float accuracy = fn::calculateAccuracy(predicted, expected);
+
+			auto us = std::chrono::duration_cast<std::chrono::microseconds>(tTrainFinish - tTrainStart);
+			std::cout << "Training Finished"
+				<< std::setw(20) << ("Epochs = " + std::to_string(epoch))
+				<< std::setw(26) << ("Duration = " + std::to_string(us.count() / 1000) + "ms")
+				<< std::setw(35) << ("Train Accuracy = " + std::to_string(accuracy * 100) + "%")
+				<< std::endl << std::endl;
 		}
 	}
 
-	float SupervisedNetwork::trainBatch(const Matrix& input, const Matrix& expected, const TrainingConfig& config, std::vector<Matrix>& weightsMomentum, std::vector<Matrix>& biasMomentum, std::mutex& updateMutex)
+	float SupervisedNetwork::trainBatch(const Matrix& input, const Matrix& expected, const TrainingConfig& config, std::vector<Matrix>& weightsMomentum, std::vector<Matrix>& biasMomentum)
 	{
 		// Forward propogation current batch
 		PropogateCache predictedCache;
@@ -139,11 +161,8 @@ namespace tbml
 			biasMomentum[layer] = biasDelta;
 
 			// Apply weights delta
-			{
-				std::lock_guard<std::mutex> guard(updateMutex);
-				weights[layer] += derivativeDelta;
-				bias[layer] += biasDelta;
-			}
+			weights[layer] += derivativeDelta;
+			bias[layer] += biasDelta;
 		}
 
 		// Return error

@@ -31,7 +31,7 @@ namespace tbml
 		static const int MAX_MAX_ITERATIONS = 1'000'000;
 		fn::ErrorFunction errorFn;
 
-		float trainBatch(const Matrix& input, const Matrix& expected, const TrainingConfig& config, std::vector<Matrix>& pdWeightsMomentum, std::vector<Matrix>& pdBiasMomentum, std::mutex& updateMutex);
+		float trainBatch(const Matrix& input, const Matrix& expected, const TrainingConfig& config, std::vector<Matrix>& pdWeightsMomentum, std::vector<Matrix>& pdBiasMomentum);
 		void backpropogate(const Matrix& expected, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const;
 		void calculatePdErrorToIn(size_t layer, const Matrix& expected, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const;
 		void calculatePdErrorToOut(size_t layer, const Matrix& expected, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const;

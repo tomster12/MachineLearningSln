@@ -77,4 +77,15 @@ namespace tbml
 			bias[layer].printValues(std::to_string(layer) + ": ");
 		std::cout << "------\n" << std::endl;
 	}
+
+	size_t NeuralNetwork::getParameterCount() const
+	{
+		size_t sum = 0;
+		for (size_t i = 0; i < weights.size(); i++)
+		{
+			sum += weights[i].getRowCount() * weights[i].getColCount();
+			sum += bias[i].getRowCount() * bias[i].getColCount();
+		}
+		return sum;
+	}
 }

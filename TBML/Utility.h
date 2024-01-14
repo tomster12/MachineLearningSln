@@ -8,6 +8,7 @@ namespace tbml
 	namespace fn
 	{
 		float getRandomFloat();
+		float calculateAccuracy(tbml::Matrix const& predicted, tbml::Matrix const& expected);
 
 		class ActivationFunction
 		{
