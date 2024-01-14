@@ -12,7 +12,6 @@
 void testBasic();
 void testTime();
 void testTimeThreaded();
-void testDebug();
 void testBackprop();
 void testMNIST();
 
@@ -100,36 +99,6 @@ void testTimeThreaded()
 	std::cout << "Time taken: " << us.count() / 1000.0f << "ms" << std::endl;
 }
 
-void testDebug()
-{
-	tbml::SupervisedNetwork network(
-		{ 2, 6, 6, 4 },
-		{ tbml::fn::ReLU(),
-		  tbml::fn::ReLU(),
-		  tbml::fn::SoftMax() },
-		tbml::fn::CrossEntropy(),
-		tbml::NeuralNetwork::RANDOM);
-
-	const float L = 0.0f, H = 1.0f;
-	tbml::Matrix input = tbml::Matrix({
-		{ L, L },
-		{ L, H },
-		{ H, L },
-		{ H, H } });
-	tbml::Matrix expected = tbml::Matrix({
-		{ H, L, L, L },
-		{ L, H, L, L },
-		{ L, L, H, L },
-		{ L, L, L, H } });
-
-	// Print values and train
-	input.printValues("Input:");
-	expected.printValues("Expected:");
-	network.propogate(input).printValues("Initial: ");
-	network.train(input, expected, { -1, -1, 0.2f, 0.85f, 0.01f, 2 });
-	network.propogate(input).printValues("Trained: ");
-}
-
 void testBackprop()
 {
 	const float L = -1.0f, H = 1.0f;
@@ -191,5 +160,5 @@ void testMNIST()
 	//network.train(input, expected, { 10, 128, 0.15f, 0.8f, 0.01f, 2 });
 
 	tbml::SupervisedNetwork network({ imageSize, 100, 10 }, { tbml::fn::ReLU(), tbml::fn::SoftMax() }, tbml::fn::CrossEntropy());
-	network.train(input, expected, { 10, 50, 0.01f, 0.7f, 0.01f, 2 });
+	network.train(input, expected, { 10, 50, 0.02f, 0.8f, 0.01f, 2 });
 }

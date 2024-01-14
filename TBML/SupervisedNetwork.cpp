@@ -138,8 +138,6 @@ namespace tbml
 			weightsMomentum[layer] = derivativeDelta;
 			biasMomentum[layer] = biasDelta;
 
-			// TODO: Apply weight gradient clipping
-
 			// Apply weights delta
 			{
 				std::lock_guard<std::mutex> guard(updateMutex);
@@ -196,18 +194,11 @@ namespace tbml
 	{
 		if (!backpropogateCache.pdNeuronIn[layer].getEmpty()) return;
 
-		// TODO: This needs updating
-		// Meaning, each neuron in derivative (j) is the sum over (i)
-		// of the neuron out derivative (j) * the specific (δoᵢ / δzⱼ)
-
 		// Partial derivative of error w.r.t. to neuron in
-		// In the case of regression:
 		// (δE / δzⱼ) = Σ(δE / δoᵢ) * (δoᵢ / δzⱼ)
-		// However with classification:
-		// (δE / δzⱼ) = (δE / δoⱼ) * (δoⱼ / δzⱼ)
 		calculatePdErrorToOut(layer, expected, predictedCache, backpropogateCache);
 		const Matrix& pdToOut = backpropogateCache.pdNeuronOut[layer];
-		backpropogateCache.pdNeuronIn[layer] = actFns[layer - 1].partialDerivative(predictedCache.neuronOutput[layer], pdToOut);
+		backpropogateCache.pdNeuronIn[layer] = actFns[layer - 1].derivative(predictedCache.neuronOutput[layer], pdToOut);
 	}
 
 	void SupervisedNetwork::calculatePdErrorToOut(size_t layer, const Matrix& expected, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const
@@ -227,7 +218,7 @@ namespace tbml
 		// (δE / δoⱼ) = (δE / δy)
 		else if (layer == layerCount - 1)
 		{
-			backpropogateCache.pdNeuronOut[layerCount - 1] = errorFn.partialDerivative(predictedCache.neuronOutput[layerCount - 1], expected);
+			backpropogateCache.pdNeuronOut[layerCount - 1] = errorFn.derivative(predictedCache.neuronOutput[layerCount - 1], expected);
 		}
 	}
 
@@ -251,77 +242,3 @@ namespace tbml
 		}
 	}
 }
-
-// --------------------------------
-//
-// 	-- Forward Propogation --
-//
-// - Overview -
-//
-// Layer Sizes:  2, 4, 1
-// Bias:		 True
-// Data Count:	 3
-//
-// - Data Layout -
-//
-// Input	= [ x00, x01 ]
-//			  [ x10, x11 ]
-//			  [ x20, x21 ]
-//
-//
-// weights l1 = [ w00 w01 w02 w03 ]
-//			    [ w10 w11 w12 w13 ]
-//
-// bias l1	  = [ b0, b1, b2, b3 ]
-//
-// Values l1  = [ x00, x01, x02, x03 ]
-//				[ x10, x11, x12, x13 ]
-//				[ x20, x21, x22, x23 ]
-//
-//
-// weight l2  = [ w00 ]
-//			    [ w10 ]
-//			    [ w20 ]
-//			    [ w30 ]
-//
-// bias l2	  = [ b0 ]
-//
-// Values l2  = [ x00 ]
-//				[ x10 ]
-//				[ x20 ]
-//
-// --------------------------------
-
-// --------------------------------
-//
-// 	-- Back Propogation --
-//
-// (δE / δWᵢⱼ)		= (δE / δoⱼ) * (δoⱼ / δzⱼ) * (δzⱼ / δWᵢⱼ)
-//
-// pdErrorToWeight	= pdErrorToIn * pdInToWeight
-// (δE / δWᵢⱼ)		= (δE / δzⱼ) * (δzⱼ / δWᵢⱼ)
-//					= (δE / δzⱼ) * Out[j]
-//
-// pdErrorToIn		= pdErrorToOut * pdOutToIn			(Cache)
-// (δE / δzⱼ)		= (δE / δoⱼ)   * (δoⱼ / δzᵢⱼ)
-//
-// pdErrorToOut[last]	= predicted - expected
-// (δE / δoⱼ)			= (δE / δy)
-//						= (y - t)
-//
-// pdErrorToOut[other]	= sum(weight[J] * pdErrorToIn[J])
-// (δE / δoⱼ)			= Σ(δWᵢⱼ * (δE / δzⱼ))
-//
-// pdOutToIn
-// (δoⱼ / δzᵢⱼ)	= drvActivator(out[j])
-//
-// Error
-// E(y)				= 1/2 * Σ(t - y) ^ 2
-//
-// -- Gradient Descent --
-//
-// weight += derivative * learningRate
-// weight += momentum * momentumRate
-// momentum = derivative
-//
-// --------------------------------
