@@ -1,16 +1,14 @@
-
 #include "stdafx.h"
-#include "NeuralPoleBalancerGS.h"
+#include "NNPoleBalancerGenepool.h"
 #include "Utility.h"
 
+#pragma region - NNPoleBalancerAgent
 
-#pragma region - NeuralPoleBalancerGI
-
-NeuralPoleBalancerGI::NeuralPoleBalancerGI(
+NNPoleBalancerAgent::NNPoleBalancerAgent(
 	float cartMass, float poleMass, float poleLength, float force,
 	float trackLimit, float angleLimit, float timeLimit,
-	NeuralPoleBalancerGI::DataPtr&& geneticData)
-	: tbml::GeneticInstance<NeuralGD>(std::move(geneticData)),
+	NNPoleBalancerAgent::GenomePtr&& genome)
+	: tbml::ga::Agent<NNGenome>(std::move(genome)),
 	cartMass(cartMass), poleMass(poleMass), poleLength(poleLength), force(force),
 	trackLimit(trackLimit), angleLimit(angleLimit), timeLimit(timeLimit),
 	netInput(1, 4), poleAngle(0.1f)
@@ -18,7 +16,7 @@ NeuralPoleBalancerGI::NeuralPoleBalancerGI(
 	this->initVisual();
 }
 
-void NeuralPoleBalancerGI::initVisual()
+void NNPoleBalancerAgent::initVisual()
 {
 	this->cartShape.setSize({ 0.3f * METRE_TO_UNIT, 0.22f * METRE_TO_UNIT });
 	this->cartShape.setOrigin(0.5f * (0.3f * METRE_TO_UNIT), 0.5f * (0.32f * METRE_TO_UNIT));
@@ -33,17 +31,17 @@ void NeuralPoleBalancerGI::initVisual()
 	this->poleShape.setOutlineThickness(1.0f);
 }
 
-bool NeuralPoleBalancerGI::step()
+bool NNPoleBalancerAgent::step()
 {
-	if (this->instanceFinished) return true;
+	if (this->isFinished) return true;
 
 	// Calculate force with network
-	netInput.set(0, 0, cartPosition);
-	netInput.set(0, 1, cartAcceleration);
-	netInput.set(0, 2, poleAngle);
-	netInput.set(0, 3, poleAcceleration);
-	tbml::Matrix output = this->geneticData->propogate(netInput);
-	float ft = output.get(0, 0) > 0.5f ? force : -force;
+	netInput(0, 0) = cartPosition;
+	netInput(0, 1) = cartAcceleration;
+	netInput(0, 2) = poleAngle;
+	netInput(0, 3) = poleAcceleration;
+	tbml::Matrix output = this->genome->propogate(netInput);
+	float ft = output(0, 0) > 0.5f ? force : -force;
 
 	// Calculate acceleration
 	cartAcceleration = (ft + poleMass * poleLength * (poleVelocity * poleVelocity * sin(poleAngle) - poleAcceleration * cos(poleAngle))) / (cartMass + poleMass);
@@ -64,14 +62,14 @@ bool NeuralPoleBalancerGI::step()
 	if (done)
 	{
 		calculateFitness();
-		instanceFinished = true;
+		isFinished = true;
 		this->cartShape.setOutlineColor(sf::Color(100, 100, 140, 10));
 		this->poleShape.setOutlineColor(sf::Color(100, 100, 140, 10));
 	}
-	return instanceFinished;
+	return isFinished;
 }
 
-void NeuralPoleBalancerGI::render(sf::RenderWindow* window)
+void NNPoleBalancerAgent::render(sf::RenderWindow* window)
 {
 	// Update shape positions and rotations
 	this->cartShape.setPosition(700.0f + cartPosition * METRE_TO_UNIT, 700.0f);
@@ -83,36 +81,36 @@ void NeuralPoleBalancerGI::render(sf::RenderWindow* window)
 	window->draw(this->poleShape);
 }
 
-float NeuralPoleBalancerGI::calculateFitness()
+float NNPoleBalancerAgent::calculateFitness()
 {
-	if (this->instanceFinished) return this->instanceFitness;
+	if (this->isFinished) return this->fitness;
 
 	// Update and return
-	this->instanceFitness = this->time;
-	return this->instanceFitness;
+	this->fitness = this->time;
+	return this->fitness;
 }
 
 #pragma endregion
 
-#pragma region - NeuralPoleBalancerGI
+#pragma region - NNPoleBalancerAgent
 
-NeuralPoleBalancerGS::NeuralPoleBalancerGS(
+NNPoleBalancerGenepool::NNPoleBalancerGenepool(
 	float cartMass, float poleMass, float poleLength, float force,
 	float trackLimit, float angleLimit, float timeLimit,
-	std::vector<size_t> dataLayerSizes, float (*dataActivator)(float))
+	std::vector<size_t> layerSizes, std::vector<tbml::fn::ActivationFunction> actFns)
 	: cartMass(cartMass), poleMass(poleMass), poleLength(poleLength), force(force),
 	trackLimit(trackLimit), angleLimit(angleLimit), timeLimit(timeLimit),
-	dataLayerSizes(dataLayerSizes), dataActivator(dataActivator)
+	layerSizes(layerSizes), actFns(actFns)
 {}
 
-NeuralPoleBalancerGS::DataPtr NeuralPoleBalancerGS::createData() const
+NNPoleBalancerGenepool::GenomePtr NNPoleBalancerGenepool::createGenome() const
 {
-	return std::make_shared<NeuralGD>(this->dataLayerSizes, dataActivator);
+	return std::make_shared<NNGenome>(this->layerSizes, actFns);
 };
 
-NeuralPoleBalancerGS::InstPtr NeuralPoleBalancerGS::createInstance(NeuralPoleBalancerGS::DataPtr&& data) const
+NNPoleBalancerGenepool::AgentPtr NNPoleBalancerGenepool::createAgent(NNPoleBalancerGenepool::GenomePtr&& data) const
 {
-	return std::make_unique<NeuralPoleBalancerGI>(
+	return std::make_unique<NNPoleBalancerAgent>(
 		cartMass, poleMass, poleLength, force,
 		trackLimit, angleLimit, timeLimit,
 		std::move(data));

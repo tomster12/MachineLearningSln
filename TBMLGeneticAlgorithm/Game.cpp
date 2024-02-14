@@ -1,14 +1,13 @@
-
 #include "stdafx.h"
 #include "Game.h"
 
 #include "Utility.h"
 #include "GenepoolSimulation.h"
 
-//#include "VectorListTargetGS.h"
-//#include "NeuralTargetGS.h"
-//#include "NeuralIceTargetsGS.h"
-#include "NeuralPoleBalancerGS.h"
+#include "VectorListTargetGenepool.h"
+#include "NNTargetGenepool.h"
+#include "NNIceTargetsGenepool.h"
+#include "NNPoleBalancerGenepool.h"
 
 Game::Game()
 	: window(NULL), dt(0)
@@ -40,13 +39,29 @@ void Game::initialize()
 	this->window->setVerticalSyncEnabled(verticalSyncEnabled);
 
 	// Initialize genepool object
-	//tbml::IGenepoolSimulationPtr genepool(new VectorListTargetGS({ 700.0f, 600.0f }, 4.0f, 4.0f, 500, { 700.0f, 100.0f }, 20.0f));
-	//tbml::IGenepoolSimulationPtr genepool(new NeuralTargetGS({ 700.0f, 850.0f }, 2.0f, 2.0f, 1000, { 2, 2 }, 20.0f, { 700.0f, 150.0f }, 500.0f));
-	tbml::IGenepoolSimulationPtr genepool(new NeuralIceTargetsGS({ 700.0f, 850.0f }, 2.0f, 400.0f, 0.995f, 3000, { 6, 2 }, { { 300.0f, 150.0f }, { 1100.0f, 400.0f }, { 450.0f, 850.0f }, { 700.0f, 320.0f } }, 4.0f, tbml::tanh));
-	//tbml::IGenepoolSimulationPtr genepool(new NeuralPoleBalancerGS(1.0f, 0.1f, 0.5f, 2.0f, 0.6f, 0.25f, 20.0f, { 4, 1 }, tbml::tanh));
+	//tbml::ga::IGenepoolPtr genepool(new VectorListTargetGenepool(
+	//	{ 700.0f, 600.0f }, 4.0f, 4.0f,
+	//	{ 700.0f, 100.0f }, 20.0f,
+	//	500));
+
+	//tbml::ga::IGenepoolPtr genepool(new NNTargetGenepool(
+	//	{ 700.0f, 850.0f }, 2.0f, 2.0f, 1000,
+	//	20.0f, { 700.0f, 150.0f }, 500.0f,
+	//	{ 2, 2 }, { tbml::fn::TanH() }));
+
+	//tbml::ga::IGenepoolPtr genepool(new NNIceTargetsGenepool(
+	//	{ 700.0f, 850.0f }, 2.0f, 400.0f, 0.99f, 3000,
+	//	{ { 300.0f, 150.0f }, { 1100.0f, 400.0f }, { 450.0f, 850.0f }, { 700.0f, 320.0f } }, 4.0f,
+	//	{ 6, 4, 2 }, { tbml::fn::TanH(), tbml::fn::TanH() }));
+
+	tbml::ga::IGenepoolPtr genepool(new NNPoleBalancerGenepool(
+		1.0f, 0.1f, 0.5f, 2.0f,
+		0.6f, 0.25f, 20.0f,
+		{ 4, 1 }, { tbml::fn::TanH() }));
 
 	genepool->resetGenepool(2000, 0.05f);
-	this->genepoolController = std::make_unique<tbml::GenepoolSimulationController>(std::move(genepool));
+
+	this->genepoolController = std::make_unique<tbml::ga::GenepoolControlle>(std::move(genepool));
 
 	// Initialize UI
 	this->uiManager = std::make_unique<UIManager>();
@@ -96,7 +111,6 @@ void Game::update()
 	{
 		switch (this->sfEvent.type)
 		{
-
 		case sf::Event::Closed:
 			this->window->close();
 			break;

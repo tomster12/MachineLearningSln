@@ -2,9 +2,9 @@
 #include "CommonImpl.h"
 #include "Matrix.h"
 
-#pragma region - VectorListGD
+#pragma region - VectorListGenome
 
-VectorListGD::VectorListGD(int dataSize)
+VectorListGenome::VectorListGenome(int dataSize)
 {
 	this->dataSize = dataSize;
 	this->values = std::vector<sf::Vector2f>(dataSize);
@@ -15,19 +15,19 @@ VectorListGD::VectorListGD(int dataSize)
 	}
 }
 
-VectorListGD::VectorListGD(std::vector<sf::Vector2f>&& values)
+VectorListGenome::VectorListGenome(std::vector<sf::Vector2f>&& values)
 {
 	this->dataSize = values.size();
 	this->values = std::move(values);
 }
 
-const std::vector<sf::Vector2f>& VectorListGD::getValues() const { return values; };
+const std::vector<sf::Vector2f>& VectorListGenome::getValues() const { return values; };
 
-const sf::Vector2f VectorListGD::getValue(int index) const { return this->values[index]; }
+const sf::Vector2f VectorListGenome::getValue(int index) const { return this->values[index]; }
 
-const size_t VectorListGD::getSize() const { return this->dataSize; }
+const size_t VectorListGenome::getSize() const { return this->dataSize; }
 
-VectorListGD::DataPtr VectorListGD::crossover(const VectorListGD::DataPtr& otherData, float mutateChance) const
+VectorListGenome::GenomePtr VectorListGenome::crossover(const VectorListGenome::GenomePtr& otherData, float mutateChance) const
 {
 	std::vector<sf::Vector2f> newValues(this->getSize());
 
@@ -45,28 +45,30 @@ VectorListGD::DataPtr VectorListGD::crossover(const VectorListGD::DataPtr& other
 		}
 	}
 
-	return std::make_shared<VectorListGD>(std::move(newValues));
+	return std::make_shared<VectorListGenome>(std::move(newValues));
 }
 
 #pragma endregion
 
-#pragma region - NeuralGD
+#pragma region - NNGenome
 
-NeuralGD::NeuralGD(std::vector<size_t> layerSizes, float (*activator)(float))
-	: network(layerSizes, activator, false)
-{
-	this->network.randomize();
-}
+NNGenome::NNGenome(std::vector<size_t> layerSizes)
+	: network(layerSizes, tbml::nn::NeuralNetwork::WeightInitType::RANDOM)
+{}
 
-NeuralGD::NeuralGD(tbml::NeuralNetwork&& network)
+NNGenome::NNGenome(std::vector<size_t> layerSizes, std::vector<tbml::fn::ActivationFunction> actFns)
+	: network(layerSizes, actFns, tbml::nn::NeuralNetwork::WeightInitType::RANDOM)
+{}
+
+NNGenome::NNGenome(tbml::nn::NeuralNetwork&& network)
 	: network(std::move(network))
 {}
 
-tbml::Matrix NeuralGD::propogate(tbml::Matrix& input) const { return this->network.propogate(input); }
+tbml::Matrix NNGenome::propogate(tbml::Matrix& input) const { return this->network.propogate(input); }
 
-void NeuralGD::print() const { this->network.printLayers(); }
+void NNGenome::print() const { this->network.printLayers(); }
 
-NeuralGD::DataPtr NeuralGD::crossover(const NeuralGD::DataPtr& otherData, float mutateChance) const
+NNGenome::GenomePtr NNGenome::crossover(const NNGenome::GenomePtr& otherData, float mutateChance) const
 {
 	// Crossover weights
 	const std::vector<tbml::Matrix>& weights = this->network.getWeights();
@@ -75,7 +77,7 @@ NeuralGD::DataPtr NeuralGD::crossover(const NeuralGD::DataPtr& otherData, float 
 	std::vector<tbml::Matrix> newWeights = std::vector<tbml::Matrix>(weights.size());
 	for (size_t i = 0; i < weights.size(); i++)
 	{
-		newWeights[i] = weights[i].ewise(oWeights[i], [mutateChance](float a, float b)
+		newWeights[i] = weights[i].ewised(oWeights[i], [mutateChance](float a, float b)
 		{
 			if (tbml::fn::getRandomFloat() < mutateChance) return -1.0f + 2.0f * tbml::fn::getRandomFloat();
 			else return tbml::fn::getRandomFloat() < 0.5f ? a : b;
@@ -89,7 +91,7 @@ NeuralGD::DataPtr NeuralGD::crossover(const NeuralGD::DataPtr& otherData, float 
 	std::vector<tbml::Matrix> newBias = std::vector<tbml::Matrix>(bias.size());
 	for (size_t i = 0; i < bias.size(); i++)
 	{
-		newBias[i] = bias[i].ewise(oBias[i], [mutateChance](float a, float b)
+		newBias[i] = bias[i].ewised(oBias[i], [mutateChance](float a, float b)
 		{
 			if (tbml::fn::getRandomFloat() < mutateChance) return -1.0f + 2.0f * tbml::fn::getRandomFloat();
 			else return tbml::fn::getRandomFloat() < 0.5f ? a : b;
@@ -97,8 +99,8 @@ NeuralGD::DataPtr NeuralGD::crossover(const NeuralGD::DataPtr& otherData, float 
 	}
 
 	// Create new network and return
-	tbml::NeuralNetwork network(std::move(newWeights), std::move(newBias), this->network.getActivator());
-	return std::make_shared<NeuralGD>(std::move(network));
+	tbml::nn::NeuralNetwork network(std::move(newWeights), std::move(newBias), this->network.getActivationFns());
+	return std::make_shared<NNGenome>(std::move(network));
 };
 
 #pragma endregion

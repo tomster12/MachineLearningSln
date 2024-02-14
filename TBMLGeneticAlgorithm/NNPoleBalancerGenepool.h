@@ -1,19 +1,18 @@
-
 #pragma once
 
 #include "GenepoolSimulation.h"
 #include "CommonImpl.h"
 
 // https://researchbank.swinburne.edu.au/file/62a8df69-4a2c-407f-8040-5ac533fc2787/1/PDF%20(12%20pages).pdf
-class NeuralPoleBalancerGS;
-class NeuralPoleBalancerGI : public tbml::GeneticInstance<NeuralGD>
+class NNPoleBalancerGenepool;
+class NNPoleBalancerAgent : public tbml::ga::Agent<NNGenome>
 {
 public:
-	NeuralPoleBalancerGI(NeuralPoleBalancerGI::DataPtr&& geneticData) : GeneticInstance(std::move(geneticData)) {};
-	NeuralPoleBalancerGI(
+	NNPoleBalancerAgent(NNPoleBalancerAgent::GenomePtr&& genome) : Agent(std::move(genome)) {};
+	NNPoleBalancerAgent(
 		float cartMass, float poleMass, float poleLength, float force,
 		float trackLimit, float angleLimit, float timeLimit,
-		NeuralPoleBalancerGI::DataPtr&& geneticData);
+		NNPoleBalancerAgent::GenomePtr&& genome);
 	void initVisual();
 
 	bool step() override;
@@ -47,14 +46,13 @@ private:
 	float time = 0.0f;
 };
 
-
-class NeuralPoleBalancerGS : public tbml::GenepoolSimulation<NeuralGD, NeuralPoleBalancerGI>
+class NNPoleBalancerGenepool : public tbml::ga::Genepool<NNGenome, NNPoleBalancerAgent>
 {
 public:
-	NeuralPoleBalancerGS(
+	NNPoleBalancerGenepool(
 		float cartMass, float poleMass, float poleLength, float force,
 		float trackLimit, float angleLimit, float timeLimit,
-		std::vector<size_t> dataLayerSizes, float (*dataActivator)(float) = tbml::sign);
+		std::vector<size_t> layerSizes, std::vector<tbml::fn::ActivationFunction> actFns);
 
 protected:
 	float cartMass;
@@ -64,9 +62,9 @@ protected:
 	float trackLimit;
 	float angleLimit;
 	float timeLimit;
-	std::vector<size_t> dataLayerSizes;
-	float (*dataActivator)(float);
+	std::vector<size_t> layerSizes;
+	std::vector<tbml::fn::ActivationFunction> actFns;
 
-	DataPtr createData() const override;
-	InstPtr createInstance(DataPtr&& data) const override;
+	GenomePtr createGenome() const override;
+	AgentPtr createAgent(GenomePtr&& data) const override;
 };

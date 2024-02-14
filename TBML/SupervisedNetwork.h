@@ -6,34 +6,37 @@
 
 namespace tbml
 {
-	struct BackpropogateCache
+	namespace nn
 	{
-		std::vector<Matrix> pdToNeuronIn;
-		std::vector<Matrix> pdToNeuronOut;
-		std::vector<std::vector<Matrix>> pdToWeights;
-		std::vector<std::vector<Matrix>> pdToBias;
-	};
+		struct BackpropogateCache
+		{
+			std::vector<Matrix> pdToNeuronIn;
+			std::vector<Matrix> pdToNeuronOut;
+			std::vector<std::vector<Matrix>> pdToWeights;
+			std::vector<std::vector<Matrix>> pdToBias;
+		};
 
-	struct TrainingConfig { int epochs = 20; int batchSize = -1; float learningRate = 0.1f; float momentumRate = 0.1f; float errorExit = 0.0f; int logLevel = 0; };
+		struct TrainingConfig { int epochs = 20; int batchSize = -1; float learningRate = 0.1f; float momentumRate = 0.1f; float errorExit = 0.0f; int logLevel = 0; };
 
-	class SupervisedNetwork : public NeuralNetwork
-	{
-	public:
-		SupervisedNetwork(std::vector<size_t> layerSizes, WeightInitType weightInitType = RANDOM);
-		SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fn::ActivationFunction> actFns, WeightInitType weightInitType = RANDOM);
-		SupervisedNetwork(std::vector<size_t> layerSizes, fn::ErrorFunction errorFn, WeightInitType weightInitType = RANDOM);
-		SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fn::ActivationFunction> actFns, fn::ErrorFunction errorFn, WeightInitType weightInitType = RANDOM);
+		class SupervisedNetwork : public NeuralNetwork
+		{
+		public:
+			SupervisedNetwork(std::vector<size_t> layerSizes, WeightInitType weightInitType = RANDOM);
+			SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fn::ActivationFunction> actFns, WeightInitType weightInitType = RANDOM);
+			SupervisedNetwork(std::vector<size_t> layerSizes, fn::ErrorFunction errorFn, WeightInitType weightInitType = RANDOM);
+			SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fn::ActivationFunction> actFns, fn::ErrorFunction errorFn, WeightInitType weightInitType = RANDOM);
 
-		void train(const Matrix& input, const Matrix& expected, const TrainingConfig& config);
+			void train(const Matrix& input, const Matrix& expected, const TrainingConfig& config);
 
-	private:
-		static const int MAX_MAX_ITERATIONS = 1'000'000;
-		fn::ErrorFunction errorFn;
+		private:
+			static const int MAX_MAX_ITERATIONS = 1'000'000;
+			fn::ErrorFunction errorFn;
 
-		float trainBatch(const Matrix& input, const Matrix& expected, const TrainingConfig& config, std::vector<Matrix>& pdWeightsMomentum, std::vector<Matrix>& pdBiasMomentum);
-		void backpropogate(const Matrix& expected, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const;
-		Matrix const& calculatePdErrorToIn(size_t layer, const Matrix& expected, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const;
-		Matrix const& calculatePdErrorToOut(size_t layer, const Matrix& expected, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const;
-		BackpropogateCache preinitializeBackpropagationCache(int inputCount) const;
-	};
+			float trainBatch(const Matrix& input, const Matrix& expected, const TrainingConfig& config, std::vector<Matrix>& pdWeightsMomentum, std::vector<Matrix>& pdBiasMomentum);
+			void backpropogate(const Matrix& expected, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const;
+			Matrix const& calculatePdErrorToIn(size_t layer, const Matrix& expected, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const;
+			Matrix const& calculatePdErrorToOut(size_t layer, const Matrix& expected, const PropogateCache& predictedCache, BackpropogateCache& backpropogateCache) const;
+			BackpropogateCache preinitializeBackpropagationCache(int inputCount) const;
+		};
+	}
 }

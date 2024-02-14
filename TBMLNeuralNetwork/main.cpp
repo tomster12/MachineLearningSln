@@ -24,7 +24,7 @@ int main()
 void testBasic()
 {
 	// Create network, inputs, and run
-	tbml::NeuralNetwork network = tbml::NeuralNetwork({ { 3, 3, 1 } }, { tbml::fn::Sigmoid(), tbml::fn::Sigmoid() });
+	tbml::nn::NeuralNetwork network = tbml::nn::NeuralNetwork({ { 3, 3, 1 } }, { tbml::fn::Sigmoid(), tbml::fn::Sigmoid() });
 	tbml::Matrix input = tbml::Matrix({ { 1.0f, -1.0f, 1.0f } });
 	tbml::Matrix output = network.propogate(input);
 
@@ -37,7 +37,7 @@ void testBasic()
 void testTime()
 {
 	// Create network and inputs
-	tbml::NeuralNetwork network({ 8, 8, 8, 1 });
+	tbml::nn::NeuralNetwork network({ 8, 8, 8, 1 });
 	tbml::Matrix input = tbml::Matrix({ { 1, 0, -1, 0.2f, 0.7f, -0.3f, -1, -1 } });
 	size_t epoch = 10'000'000;
 
@@ -52,7 +52,7 @@ void testTime()
 	// Release x86	10'000'000	~7800ms		1D matrix
 	// -----------
 	std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
-	tbml::PropogateCache cache;
+	tbml::nn::PropogateCache cache;
 	for (size_t i = 0; i < epoch; i++) network.propogate(input, cache);
 	std::cout << cache.neuronOutput[3](0, 0) << std::endl;
 	std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
@@ -68,7 +68,7 @@ void testTime()
 void testTimeThreaded()
 {
 	// Create network and inputs
-	tbml::NeuralNetwork network(std::vector<size_t>({ 8, 8, 8, 1 }));
+	tbml::nn::NeuralNetwork network(std::vector<size_t>({ 8, 8, 8, 1 }));
 	tbml::Matrix input = tbml::Matrix({ { 1, 0, -1, 0.2f, 0.7f, -0.3f, -1, -1 } });
 	size_t epoch = 50'000'000;
 
@@ -104,7 +104,7 @@ void testBackprop()
 	const float L = -1.0f, H = 1.0f;
 
 	// Create network and setup training data
-	tbml::SupervisedNetwork network({ 2, 2, 1 }, { tbml::fn::TanH(), tbml::fn::TanH() }, tbml::fn::SquareError());
+	tbml::nn::SupervisedNetwork network({ 2, 2, 1 }, { tbml::fn::TanH(), tbml::fn::TanH() }, tbml::fn::SquareError());
 	tbml::Matrix input = tbml::Matrix({
 		{ L, L },
 		{ L, H },
@@ -186,7 +186,7 @@ void testMNIST()
 	// network.train(trainInput, trainExpected, { 10, 128, 0.15f, 0.8f, 0.01f, 3 });
 
 	// Epochs = 15, accuracy = 81.93%
-	tbml::SupervisedNetwork network({ trainImageSize, 100, 10 }, { tbml::fn::ReLU(), tbml::fn::SoftMax() }, tbml::fn::CrossEntropy());
+	tbml::nn::SupervisedNetwork network({ trainImageSize, 100, 10 }, { tbml::fn::ReLU(), tbml::fn::SoftMax() }, tbml::fn::CrossEntropy());
 	network.train(trainInput, trainExpected, { 15, 50, 0.02f, 0.8f, 0.01f, 2 });
 
 	// Epochs = 10, accuracy = 90.68%
