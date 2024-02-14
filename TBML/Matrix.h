@@ -10,7 +10,7 @@ namespace tbml
 	{
 	public:
 		Matrix();
-		Matrix(const Matrix& data);
+		Matrix(const Matrix& m);
 		Matrix(const std::vector<std::vector<float>>& data);
 		Matrix(std::vector<float>&& data, size_t rows, size_t cols);
 		Matrix(size_t rows, size_t cols);
@@ -45,6 +45,7 @@ namespace tbml
 		Matrix ewised(Matrix const& m, std::function<float(float, float)> func) const { return Matrix(*this).ewise(m, func); }
 		Matrix transposed() const { return Matrix(*this).transpose(); }
 		Matrix crossed(Matrix const& m) const { return Matrix(*this).cross(m); }
+
 		float acc(std::function<float(float, float)> func, float initial) const;
 		Matrix& addBounded(Matrix const& m);
 		void printValues(std::string tag = "Matrix:") const;

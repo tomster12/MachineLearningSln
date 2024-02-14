@@ -4,6 +4,9 @@
     <Filter Include="Library">
       <UniqueIdentifier>{e7fa3b8a-c46a-42f8-afb6-c869f39178d1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="WIP">
+      <UniqueIdentifier>{e83ebbbe-db14-4f7a-b9e7-621129c083e6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Utility.h">
@@ -24,6 +27,12 @@
     <ClInclude Include="GenepoolSimulation.h">
       <Filter>Library</Filter>
     </ClInclude>
+    <ClInclude Include="_NeuralNetwork.h">
+      <Filter>WIP</Filter>
+    </ClInclude>
+    <ClInclude Include="_Tensor.h">
+      <Filter>WIP</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Utility.cpp">
@@ -43,6 +52,12 @@
     </ClCompile>
     <ClCompile Include="ThreadPool.h">
       <Filter>Library</Filter>
+    </ClCompile>
+    <ClCompile Include="_NeuralNetwork.cpp">
+      <Filter>WIP</Filter>
+    </ClCompile>
+    <ClCompile Include="_Tensor.cpp">
+      <Filter>WIP</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

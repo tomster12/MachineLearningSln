@@ -61,7 +61,7 @@ void Game::initialize()
 
 	genepool->resetGenepool(2000, 0.05f);
 
-	this->genepoolController = std::make_unique<tbml::ga::GenepoolControlle>(std::move(genepool));
+	this->genepoolController = std::make_unique<tbml::ga::GenepoolController>(std::move(genepool));
 
 	// Initialize UI
 	this->uiManager = std::make_unique<UIManager>();

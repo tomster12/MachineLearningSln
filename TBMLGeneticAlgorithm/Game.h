@@ -17,7 +17,7 @@ private:
 	sf::Clock dtClock;
 	float dt;
 
-	std::unique_ptr<tbml::ga::GenepoolControlle> genepoolController;
+	std::unique_ptr<tbml::ga::GenepoolController> genepoolController;
 	std::unique_ptr<UIManager> uiManager;
 
 	void initialize();

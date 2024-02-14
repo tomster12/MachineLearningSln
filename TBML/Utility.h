@@ -29,10 +29,10 @@ namespace tbml
 			{}
 		};
 
-		class ErrorFunction
+		class LossFunction
 		{
 		public:
-			ErrorFunction() : errorFn(nullptr), derivativeFn(nullptr) {}
+			LossFunction() : errorFn(nullptr), derivativeFn(nullptr) {}
 			virtual float operator()(Matrix const& predicted, Matrix const& expected) const { return errorFn(predicted, expected); }
 			virtual Matrix derivative(Matrix const& predicted, Matrix const& expected) const { return derivativeFn(predicted, expected); }
 
@@ -41,7 +41,7 @@ namespace tbml
 			std::function<Matrix(Matrix const& predicted, Matrix const& expected)> derivativeFn;
 
 		protected:
-			ErrorFunction(
+			LossFunction(
 				std::function<float(Matrix const& predicted, Matrix const& expected)> errorFn,
 				std::function<Matrix(Matrix const& predicted, Matrix const& expected)> derivativeFn)
 				: errorFn(errorFn), derivativeFn(derivativeFn)
@@ -137,10 +137,10 @@ namespace tbml
 			};
 		};
 
-		class SquareError : public ErrorFunction
+		class SquareError : public LossFunction
 		{
 		public:
-			SquareError() : ErrorFunction(
+			SquareError() : LossFunction(
 				[](Matrix const& predicted, Matrix const& expected)
 			{
 				float error = 0;
@@ -162,10 +162,10 @@ namespace tbml
 			{}
 		};
 
-		class CrossEntropy : public ErrorFunction
+		class CrossEntropy : public LossFunction
 		{
 		public:
-			CrossEntropy() : ErrorFunction(
+			CrossEntropy() : LossFunction(
 				[](Matrix const& predicted, Matrix const& expected)
 			{
 				size_t rows = expected.getRowCount();

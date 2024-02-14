@@ -248,7 +248,7 @@ namespace tbml
 			bool getGenerationEvaluated() const { return this->isGenerationEvaluated; }
 		};
 
-		class GenepoolControlle
+		class GenepoolController
 		{
 		protected:
 			IGenepoolPtr genepool = nullptr;
@@ -259,9 +259,9 @@ namespace tbml
 			bool autoIterate = false;
 
 		public:
-			GenepoolControlle() {}
+			GenepoolController() {}
 
-			GenepoolControlle(IGenepoolPtr genepool)
+			GenepoolController(IGenepoolPtr genepool)
 				: genepool(std::move(genepool))
 			{}
 

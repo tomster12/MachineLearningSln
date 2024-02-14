@@ -17,11 +17,11 @@ namespace tbml
 			: SupervisedNetwork(layerSizes, actFns, fn::SquareError(), weightInitType)
 		{}
 
-		SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, fn::ErrorFunction errorFn, WeightInitType weightInitType)
+		SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, fn::LossFunction errorFn, WeightInitType weightInitType)
 			: NeuralNetwork(layerSizes, weightInitType), errorFn(errorFn)
 		{}
 
-		SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fn::ActivationFunction> actFns, fn::ErrorFunction errorFn, WeightInitType weightInitType)
+		SupervisedNetwork::SupervisedNetwork(std::vector<size_t> layerSizes, std::vector<fn::ActivationFunction> actFns, fn::LossFunction errorFn, WeightInitType weightInitType)
 			: NeuralNetwork(layerSizes, actFns, weightInitType), errorFn(errorFn)
 		{}
 

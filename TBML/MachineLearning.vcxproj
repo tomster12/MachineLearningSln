@@ -171,19 +171,23 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="GenepoolSimulation.h" />
+    <ClInclude Include="_NeuralNetwork.h" />
     <ClInclude Include="Utility.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="NeuralNetwork.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="SupervisedNetwork.h" />
+    <ClInclude Include="_Tensor.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="_NeuralNetwork.cpp" />
     <ClCompile Include="ThreadPool.h" />
     <ClCompile Include="Utility.cpp" />
     <ClCompile Include="Matrix.cpp" />
     <ClCompile Include="NeuralNetwork.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="SupervisedNetwork.cpp" />
+    <ClCompile Include="_Tensor.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
