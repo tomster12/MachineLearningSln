@@ -20,7 +20,7 @@ namespace tbml
 		{
 			if (layers.size() == 0) return _Tensor();
 
-			// Funky layout is to ensure const ref throughout
+			// Funky layout is to ensure const reference throughout
 
 			layers[0]->propogate(input);
 			for (size_t i = 1; i < layers.size(); i++)
@@ -43,7 +43,7 @@ namespace tbml
 
 		_DenseLayer::_DenseLayer(size_t inputSize, size_t outputSize, fn::ActivationFunction&& actFn, _DenseInitType initType, bool useBias)
 		{
-			weights = _Tensor({ inputSize, outputSize });
+			weights = _Tensor({ inputSize, outputSize }, 0);
 
 			if (initType == _DenseInitType::RANDOM)
 			{
@@ -52,7 +52,7 @@ namespace tbml
 
 			if (useBias)
 			{
-				bias = _Tensor({ 1, outputSize });
+				bias = _Tensor({ 1, outputSize }, 0);
 
 				if (initType == _DenseInitType::RANDOM)
 				{

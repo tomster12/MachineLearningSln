@@ -7,15 +7,15 @@ namespace tbml
 	public:
 		_Tensor();
 		_Tensor(const _Tensor& t);
-		_Tensor(std::vector<size_t> shape);
-		_Tensor(std::vector<size_t> shape, std::vector<float>&& data);
-
-		_Tensor(std::vector<float>& data);
-		_Tensor(std::vector<std::vector<float>>& data);
-		_Tensor(std::vector<std::vector<std::vector<float>>>& data);
-
-		void resize(std::vector<size_t> shape);
+		_Tensor(const std::vector<size_t>& shape, float v);
+		_Tensor(const std::vector<size_t>& shape, const std::vector<float>& data);
+		_Tensor(const std::vector<float>& data);
+		_Tensor(const std::vector<std::vector<float>>& data);
+		_Tensor(const std::vector<std::vector<std::vector<float>>>& data);
 		void zero();
+
+		template<typename... Args>
+		float& operator()(Args... args) { return data[_getIndex(0, 1, args...)]; }
 
 		_Tensor& operator+=(const _Tensor& t);
 		_Tensor& operator+=(float v);
@@ -33,13 +33,18 @@ namespace tbml
 		_Tensor operator*(float v) const { return _Tensor(*this) *= v; }
 		_Tensor operator/(const _Tensor& t) const { return _Tensor(*this) /= t; }
 		_Tensor operator/(float v) const { return _Tensor(*this) /= v; }
+
+		float acc(std::function<float(float, float)> fn, float initial) const;
 		_Tensor& map(std::function<float(float)> fn);
 		_Tensor& ewise(const _Tensor& t, std::function<float(float, float)> fn);
 		_Tensor& matmul(const _Tensor& t);
 		_Tensor& transpose();
-		float acc(std::function<float(float, float)> fn, float initial) const;
+		_Tensor& mapped(std::function<float(float)> fn) { return _Tensor(*this).map(fn); }
+		_Tensor& ewised(const _Tensor& t, std::function<float(float, float)> fn) { return _Tensor(*this).ewise(t, fn); }
+		_Tensor& matmulled(const _Tensor& t) { return _Tensor(*this).matmul(t); }
+		_Tensor& transposed() { return _Tensor(*this).transpose(); }
 
-		void print(std::string tag = "_Tensor:") const;
+		void print(std::string tag = "Tensor:") const;
 		const std::vector<size_t> getShape() const { return shape; }
 		const std::vector<float>& getData() { return data; }
 		bool isZero() const;
@@ -47,5 +52,17 @@ namespace tbml
 	private:
 		std::vector<size_t> shape;
 		std::vector<float> data;
+
+		template<typename ICurrent, typename... IRest>
+		size_t _getIndex(size_t acc, size_t mult, ICurrent index, IRest... rest)
+		{
+			// shape: (2, 3, 4), indices: (a, b, c)
+			// [0 0 0]  [0 0 0]  [0 0 0]  [0 0 0]
+			// [0 0 0]  [0 0 0]  [0 0 0]  [0 0 0]
+			// (a) + (2 * b) + (2 * 3 * c)
+			return _getIndex(acc + (index * mult), (mult * shape[shape.size() - sizeof...(IRest)]), rest...);
+		}
+
+		size_t _getIndex(size_t acc, size_t mult) { return acc; }
 	};
 }
