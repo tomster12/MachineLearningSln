@@ -14,14 +14,15 @@ namespace tbml
 		{}
 
 		void _NeuralNetwork::addLayer(_Layer* layer)
-		{}
+		{
+			layers.push_back(layer);
+		}
 
 		const _Tensor& _NeuralNetwork::propogate(const _Tensor& input)
 		{
-			if (layers.size() == 0) return _Tensor();
+			if (layers.size() == 0) return _Tensor::ZERO;
 
 			// Funky layout is to ensure const reference throughout
-
 			layers[0]->propogate(input);
 			for (size_t i = 1; i < layers.size(); i++)
 			{
@@ -32,8 +33,21 @@ namespace tbml
 
 		const _Tensor& _NeuralNetwork::train(const std::vector<_Tensor>& inputs, const std::vector<_Tensor>& expectedOutputs, const _TrainingConfig& config)
 		{
+			// Stochastic gradient descent without batches
+			for (size_t i = 0; i < inputs.size(); i++)
+			{
+				// Propogate
+				const _Tensor& output = propogate(inputs[i]);
+
+				// Calculate loss
+				const _Tensor& loss = lossFn(output, expectedOutputs[i]);
+
+				// Backpropogate
+				backpropogate(loss);
+			}
+
 			// TODO: Implement
-			return _Tensor();
+			return _Tensor::ZERO;
 		}
 
 		void _NeuralNetwork::backpropogate(const _Tensor& loss) const
@@ -47,7 +61,7 @@ namespace tbml
 
 			if (initType == _DenseInitType::RANDOM)
 			{
-				weights.map([](float _) { return fn::getRandomFloat(); });
+				weights.map([](float _) { return fn::getRandomFloat() * 2 - 1; });
 			}
 
 			if (useBias)
@@ -56,19 +70,21 @@ namespace tbml
 
 				if (initType == _DenseInitType::RANDOM)
 				{
-					bias.map([](float _) { return fn::getRandomFloat(); });
+					bias.map([](float _) { return fn::getRandomFloat() * 2 - 1; });
 				}
 			}
 		}
 
 		const _Tensor& _DenseLayer::propogate(const _Tensor& input)
 		{
-			// TODO: insert return statement here
+			// TODO: Implement
+			return _Tensor::ZERO;
 		}
 
 		const _Tensor& _DenseLayer::backpropagate(const _Tensor& dToOut)
 		{
-			// TODO: insert return statement here
+			// TODO: Implement
+			return _Tensor::ZERO;
 		}
 
 		_ConvLayer::_ConvLayer(std::vector<size_t> kernel, std::vector<size_t> stride, fn::ActivationFunction&& actFn)
@@ -76,12 +92,14 @@ namespace tbml
 
 		const _Tensor& _ConvLayer::propogate(const _Tensor& input)
 		{
-			// TODO: insert return statement here
+			// TODO: Implement
+			return _Tensor::ZERO;
 		}
 
 		const _Tensor& _ConvLayer::backpropagate(const _Tensor& dToOut)
 		{
-			// TODO: insert return statement here
+			// TODO: Implement
+			return _Tensor::ZERO;
 		}
 
 		_FlattenLayer::_FlattenLayer()
@@ -89,12 +107,14 @@ namespace tbml
 
 		const _Tensor& _FlattenLayer::propogate(const _Tensor& input)
 		{
-			// TODO: insert return statement here
+			// TODO: Implement
+			return _Tensor::ZERO;
 		}
 
 		const _Tensor& _FlattenLayer::backpropagate(const _Tensor& dToOut)
 		{
-			// TODO: insert return statement here
+			// TODO: Implement
+			return _Tensor::ZERO;
 		}
 
 		_MaxPoolLayer::_MaxPoolLayer()
@@ -102,12 +122,14 @@ namespace tbml
 
 		const _Tensor& _MaxPoolLayer::propogate(const _Tensor& input)
 		{
-			// TODO: insert return statement here
+			// TODO: Implement
+			return _Tensor::ZERO;
 		}
 
 		const _Tensor& _MaxPoolLayer::backpropagate(const _Tensor& dToOut)
 		{
-			// TODO: insert return statement here
+			// TODO: Implement
+			return _Tensor::ZERO;
 		}
 	}
 }

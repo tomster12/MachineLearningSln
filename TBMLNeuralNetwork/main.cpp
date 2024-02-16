@@ -9,15 +9,18 @@
 #include "MNIST.h"
 #include "ThreadPool.h"
 
+#include "_Tensor.h"
+
 void testBasic();
 void testTime();
 void testTimeThreaded();
 void testBackprop();
 void testMNIST();
+void testNew();
 
 int main()
 {
-	testMNIST();
+	testNew();
 	return 0;
 }
 
@@ -202,4 +205,31 @@ void testMNIST()
 	tbml::Matrix output = network.propogate(testInput);
 	float accuracy = tbml::fn::calculateAccuracy(output, testExpected);
 	std::cout << "t10k Accuracy = " << (accuracy * 100) << "%" << std::endl;
+}
+
+void testNew()
+{
+	tbml::_Tensor t1{
+		{ { 1.0, 2.0f, 3.0f },
+		  { 4.0, 5.0f, 6.0f } }
+	};
+
+	tbml::_Tensor t2{
+		{ { 7.0, 8.0f, 9.0f },
+		  { 10.0, 11.0f, 12.0f } }
+	};
+
+	tbml::_Tensor t3{
+		{ { 2.0f, 2.0f },
+		  { 2.0f, 2.0f },
+		  { 2.0f, 2.0f } }
+	};
+
+	tbml::_Tensor t4 = t1 + t2;
+	tbml::_Tensor t5 = t1 - t2;
+	tbml::_Tensor t6 = t1.matmulled(t3);
+
+	t4.print();
+	t5.print();
+	t6.print();
 }

@@ -178,6 +178,7 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="SupervisedNetwork.h" />
     <ClInclude Include="_Tensor.h" />
+    <ClInclude Include="_Utility.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="_NeuralNetwork.cpp" />
@@ -188,6 +189,7 @@
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="SupervisedNetwork.cpp" />
     <ClCompile Include="_Tensor.cpp" />
+    <ClCompile Include="_Utility.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
