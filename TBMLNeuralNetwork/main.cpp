@@ -3,11 +3,13 @@
 #include <chrono>
 #include <omp.h>
 
+#include "MNIST.h"
+#include "ThreadPool.h"
 #include "Matrix.h"
 #include "Utility.h"
 #include "SupervisedNetwork.h"
-#include "MNIST.h"
-#include "ThreadPool.h"
+#include "_Utility.h"
+#include "_NeuralNetwork.h"
 
 #include "_Tensor.h"
 
@@ -209,27 +211,14 @@ void testMNIST()
 
 void testNew()
 {
-	tbml::_Tensor t1{
-		{ { 1.0, 2.0f, 3.0f },
-		  { 4.0, 5.0f, 6.0f } }
-	};
+	tbml::nn::_NeuralNetwork network(tbml::fn::_SquareError(), {
+		new tbml::nn::_DenseLayer(2, 3, tbml::fn::_Sigmoid()),
+		new tbml::nn::_DenseLayer(3, 1, tbml::fn::_Sigmoid()) });
 
-	tbml::_Tensor t2{
-		{ { 7.0, 8.0f, 9.0f },
-		  { 10.0, 11.0f, 12.0f } }
-	};
+	// TODO: Figure out shape situation
+	tbml::_Tensor input({ 3, 1 }, { 1.0f, 3.0f, 4.0f });
+	tbml::_Tensor output = network.propogate(input);
 
-	tbml::_Tensor t3{
-		{ { 2.0f, 2.0f },
-		  { 2.0f, 2.0f },
-		  { 2.0f, 2.0f } }
-	};
-
-	tbml::_Tensor t4 = t1 + t2;
-	tbml::_Tensor t5 = t1 - t2;
-	tbml::_Tensor t6 = t1.matmulled(t3);
-
-	t4.print();
-	t5.print();
-	t6.print();
+	input.print("Input: ");
+	output.print("Output: ");
 }

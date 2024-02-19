@@ -5,13 +5,19 @@ namespace tbml
 {
 	namespace nn
 	{
-		_NeuralNetwork::_NeuralNetwork(fn::LossFunction&& lossFn)
+		_NeuralNetwork::_NeuralNetwork(fn::_LossFunction&& lossFn)
 			: lossFn(lossFn)
 		{}
 
-		_NeuralNetwork::_NeuralNetwork(fn::LossFunction&& lossFn, std::vector<_Layer*>&& layers)
+		_NeuralNetwork::_NeuralNetwork(fn::_LossFunction&& lossFn, std::vector< _Layer*> layers)
 			: lossFn(lossFn), layers(layers)
 		{}
+
+		_NeuralNetwork::~_NeuralNetwork()
+		{
+			for (size_t i = 0; i < layers.size(); i++) delete layers[i];
+			layers.clear();
+		}
 
 		void _NeuralNetwork::addLayer(_Layer* layer)
 		{
@@ -22,7 +28,7 @@ namespace tbml
 		{
 			if (layers.size() == 0) return _Tensor::ZERO;
 
-			// Funky layout is to ensure const reference throughout
+			// Propogate layers using const refs
 			layers[0]->propogate(input);
 			for (size_t i = 1; i < layers.size(); i++)
 			{
@@ -31,31 +37,41 @@ namespace tbml
 			return layers[layers.size() - 1]->getPropogateOutput();
 		}
 
-		const _Tensor& _NeuralNetwork::train(const std::vector<_Tensor>& inputs, const std::vector<_Tensor>& expectedOutputs, const _TrainingConfig& config)
+		void _NeuralNetwork::train(const std::vector<_Tensor>& inputs, const std::vector<_Tensor>& expectedOutputs, const _TrainingConfig& config)
 		{
 			// Stochastic gradient descent without batches
 			for (size_t i = 0; i < inputs.size(); i++)
 			{
-				// Propogate
+				// Propogate input to output
 				const _Tensor& output = propogate(inputs[i]);
 
-				// Calculate loss
-				const _Tensor& loss = lossFn(output, expectedOutputs[i]);
+				// Backpropogate output through network
+				backpropogate(output, expectedOutputs[i]);
 
-				// Backpropogate
-				backpropogate(loss);
+				// Update weights and biases
+				for (size_t j = 0; j < layers.size(); j++)
+				{
+					// TODO: Implement
+				}
 			}
-
-			// TODO: Implement
-			return _Tensor::ZERO;
 		}
 
-		void _NeuralNetwork::backpropogate(const _Tensor& loss) const
+		void _NeuralNetwork::backpropogate(const _Tensor& predicted, const _Tensor& expected)
 		{
-			// TODO: Implement
+			if (layers.size() == 0) return;
+
+			// Backpropogate loss function
+			_Tensor pdLossToOut = lossFn.derive(predicted, expected);
+
+			// Backpropogate layers using next layers pd to in
+			layers[layers.size() - 1]->backpropogate(pdLossToOut);
+			for (int i = (int)layers.size() - 2; i >= 0; i--)
+			{
+				layers[i]->backpropogate(layers[i + 1]->getBackpropogateOutput());
+			}
 		}
 
-		_DenseLayer::_DenseLayer(size_t inputSize, size_t outputSize, fn::ActivationFunction&& actFn, _DenseInitType initType, bool useBias)
+		_DenseLayer::_DenseLayer(size_t inputSize, size_t outputSize, fn::_ActivationFunction&& actFn, _DenseInitType initType, bool useBias)
 		{
 			weights = _Tensor({ inputSize, outputSize }, 0);
 
@@ -75,61 +91,61 @@ namespace tbml
 			}
 		}
 
-		const _Tensor& _DenseLayer::propogate(const _Tensor& input)
+		void _DenseLayer::propogate(const _Tensor& input)
 		{
-			// TODO: Implement
-			return _Tensor::ZERO;
+			// TODO: Fix with bias being wrong
+			propogateOutput = input.transposed().matmul(weights);
 		}
 
-		const _Tensor& _DenseLayer::backpropagate(const _Tensor& dToOut)
+		void _DenseLayer::backpropogate(const _Tensor& pdToOut)
 		{
 			// TODO: Implement
-			return _Tensor::ZERO;
+			backpropogateOutput = pdToOut;
 		}
 
-		_ConvLayer::_ConvLayer(std::vector<size_t> kernel, std::vector<size_t> stride, fn::ActivationFunction&& actFn)
+		_ConvLayer::_ConvLayer(std::vector<size_t> kernel, std::vector<size_t> stride, fn::_ActivationFunction&& actFn)
 		{}
 
-		const _Tensor& _ConvLayer::propogate(const _Tensor& input)
+		void _ConvLayer::propogate(const _Tensor& input)
 		{
 			// TODO: Implement
-			return _Tensor::ZERO;
+			propogateOutput = _Tensor::ZERO;
 		}
 
-		const _Tensor& _ConvLayer::backpropagate(const _Tensor& dToOut)
+		void _ConvLayer::backpropogate(const _Tensor& pdToOut)
 		{
 			// TODO: Implement
-			return _Tensor::ZERO;
+			backpropogateOutput = pdToOut;
 		}
 
 		_FlattenLayer::_FlattenLayer()
 		{}
 
-		const _Tensor& _FlattenLayer::propogate(const _Tensor& input)
+		void _FlattenLayer::propogate(const _Tensor& input)
 		{
 			// TODO: Implement
-			return _Tensor::ZERO;
+			propogateOutput = _Tensor::ZERO;
 		}
 
-		const _Tensor& _FlattenLayer::backpropagate(const _Tensor& dToOut)
+		void _FlattenLayer::backpropogate(const _Tensor& pdToOut)
 		{
 			// TODO: Implement
-			return _Tensor::ZERO;
+			backpropogateOutput = pdToOut;
 		}
 
 		_MaxPoolLayer::_MaxPoolLayer()
 		{}
 
-		const _Tensor& _MaxPoolLayer::propogate(const _Tensor& input)
+		void _MaxPoolLayer::propogate(const _Tensor& input)
 		{
 			// TODO: Implement
-			return _Tensor::ZERO;
+			propogateOutput = _Tensor::ZERO;
 		}
 
-		const _Tensor& _MaxPoolLayer::backpropagate(const _Tensor& dToOut)
+		void _MaxPoolLayer::backpropogate(const _Tensor& pdToOut)
 		{
 			// TODO: Implement
-			return _Tensor::ZERO;
+			backpropogateOutput = pdToOut;
 		}
 	}
 }

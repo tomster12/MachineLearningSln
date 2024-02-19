@@ -2,6 +2,7 @@
 
 #include "stdafx.h"
 #include "_Tensor.h"
+#include <cassert>
 
 namespace tbml
 {
@@ -10,189 +11,210 @@ namespace tbml
 		class _ActivationFunction
 		{
 		public:
-			_ActivationFunction() : activateFn(nullptr), chainDerivativeFn(nullptr) {}
+			_ActivationFunction() : activateFn(nullptr), derivativeFn(nullptr) {}
 			virtual void operator()(_Tensor& x) const { activateFn(x); }
-			virtual _Tensor derivative(_Tensor const& x, _Tensor const& pdToOut) const { return chainDerivativeFn(x, pdToOut); }
+			virtual _Tensor derive(const _Tensor& z, const _Tensor& pdToOut) const { return derivativeFn(z, pdToOut); }
 
 		private:
 			std::function<void(_Tensor&)> activateFn;
-			std::function<_Tensor(_Tensor const&, _Tensor const&)> chainDerivativeFn;
+			std::function<_Tensor(const _Tensor&, const _Tensor&)> derivativeFn;
 
 		protected:
 			_ActivationFunction(
-				std::function<void(_Tensor&)> activate,
-				std::function<_Tensor(_Tensor const&, _Tensor const&)> chainDerivativeFn)
-				: activateFn(activate), chainDerivativeFn(chainDerivativeFn)
+				std::function<void(_Tensor& x)> activateFn,
+				std::function<_Tensor(const _Tensor& z, const _Tensor& pdToOut)> derivativeFn)
+				: activateFn(activateFn), derivativeFn(derivativeFn)
 			{}
 		};
 
 		class _LossFunction
 		{
 		public:
-			_LossFunction() : errorFn(nullptr), derivativeFn(nullptr) {}
-			virtual float operator()(_Tensor const& predicted, _Tensor const& expected) const { return errorFn(predicted, expected); }
-			virtual _Tensor derivative(_Tensor const& predicted, _Tensor const& expected) const { return derivativeFn(predicted, expected); }
+			_LossFunction() : lossFn(nullptr), derivativeFn(nullptr) {}
+			virtual float operator()(const _Tensor& predicted, const _Tensor& expected) const { return lossFn(predicted, expected); }
+			virtual _Tensor derive(const _Tensor& predicted, const _Tensor& expected) const { return derivativeFn(predicted, expected); }
 
 		private:
-			std::function<float(_Tensor const& predicted, _Tensor const& expected)> errorFn;
-			std::function<_Tensor(_Tensor const& predicted, _Tensor const& expected)> derivativeFn;
+			std::function<float(const _Tensor& predicted, const _Tensor& expected)> lossFn;
+			std::function<_Tensor(const _Tensor& predicted, const _Tensor& expected)> derivativeFn;
 
 		protected:
 			_LossFunction(
-				std::function<float(_Tensor const& predicted, _Tensor const& expected)> errorFn,
-				std::function<_Tensor(_Tensor const& predicted, _Tensor const& expected)> derivativeFn)
-				: errorFn(errorFn), derivativeFn(derivativeFn)
+				std::function<float(const _Tensor& predicted, const _Tensor& expected)> lossFn,
+				std::function<_Tensor(const _Tensor& predicted, const _Tensor& expected)> derivativeFn)
+				: lossFn(lossFn), derivativeFn(derivativeFn)
 			{}
 		};
 
-		class ReLU : public _ActivationFunction
+		class _ReLU : public _ActivationFunction
 		{
 		public:
-			ReLU() : _ActivationFunction(
-				[](_Tensor& x) { x.map([](float x) { return std::max(0.0f, x); }); },
-				[](_Tensor const& x, _Tensor const& pdToOut) { return x.mapped([](float v) { return v > 0 ? 1.0f : 0.0f; }) * pdToOut; })
+			_ReLU() : _ActivationFunction(
+				[](_Tensor& x)
+			{
+				x.map([](float x) { return std::max(0.0f, x); });
+			},
+				[](const _Tensor& z, const _Tensor& pdToOut)
+			{
+				_Tensor pdOutToIn = z.mapped([](float v) { return v > 0 ? 1.0f : 0.0f; });
+				return pdOutToIn * pdToOut;
+			})
 			{}
 		};
 
-		class Sigmoid : public _ActivationFunction
+		class _Sigmoid : public _ActivationFunction
 		{
 		public:
-			Sigmoid() : _ActivationFunction(
-				[this](_Tensor& x) { x.map([this](float x) { return sigmoid(x); }); },
-				[this](_Tensor const& x, _Tensor const& pdToOut) { return x.mapped([this](float x) { return sigmoid(x) * (1.0f - sigmoid(x)); }) * pdToOut; })
+			_Sigmoid() : _ActivationFunction(
+				[this](_Tensor& x)
+			{
+				x.map([this](float x) { return sigmoid(x); });
+			},
+				[this](const _Tensor& z, const _Tensor& pdToOut)
+			{
+				_Tensor pdOutToIn = z.mapped([this](float v)
+				{
+					float sv = sigmoid(v);
+					return sv * (1.0f - sv);
+				});
+
+				return pdOutToIn * pdToOut;
+			})
 			{}
 
 		private:
 			float sigmoid(float x) { return 1.0f / (1.0f + std::exp(-x)); }
 		};
 
-		class TanH : public _ActivationFunction
+		class _TanH : public _ActivationFunction
 		{
 		public:
-			TanH() : _ActivationFunction(
-				[](_Tensor& x) { x.map([](float x) { return tanhf(x); }); },
-				[](_Tensor const& x, _Tensor const& pdToOut) { return x.mapped([](float x) { float th = tanhf(x); return 1 - th * th; }) * pdToOut; })
+			_TanH() : _ActivationFunction(
+				[](_Tensor& x)
+			{
+				x.map([](float x) { return tanhf(x); });
+			},
+				[](const _Tensor& z, const _Tensor& pdToOut)
+			{
+				_Tensor pdOutToIn = z.mapped([](float v)
+				{
+					float th = tanhf(v);
+					return 1 - th * th;
+				});
+
+				return pdOutToIn * pdToOut;
+			})
 			{}
 		};
 
-		class SoftMax : public _ActivationFunction
+		class _SoftMax : public _ActivationFunction
 		{
 		public:
-			SoftMax() : _ActivationFunction(
+			_SoftMax() : _ActivationFunction(
 				[this](_Tensor& x)
 			{
-				/*
-				size_t rows = x.getRowCount();
-				size_t cols = x.getColCount();
+				auto shape = x.getShape();
+				assert(shape.size() == 2);
 
-				// Consider each row independantly
-				for (size_t row = 0; row < rows; row++)
+				// Independent per row
+				for (size_t row = 0; row < shape[0]; row++)
 				{
-					// Calculate max for stability
+					// Calculate max of row for stability
 					float max = x(row, 0);
-					for (size_t col = 1; col < cols; col++) max = std::max(max, x(row, col));
+					for (size_t i = 1; i < shape[1]; i++) max = std::max(max, x(row, i));
 
-					// SoftMax = Sⱼ = eˣᶦ⁺ᴰ / Σ(Cᵃʲ⁺ᴰ), With D = -max for stability
+					// SoftMax of each element in row = e^(X(i) - max) / Σ e^(X(i) - max)
 					float sum = 0.0;
-					for (size_t i = 0; i < cols; i++)
+					for (size_t i = 0; i < shape[1]; i++)
 					{
 						x(row, i) = std::exp(x(row, i) - max);
 						sum += x(row, i);
 					}
-					for (size_t j = 0; j < cols; j++) x(row, j) /= sum;
-				}*/
+					for (size_t i = 0; i < shape[1]; i++) x(row, i) /= sum;
+				}
 			},
-			[this](_Tensor const& s, _Tensor const& pdToOut)
+				[this](const _Tensor& z, const _Tensor& pdToOut)
 			{
-				size_t rows = s.getRowCount();
-				size_t cols = s.getColCount();
-				_Tensor result(rows, cols);
+				auto shape = z.getShape();
+				assert(shape.size() == 2);
+				_Tensor result(shape, 0);
 
 				// Independent per row
-				for (size_t row = 0; row < rows; row++)
+				for (size_t row = 0; row < shape[0]; row++)
 				{
-					// For each neuron input X(j)
-					for (size_t j = 0; j < cols; j++)
+					// For each neuron i
+					for (size_t i = 0; i < shape[1]; i++)
 					{
-						float Sj = s(row, j);
+						float Zi = z(row, i);
 
-						// Calculate derivative d S(j) / X(i)
-						for (size_t i = 0; i < cols; i++)
+						// Sum partial derivatives Zj / Xi
+						for (size_t j = 0; j < shape[1]; j++)
 						{
-							float Si = s(row, i);
-							int kronekerDelta = (j == i) ? 1 : 0;
-							float dSij = (Si * (kronekerDelta - Sj));
-							result(row, j) += dSij * pdToOut(row, i);
+							float Zj = z(row, j);
+							int kronekerDelta = (i == j) ? 1 : 0;
+							float dSij = (Zj * (kronekerDelta - Zi));
+							result(row, i) += dSij * pdToOut(row, j);
 						}
 					}
 				}
 
 				return result;
-			});
+			})
+			{}
 		};
 
-		class SquareError : public _LossFunction
+		class _SquareError : public _LossFunction
 		{
 		public:
-			SquareError() : _LossFunction(
-				[](_Tensor const& predicted, _Tensor const& expected)
+			_SquareError() : _LossFunction(
+				[](const _Tensor& predicted, const _Tensor& expected)
 			{
-				float error = 0;
-				for (size_t row = 0; row < predicted.getRowCount(); row++)
+				const auto& predicteddata = predicted.getData();
+				const auto& expecteddata = expected.getData();
+				assert(predicteddata.size() == expecteddata.size());
+
+				float error = 0.0;
+				for (size_t i = 0; i < predicteddata.size(); i++)
 				{
-					// Sum of squared errors = Σ (Ei - Yi)^2
-					for (size_t i = 0; i < predicted.getColCount(); i++)
-					{
-						float diff = expected(row, i) - predicted(row, i);
-						error += diff * diff;
-					}
+					float diff = predicteddata[i] - expecteddata[i];
+					error += diff * diff;
 				}
 				return error;
 			},
-				[](_Tensor const& predicted, _Tensor const& expected)
+				[](const _Tensor& predicted, const _Tensor& expected)
 			{
+				assert(predicted.getShape() == expected.getShape());
+
+				// derivative of square error = YH - Y
 				return predicted - expected;
 			})
 			{}
 		};
 
-		class CrossEntropy : public _LossFunction
+		class _CrossEntropy : public _LossFunction
 		{
 		public:
-			CrossEntropy() : _LossFunction(
-				[](_Tensor const& predicted, _Tensor const& expected)
+			_CrossEntropy() : _LossFunction(
+				[](const _Tensor& predicted, const _Tensor& expected)
 			{
-				size_t rows = expected.getRowCount();
-				size_t cols = expected.getColCount();
+				const auto& predictedData = predicted.getData();
+				const auto& expectedData = expected.getData();
+				assert(predictedData.size() == expectedData.size());
 
+				// Cross entropy = Σ -Yi * log(YHi + e) with epsilon = 1e-15f for stability
 				float error = 0.0;
-				for (size_t row = 0; row < rows; ++row)
+				for (size_t i = 0; i < predictedData.size(); i++)
 				{
-					// Categorical cross entropy = Σ Ei * log(Yi + e) with epsilon = 1e-15f for stability
-					for (size_t i = 0; i < cols; i++)
-					{
-						error += -expected(row, i) * std::log(predicted(row, i) + float(1e-15f));
-					}
+					error += -expectedData[i] * std::log(predictedData[i] + float(1e-15f));
 				}
-
-				return error / rows;
+				return error / predicted.getShape()[0];
 			},
-				[](_Tensor const& predicted, _Tensor const& expected)
+				[](const _Tensor& predicted, const _Tensor& expected)
 			{
-				size_t rows = expected.getRowCount();
-				size_t cols = expected.getColCount();
+				assert(predicted.getShape() == expected.getShape());
 
-				_Tensor grad(rows, cols);
-				for (size_t row = 0; row < rows; row++)
-				{
-					// Categorical cross entropy = Ei / (Yi + e) with epsilon = 1e-15f for stability
-					for (size_t i = 0; i < cols; i++)
-					{
-						grad(row, i) = -expected(row, i) / (predicted(row, i) + 1e-15f);
-					}
-				}
-
-				return grad;
+				// derivative of cross entropy = Yi / (YHi + e) with epsilon = 1e-15f for stability
+				return expected.ewised(predicted, [](float expected, float predicted) { return -expected / (predicted + 1e-15f); });
 			})
 			{}
 		};

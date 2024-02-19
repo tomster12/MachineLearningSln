@@ -24,7 +24,7 @@ namespace tbml
 					float v = predicted(row, i);
 					if (v > predictedValue)
 					{
-						predictedClass = i;
+						predictedClass = (int)i;
 						predictedValue = v;
 					}
 				}
@@ -36,7 +36,7 @@ namespace tbml
 					float v = expected(row, i);
 					if (v > expectedValue)
 					{
-						expectedClass = i;
+						expectedClass = (int)i;
 						expectedValue = v;
 					}
 				}

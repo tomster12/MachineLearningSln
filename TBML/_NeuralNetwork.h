@@ -1,25 +1,13 @@
 #pragma once
 
 #include "Utility.h"
+#include "_Utility.h"
 #include "_Tensor.h"
 
 namespace tbml
 {
 	namespace nn
 	{
-		class _Layer
-		{
-		public:
-			virtual const _Tensor& propogate(const _Tensor& input) = 0;
-			virtual const _Tensor& backpropagate(const _Tensor& dToOut) = 0;
-			const _Tensor& getPropogateOutput() { return propogateOutput; }
-			const _Tensor& getBackpropogateOutput() { return backpropagateOutput; }
-
-		protected:
-			_Tensor propogateOutput;
-			_Tensor backpropagateOutput;
-		};
-
 		struct _TrainingConfig
 		{
 			size_t epochs = 20;
@@ -30,62 +18,77 @@ namespace tbml
 			size_t logLevel = 0;
 		};
 
+		class _Layer;
 		class _NeuralNetwork
 		{
 		public:
-			_NeuralNetwork(fn::LossFunction&& lossFn);
-			_NeuralNetwork(fn::LossFunction&& lossFn, std::vector<_Layer*>&& layers);
+			_NeuralNetwork(fn::_LossFunction&& lossFn);
+			_NeuralNetwork(fn::_LossFunction&& lossFn, std::vector<_Layer*> layers);
+			~_NeuralNetwork();
 			void addLayer(_Layer* layer);
 			const _Tensor& propogate(const _Tensor& input);
-			const _Tensor& train(const std::vector<_Tensor>& inputs, const std::vector<_Tensor>& expectedOutputs, const _TrainingConfig& config);
+			void train(const std::vector<_Tensor>& inputs, const std::vector<_Tensor>& expectedOutputs, const _TrainingConfig& config);
 
 		private:
-			fn::LossFunction lossFn;
+			fn::_LossFunction lossFn;
 			std::vector<_Layer*> layers;
 
-			void backpropogate(const _Tensor& loss) const;
+			void backpropogate(const _Tensor& predicted, const _Tensor& expected);
+		};
+
+		class _Layer
+		{
+		public:
+			virtual void propogate(const _Tensor& input) = 0;
+			virtual void backpropogate(const _Tensor& pdToOut) = 0;
+			const _Tensor& getPropogateOutput() const { return propogateOutput; }
+			const _Tensor& getBackpropogateOutput() const { return backpropogateOutput; }
+
+		protected:
+			_Tensor propogateOutput;
+			_Tensor backpropogateOutput;
 		};
 
 		enum _DenseInitType { ZERO, RANDOM };
 
-		class _DenseLayer : _Layer
+		class _DenseLayer : public _Layer
 		{
 		public:
-			_DenseLayer(size_t inputSize, size_t outputSize, fn::ActivationFunction&& actFn, _DenseInitType initType = _DenseInitType::RANDOM, bool useBias = true);
-			virtual const _Tensor& propogate(const _Tensor& input) override;
-			virtual const _Tensor& backpropagate(const _Tensor& dToOut) override;
+			_DenseLayer(size_t inputSize, size_t outputSize, fn::_ActivationFunction&& actFn, _DenseInitType initType = _DenseInitType::RANDOM, bool useBias = true);
+			virtual void propogate(const _Tensor& input) override;
+			virtual void backpropogate(const _Tensor& pdToOut) override;
 
 		private:
 			_Tensor weights;
 			_Tensor bias;
-			fn::ActivationFunction actFn;
+			fn::_ActivationFunction actFn;
 		};
 
-		class _ConvLayer : _Layer
+		class _ConvLayer : public _Layer
 		{
 		public:
-			_ConvLayer(std::vector<size_t> kernel, std::vector<size_t> stride, fn::ActivationFunction&& actFn);
-			virtual const _Tensor& propogate(const _Tensor& input) override;
-			virtual const _Tensor& backpropagate(const _Tensor& dToOut) override;
+			_ConvLayer(std::vector<size_t> kernel, std::vector<size_t> stride, fn::_ActivationFunction&& actFn);
+			virtual void propogate(const _Tensor& input) override;
+			virtual void backpropogate(const _Tensor& pdToOut) override;
 
 		private:
-			fn::ActivationFunction actFn;
+			fn::_ActivationFunction actFn;
 		};
 
-		class _FlattenLayer : _Layer
+		class _FlattenLayer : public _Layer
 		{
 		public:
 			_FlattenLayer();
-			virtual const _Tensor& propogate(const _Tensor& input) override;
-			virtual const _Tensor& backpropagate(const _Tensor& dToOut) override;
+			virtual void propogate(const _Tensor& input) override;
+			virtual void backpropogate(const _Tensor& pdToOut) override;
 		};
 
-		class _MaxPoolLayer : _Layer
+		class _MaxPoolLayer : public _Layer
 		{
 		public:
 			_MaxPoolLayer();
-			virtual const _Tensor& propogate(const _Tensor& input) override;
-			virtual const _Tensor& backpropagate(const _Tensor& dToOut) override;
+			virtual void propogate(const _Tensor& input) override;
+			virtual void backpropogate(const _Tensor& pdToOut) override;
 		};
 	}
 };
