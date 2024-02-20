@@ -68,12 +68,13 @@ namespace tbml
 		private:
 			_Tensor weights;
 			_Tensor bias;
-			RefHolder<_Tensor> propogateInput;
-			_Tensor GDPdErrorToWeights;
-			_Tensor GDPdErrorToBias;
-			_Tensor GDMomentumWeights;
-			_Tensor GDMomentumBias;
 			fn::_ActivationFunction activationFn;
+
+			_Tensor const* propogateInput;
+			_Tensor pdToWeights;
+			_Tensor pdToBias;
+			_Tensor momentumWeights;
+			_Tensor momentumBias;
 		};
 
 		class _ConvLayer : public _Layer

@@ -6,18 +6,6 @@
 
 namespace tbml
 {
-	template <typename T>
-	class RefHolder
-	{
-	public:
-		RefHolder(const T& ref) : ref(ref) {}
-		RefHolder(const RefHolder<T>& other) : ref(other.ref) {}
-		const T& operator()() const { return ref; }
-
-	private:
-		const T& ref;
-	};
-
 	namespace fn
 	{
 		float _classificationAccuracy(const tbml::_Tensor& predicted, const tbml::_Tensor& expected);

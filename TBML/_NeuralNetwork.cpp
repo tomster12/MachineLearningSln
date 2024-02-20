@@ -130,7 +130,7 @@ namespace tbml
 
 		void _DenseLayer::propogate(const _Tensor& input)
 		{
-			propogateInput = RefHolder<_Tensor>(input);
+			propogateInput = &input;
 			predicted = input.matmulled(weights).add(bias, 0);
 			activationFn.activate(predicted);
 		}
@@ -142,17 +142,25 @@ namespace tbml
 			pdToIn = pdToNet.matmulled(weights.transposed());
 
 			// Calculate pd to weights and bias
-			GDPdErrorToWeights = propogateInput().matmulled(pdToNet);
-			GDPdErrorToBias = pdToNet;
+			// TODO: Check dimensions here
+			// Propogate input: (batchSize, 2)
+			// Weights: (2, 1)
+			// Bias: (1, 1)
+			// pdToNet: (batchSize, 1)
+
+			// pdToWeight: (2, 1)
+
+			pdToWeights = propogateInput->matmulled(pdToNet);
+			pdToBias = pdToNet;
 		}
 
 		void _DenseLayer::gradientDescent(float learningRate, float momentumRate)
 		{
 			// Apply gradient descent with momentum
-			GDMomentumWeights = (GDMomentumWeights * momentumRate) + (GDPdErrorToWeights * -learningRate);
-			GDMomentumBias = (GDMomentumBias * momentumRate) + (GDPdErrorToBias * -learningRate);
-			weights += GDMomentumWeights;
-			bias += GDMomentumBias;
+			momentumWeights = (momentumWeights * momentumRate) + (pdToWeights * -learningRate);
+			momentumBias = (momentumBias * momentumRate) + (pdToBias * -learningRate);
+			weights += momentumWeights;
+			bias += momentumBias;
 		}
 
 		void _DenseLayer::print() const
