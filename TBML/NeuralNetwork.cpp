@@ -1,94 +1,311 @@
 #include "stdafx.h"
 #include "NeuralNetwork.h"
-#include "Matrix.h"
 #include "Utility.h"
+#include "omp.h"
 
 namespace tbml
 {
 	namespace nn
 	{
-		NeuralNetwork::NeuralNetwork(std::vector<size_t> layerSizes, WeightInitType weightInitType)
-			: layerCount(layerSizes.size()), layerSizes(layerSizes), weights(), bias(), actFns(layerCount - 1)
+		NeuralNetwork::~NeuralNetwork()
 		{
-			// Use single default activator for all layers
-			for (size_t i = 0; i < layerCount - 1; i++) this->actFns[i] = fn::Sigmoid();
-
-			InitializeWeights(weightInitType);
+			for (size_t i = 0; i < layers.size(); i++) delete layers[i];
+			layers.clear();
 		}
 
-		NeuralNetwork::NeuralNetwork(std::vector<size_t> layerSizes, std::vector<fn::ActivationFunction> actFns, WeightInitType weightInitType)
-			: layerCount(layerSizes.size()), layerSizes(layerSizes), weights(), bias(), actFns(actFns)
+		void NeuralNetwork::addLayer(Layer* layer)
 		{
-			InitializeWeights(weightInitType);
+			layers.push_back(layer);
 		}
 
-		NeuralNetwork::NeuralNetwork(std::vector<Matrix> weights, std::vector<Matrix> bias, std::vector<fn::ActivationFunction> actFns)
-			: layerCount(weights.size() + 1), layerSizes(), weights(weights), bias(bias), actFns(actFns)
+		const Tensor& NeuralNetwork::propogate(const Tensor& input)
 		{
-			// Use passed in weights to calculate layer sizes
-			for (size_t i = 0; i < this->layerCount - 1; i++) this->layerSizes.push_back(this->weights[i].getRowCount());
-			this->layerSizes.push_back(this->weights[this->layerCount - 2].getColCount());
-		}
+			if (layers.size() == 0) return Tensor::ZERO;
 
-		void NeuralNetwork::InitializeWeights(WeightInitType type)
-		{
-			weights.reserve(layerCount - 1);
-			bias.reserve(layerCount - 1);
-			for (size_t layer = 0; layer < layerCount - 1; layer++)
+			// Propogate first layer, allow for column vector input
+			if (input.getShape().size() == 1)
+				layers[0]->propogate(input.transposed());
+			else layers[0]->propogate(input);
+
+			// Propogate rest of layers, using const refs
+			for (size_t i = 1; i < layers.size(); i++)
 			{
-				weights.push_back(Matrix(layerSizes[layer], layerSizes[layer + 1]));
-				bias.push_back(Matrix(1, layerSizes[layer + 1]));
+				layers[i]->propogate(layers[i - 1]->getOutput());
 			}
 
-			if (type == RANDOM)
+			// Return predicted of last layer
+			return layers[layers.size() - 1]->getOutput();
+		}
+
+		Tensor NeuralNetwork::propogate(const Tensor& input) const
+		{
+			if (layers.size() == 0) return Tensor::ZERO;
+
+			// Propogate first layer, allow for column vector input
+			Tensor current = input.getShape().size() == 1 ? input.transposed() : input;
+
+			// Propogate rest of layers
+			for (size_t i = 1; i < layers.size(); i++)
 			{
-				for (auto& layer : this->weights) layer.map([](float v) { return -1.0f + 2.0f * fn::getRandomFloat(); });
-				for (auto& layer : this->bias) layer.map([](float v) { return -1.0f + 2.0f * fn::getRandomFloat(); });
+				current = layers[i]->propogate(current);
+			}
+
+			// Return predicted of last layer
+			return current;
+		}
+
+		void NeuralNetwork::train(const Tensor& input, const Tensor& expected, const TrainingConfig& config)
+		{
+			// Batch data if needed
+			size_t batchCount;
+			std::vector<Tensor> inputBatches, expectedBatches;
+			if (config.batchSize == -1)
+			{
+				// Do not batch data
+				inputBatches = std::vector<Tensor>({ input });
+				expectedBatches = std::vector<Tensor>({ expected });
+				batchCount = 1;
+			}
+			else
+			{
+				// Split into batches
+				inputBatches = input.groupRows(config.batchSize);
+				expectedBatches = expected.groupRows(config.batchSize);
+				assert(inputBatches.size() == expectedBatches.size() && "Input and expected batch count mismatch");
+				batchCount = inputBatches.size();
+			}
+
+			std::chrono::steady_clock::time_point tTrainStart = std::chrono::steady_clock::now();
+			std::chrono::steady_clock::time_point tEpochStart = tTrainStart;
+			std::chrono::steady_clock::time_point tBatchStart = tTrainStart;
+
+			// Train until max epochs or error threshold
+			int epoch = 0;
+			int maxEpochs = config.epochs == -1 ? MAX_EPOCHS : config.epochs;
+			if (config.logLevel > 0) printf("Training started for %d epochs\n", maxEpochs);
+			for (; epoch < maxEpochs; epoch++)
+			{
+				float epochLoss = 0.0f;
+
+				// Train each batch
+				for (size_t batch = 0; batch < batchCount; batch++)
+				{
+					// Propogate input then calculate loss
+					const Tensor& predicted = propogate(inputBatches[batch]);
+					float batchLoss = lossFn.activate(predicted, expectedBatches[batch]);
+					epochLoss += batchLoss / batchCount;
+
+					// Backpropogate loss and then each layer
+					Tensor pdLossToOut = lossFn.derive(predicted, expectedBatches[batch]);
+					layers[layers.size() - 1]->backpropogate(pdLossToOut);
+					for (int i = (int)layers.size() - 2; i >= 0; i--)
+					{
+						layers[i]->backpropogate(layers[i + 1]->getPdToIn());
+					}
+
+					// Apply gradient descent
+					for (size_t j = 0; j < layers.size(); j++)
+					{
+						layers[j]->gradientDescent(config.learningRate, config.momentumRate);
+					}
+
+					if (config.logLevel >= 3)
+					{
+						std::chrono::steady_clock::time_point tBatchEnd = std::chrono::steady_clock::now();
+						float accuracy = fn::classificationAccuracy(predicted, expectedBatches[batch]);
+						auto us = std::chrono::duration_cast<std::chrono::microseconds>(tBatchEnd - tBatchStart);
+						printf("Epoch %d, Batch %d: Loss: %f, Accuracy: %f, Time: %fms\n", epoch, (int)batch, batchLoss, accuracy * 100, us.count() / 1000.0f);
+						tBatchStart = tBatchEnd;
+					}
+				}
+
+				if (config.logLevel >= 2)
+				{
+					std::chrono::steady_clock::time_point tEpochEnd = std::chrono::steady_clock::now();
+					Tensor predicted = propogate(input);
+					float accuracy = fn::classificationAccuracy(predicted, expected);
+					auto us = std::chrono::duration_cast<std::chrono::microseconds>(tEpochEnd - tEpochStart);
+					printf("Epoch %d: Loss: %f, Accuracy: %f, Time: %fms\n", epoch, epochLoss, accuracy, us.count() / 1000.0f);
+					tEpochStart = tEpochEnd;
+				}
+
+				// Exit if error threshold is met
+				if (epochLoss < config.errorThreshold) break;
+			}
+
+			if (config.logLevel >= 1)
+			{
+				std::chrono::steady_clock::time_point tTrainEnd = std::chrono::steady_clock::now();
+				auto us = std::chrono::duration_cast<std::chrono::microseconds>(tTrainEnd - tTrainStart);
+				printf("Training complete for %d epochs, Time taken: %fms\n\n", epoch, us.count() / 1000.0f);
 			}
 		}
 
-		Matrix NeuralNetwork::propogate(const Matrix& input) const
+		void NeuralNetwork::print() const
 		{
-			PropogateCache cache;
-			propogate(input, cache);
-			return cache.neuronOutput[layerCount - 1];
+			for (const auto& layer : layers) layer->print();
 		}
 
-		void NeuralNetwork::propogate(const Matrix& input, PropogateCache& cache) const
+		DenseLayer::DenseLayer(size_t inputSize, size_t outputSize, fn::ActivationFunction&& activationFn, _DenseInitType initType, bool useBias)
+			: activationFn(activationFn)
 		{
-			Matrix current = input;
-			cache.neuronOutput.resize(layerCount);
-			cache.neuronOutput[0] = current;
+			weights = Tensor({ inputSize, outputSize }, 0);
 
-			for (size_t layer = 0; layer < weights.size(); layer++)
+			if (initType == _DenseInitType::RANDOM)
 			{
-				current.cross(weights[layer]);
-				current.addBounded(bias[layer]);
-				actFns[layer](current);
-				cache.neuronOutput[layer + 1] = current;
+				weights.map([](float _) { return fn::getRandomFloat() * 2 - 1; });
+			}
+
+			if (useBias)
+			{
+				bias = Tensor({ 1, outputSize }, 0);
+
+				if (initType == _DenseInitType::RANDOM)
+				{
+					bias.map([](float _) { return fn::getRandomFloat() * 2 - 1; });
+				}
 			}
 		}
 
-		void NeuralNetwork::printLayers() const
+		const Tensor& DenseLayer::propogate(const Tensor& input)
 		{
-			std::cout << "\nLayers\n------" << std::endl;
-			for (size_t layer = 0; layer < layerCount - 1; layer++)
-				weights[layer].printValues(std::to_string(layer) + ": ");
-			std::cout << "\nBias\n------" << std::endl;
-			for (size_t layer = 0; layer < layerCount - 1; layer++)
-				bias[layer].printValues(std::to_string(layer) + ": ");
-			std::cout << "------\n" << std::endl;
+			assert(input.getDims() == 2 && input.getShape(1) == weights.getShape(0) && "Input shape does not match weights shape");
+
+			// Propogate input with weights and bias
+			propogateInput = &input;
+			output = input.matmulled(weights).add(bias, 0);
+			activationFn.activate(output);
+			return output;
 		}
 
-		size_t NeuralNetwork::getParameterCount() const
+		Tensor DenseLayer::propogate(const Tensor& input) const
 		{
-			size_t sum = 0;
-			for (size_t i = 0; i < weights.size(); i++)
+			assert(input.getDims() == 2 && input.getShape(1) == weights.getShape(0) && "Input shape does not match weights shape");
+
+			Tensor output = input.matmulled(weights).add(bias, 0);
+			activationFn.activate(output);
+			return output;
+		}
+
+		void DenseLayer::backpropogate(const Tensor& pdToOut)
+		{
+			assert(pdToOut.getDims() == 2 && pdToOut.getShape(1) == weights.getShape(1) && "pdToOut shape does not match weights shape");
+
+			// Calculate pd to neuron in and layer in
+			Tensor pdToNet = activationFn.chainDerivative(output, pdToOut);
+			pdToIn = pdToNet.matmulled(weights.transposed());
+
+			// Setup variables for derivatives
+			int batchSize = (int)propogateInput->getShape(0);
+			int m = (int)weights.getShape(0);
+			int n = (int)weights.getShape(1);
+			pdToWeights = Tensor(weights.getShape(), 0);
+			pdToBias = Tensor(bias.getShape(), 0);
+
+			// Calculate pd to weights and bias as average of batch
+			#pragma omp parallel for num_threads(4)
+			for (int batchRow = 0; batchRow < batchSize; batchRow++)
 			{
-				sum += weights[i].getRowCount() * weights[i].getColCount();
-				sum += bias[i].getRowCount() * bias[i].getColCount();
+				for (int i = 0; i < m; i++)
+				{
+					for (int j = 0; j < n; j++)
+					{
+						pdToWeights(i, j) += ((*propogateInput)(batchRow, i) * pdToNet(batchRow, j)) / batchSize;
+					}
+				}
+
+				for (int j = 0; j < n; j++)
+				{
+					pdToBias(0, j) += pdToNet(batchRow, j) / batchSize;
+				}
 			}
-			return sum;
+		}
+
+		void DenseLayer::gradientDescent(float learningRate, float momentumRate)
+		{
+			// Apply gradient descent with momentum
+			momentumWeights = (momentumWeights * momentumRate) - (pdToWeights * learningRate);
+			momentumBias = (momentumBias * momentumRate) - (pdToBias * learningRate);
+			weights += momentumWeights;
+			bias += momentumBias;
+		}
+
+		void DenseLayer::print() const
+		{
+			weights.print("Weights:");
+			bias.print("Bias:");
+		}
+
+		ConvLayer::ConvLayer(std::vector<size_t> kernel, std::vector<size_t> stride, fn::ActivationFunction&& activationFn)
+			: activationFn(activationFn)
+		{}
+
+		const Tensor& ConvLayer::propogate(const Tensor& input)
+		{
+			// TODO: Implement
+			output = Tensor::ZERO;
+			return output;
+		}
+
+		Tensor ConvLayer::propogate(const Tensor& input) const
+		{
+			// TODO: Implement
+			return Tensor::ZERO;
+		}
+
+		void ConvLayer::backpropogate(const Tensor& pdToOut)
+		{
+			// TODO: Implement
+			pdToIn = pdToOut;
+		}
+
+		void ConvLayer::gradientDescent(float learningRate, float momentumRate)
+		{
+			// TODO: Implement
+		}
+
+		FlattenLayer::FlattenLayer()
+		{}
+
+		const Tensor& FlattenLayer::propogate(const Tensor& input)
+		{
+			// TODO: Implement
+			output = Tensor::ZERO;
+			return output;
+		}
+
+		Tensor FlattenLayer::propogate(const Tensor& input) const
+		{
+			// TODO: Implement
+			return Tensor::ZERO;
+		}
+
+		void FlattenLayer::backpropogate(const Tensor& pdToOut)
+		{
+			// TODO: Implement
+			pdToIn = pdToOut;
+		}
+
+		MaxPoolLayer::MaxPoolLayer()
+		{}
+
+		const Tensor& MaxPoolLayer::propogate(const Tensor& input)
+		{
+			// TODO: Implement
+			output = Tensor::ZERO;
+			return output;
+		}
+
+		Tensor MaxPoolLayer::propogate(const Tensor& input) const
+		{
+			// TODO: Implement
+			return Tensor::ZERO;
+		}
+
+		void MaxPoolLayer::backpropogate(const Tensor& pdToOut)
+		{
+			// TODO: Implement
+			pdToIn = pdToOut;
 		}
 	}
 }

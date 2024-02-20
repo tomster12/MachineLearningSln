@@ -1,31 +1,32 @@
 ﻿#pragma once
 
-#include "stdafx.h"
-#include "Matrix.h"
+#include <cassert>
+#include "Tensor.h"
 
 namespace tbml
 {
 	namespace fn
 	{
 		float getRandomFloat();
-		float calculateAccuracy(tbml::Matrix const& output, tbml::Matrix const& expected);
+
+		float classificationAccuracy(const tbml::Tensor& output, const tbml::Tensor& expected);
 
 		class ActivationFunction
 		{
 		public:
-			ActivationFunction() : activateFn(nullptr), derivativeFn(nullptr) {}
-			virtual void operator()(Matrix& x) const { activateFn(x); }
-			virtual Matrix derive(Matrix const& x, Matrix const& pdToOut) const { return derivativeFn(x, pdToOut); }
+			ActivationFunction() : activateFn(nullptr), chainDerivativeFn(nullptr) {}
+			virtual void activate(Tensor& x) const { activateFn(x); }
+			virtual Tensor chainDerivative(const Tensor& z, const Tensor& pdToOut) const { return chainDerivativeFn(z, pdToOut); }
 
 		private:
-			std::function<void(Matrix&)> activateFn;
-			std::function<Matrix(Matrix const&, Matrix const&)> derivativeFn;
+			std::function<void(Tensor&)> activateFn;
+			std::function<Tensor(const Tensor&, const Tensor&)> chainDerivativeFn;
 
 		protected:
 			ActivationFunction(
-				std::function<void(Matrix&)> activate,
-				std::function<Matrix(Matrix const&, Matrix const&)> derivativeFn)
-				: activateFn(activate), derivativeFn(derivativeFn)
+				std::function<void(Tensor& x)> activateFn,
+				std::function<Tensor(const Tensor& z, const Tensor& pdToOut)> chainDerivativeFn)
+				: activateFn(activateFn), chainDerivativeFn(chainDerivativeFn)
 			{}
 		};
 
@@ -33,17 +34,17 @@ namespace tbml
 		{
 		public:
 			LossFunction() : lossFn(nullptr), derivativeFn(nullptr) {}
-			virtual float operator()(Matrix const& output, Matrix const& expected) const { return lossFn(output, expected); }
-			virtual Matrix derive(Matrix const& output, Matrix const& expected) const { return derivativeFn(output, expected); }
+			virtual float activate(const Tensor& output, const Tensor& expected) const { return lossFn(output, expected); }
+			virtual Tensor derive(const Tensor& output, const Tensor& expected) const { return derivativeFn(output, expected); }
 
 		private:
-			std::function<float(Matrix const& output, Matrix const& expected)> lossFn;
-			std::function<Matrix(Matrix const& output, Matrix const& expected)> derivativeFn;
+			std::function<float(const Tensor& output, const Tensor& expected)> lossFn;
+			std::function<Tensor(const Tensor& output, const Tensor& expected)> derivativeFn;
 
 		protected:
 			LossFunction(
-				std::function<float(Matrix const& output, Matrix const& expected)> lossFn,
-				std::function<Matrix(Matrix const& output, Matrix const& expected)> derivativeFn)
+				std::function<float(const Tensor& output, const Tensor& expected)> lossFn,
+				std::function<Tensor(const Tensor& output, const Tensor& expected)> derivativeFn)
 				: lossFn(lossFn), derivativeFn(derivativeFn)
 			{}
 		};
@@ -52,8 +53,15 @@ namespace tbml
 		{
 		public:
 			ReLU() : ActivationFunction(
-				[](Matrix& x) { x.map([](float x) { return std::max(0.0f, x); }); },
-				[](Matrix const& x, Matrix const& pdToOut) { return x.mapped([](float v) { return v > 0 ? 1.0f : 0.0f; }) * pdToOut; })
+				[](Tensor& x)
+			{
+				x.map([](float x) { return std::max(0.0f, x); });
+			},
+				[](const Tensor& z, const Tensor& pdToOut)
+			{
+				Tensor pdOutToIn = z.mapped([](float v) { return v > 0 ? 1.0f : 0.0f; });
+				return pdOutToIn * pdToOut;
+			})
 			{}
 		};
 
@@ -61,8 +69,20 @@ namespace tbml
 		{
 		public:
 			Sigmoid() : ActivationFunction(
-				[this](Matrix& x) { x.map([this](float x) { return sigmoid(x); }); },
-				[this](Matrix const& x, Matrix const& pdToOut) { return x.mapped([this](float x) { return sigmoid(x) * (1.0f - sigmoid(x)); }) * pdToOut; })
+				[this](Tensor& x)
+			{
+				x.map([this](float x) { return sigmoid(x); });
+			},
+				[this](const Tensor& z, const Tensor& pdToOut)
+			{
+				Tensor pdOutToIn = z.mapped([this](float v)
+				{
+					float sv = sigmoid(v);
+					return sv * (1.0f - sv);
+				});
+
+				return pdOutToIn * pdToOut;
+			})
 			{}
 
 		private:
@@ -73,8 +93,20 @@ namespace tbml
 		{
 		public:
 			TanH() : ActivationFunction(
-				[](Matrix& x) { x.map([](float x) { return tanhf(x); }); },
-				[](Matrix const& x, Matrix const& pdToOut) { return x.mapped([](float x) { float th = tanhf(x); return 1 - th * th; }) * pdToOut; })
+				[](Tensor& x)
+			{
+				x.map([](float x) { return tanhf(x); });
+			},
+				[](const Tensor& z, const Tensor& pdToOut)
+			{
+				Tensor pdOutToIn = z.mapped([](float v)
+				{
+					float th = tanhf(v);
+					return 1 - th * th;
+				});
+
+				return pdOutToIn * pdToOut;
+			})
 			{}
 		};
 
@@ -82,28 +114,49 @@ namespace tbml
 		{
 		public:
 			SoftMax() : ActivationFunction(
-				[this](Matrix& x) { softmax(x); },
-				[this](Matrix const& s, Matrix const& pdToOut)
+				[this](Tensor& x)
 			{
-				size_t rows = s.getRowCount();
-				size_t cols = s.getColCount();
-				Matrix result(rows, cols);
+				auto shape = x.getShape();
+				assert(shape.size() == 2);
 
 				// Independent per row
-				for (size_t row = 0; row < rows; row++)
+				for (size_t row = 0; row < shape[0]; row++)
 				{
-					// For each neuron input X(j)
-					for (size_t j = 0; j < cols; j++)
-					{
-						float Sj = s(row, j);
+					// Calculate max of row for stability
+					float max = x(row, 0);
+					for (size_t i = 1; i < shape[1]; i++) max = std::max(max, x(row, i));
 
-						// Calculate derive d S(j) / X(i)
-						for (size_t i = 0; i < cols; i++)
+					// SoftMax of each element in row = e^(X(i) - max) / Σ e^(X(i) - max)
+					float sum = 0.0;
+					for (size_t i = 0; i < shape[1]; i++)
+					{
+						x(row, i) = std::exp(x(row, i) - max);
+						sum += x(row, i);
+					}
+					for (size_t i = 0; i < shape[1]; i++) x(row, i) /= sum;
+				}
+			},
+				[this](const Tensor& z, const Tensor& pdToOut)
+			{
+				auto shape = z.getShape();
+				assert(shape.size() == 2);
+				Tensor result(shape, 0);
+
+				// Independent per row
+				for (size_t row = 0; row < shape[0]; row++)
+				{
+					// For each neuron i
+					for (size_t i = 0; i < shape[1]; i++)
+					{
+						float Zi = z(row, i);
+
+						// Sum partial derivatives Zj / Xi
+						for (size_t j = 0; j < shape[1]; j++)
 						{
-							float Si = s(row, i);
-							int kronekerDelta = (j == i) ? 1 : 0;
-							float dSij = (Si * (kronekerDelta - Sj));
-							result(row, j) += dSij * pdToOut(row, i);
+							float Zj = z(row, j);
+							int kronekerDelta = (i == j) ? 1 : 0;
+							float dSij = (Zj * (kronekerDelta - Zi));
+							result(row, i) += dSij * pdToOut(row, j);
 						}
 					}
 				}
@@ -111,52 +164,31 @@ namespace tbml
 				return result;
 			})
 			{}
-
-		private:
-			void softmax(Matrix& x)
-			{
-				size_t rows = x.getRowCount();
-				size_t cols = x.getColCount();
-
-				// Consider each row independantly
-				for (size_t row = 0; row < rows; row++)
-				{
-					// Calculate max for stability
-					float max = x(row, 0);
-					for (size_t col = 1; col < cols; col++) max = std::max(max, x(row, col));
-
-					// SoftMax = Sⱼ = eˣᶦ⁺ᴰ / Σ(Cᵃʲ⁺ᴰ), With D = -max for stability
-					float sum = 0.0;
-					for (size_t i = 0; i < cols; i++)
-					{
-						x(row, i) = std::exp(x(row, i) - max);
-						sum += x(row, i);
-					}
-					for (size_t j = 0; j < cols; j++) x(row, j) /= sum;
-				}
-			};
 		};
 
 		class SquareError : public LossFunction
 		{
 		public:
 			SquareError() : LossFunction(
-				[](Matrix const& output, Matrix const& expected)
+				[](const Tensor& output, const Tensor& expected)
 			{
-				float error = 0;
-				for (size_t row = 0; row < output.getRowCount(); row++)
+				const auto& predicteddata = output.getData();
+				const auto& expecteddata = expected.getData();
+				assert(predicteddata.size() == expecteddata.size());
+
+				float error = 0.0;
+				for (size_t i = 0; i < predicteddata.size(); i++)
 				{
-					// Sum of squared errors = Σ (Ei - Yi)^2
-					for (size_t i = 0; i < output.getColCount(); i++)
-					{
-						float diff = expected(row, i) - output(row, i);
-						error += diff * diff;
-					}
+					float diff = predicteddata[i] - expecteddata[i];
+					error += diff * diff;
 				}
 				return error;
 			},
-				[](Matrix const& output, Matrix const& expected)
+				[](const Tensor& output, const Tensor& expected)
 			{
+				assert(output.getShape() == expected.getShape());
+
+				// derivative of square error = YH - Y
 				return output - expected;
 			})
 			{}
@@ -166,39 +198,26 @@ namespace tbml
 		{
 		public:
 			CrossEntropy() : LossFunction(
-				[](Matrix const& output, Matrix const& expected)
+				[](const Tensor& output, const Tensor& expected)
 			{
-				size_t rows = expected.getRowCount();
-				size_t cols = expected.getColCount();
+				const auto& predictedData = output.getData();
+				const auto& expectedData = expected.getData();
+				assert(predictedData.size() == expectedData.size());
 
+				// Cross entropy = Σ -Yi * log(YHi + e) with epsilon = 1e-15f for stability
 				float error = 0.0;
-				for (size_t row = 0; row < rows; ++row)
+				for (size_t i = 0; i < predictedData.size(); i++)
 				{
-					// Categorical cross entropy = Σ Ei * log(Yi + e) with epsilon = 1e-15f for stability
-					for (size_t i = 0; i < cols; i++)
-					{
-						error += -expected(row, i) * std::log(output(row, i) + float(1e-15f));
-					}
+					error += -expectedData[i] * std::log(predictedData[i] + float(1e-15f));
 				}
-
-				return error / rows;
+				return error / output.getShape()[0];
 			},
-				[](Matrix const& output, Matrix const& expected)
+				[](const Tensor& output, const Tensor& expected)
 			{
-				size_t rows = expected.getRowCount();
-				size_t cols = expected.getColCount();
+				assert(output.getShape() == expected.getShape());
 
-				Matrix grad(rows, cols);
-				for (size_t row = 0; row < rows; row++)
-				{
-					// Categorical cross entropy = Ei / (Yi + e) with epsilon = 1e-15f for stability
-					for (size_t i = 0; i < cols; i++)
-					{
-						grad(row, i) = -expected(row, i) / (output(row, i) + 1e-15f);
-					}
-				}
-
-				return grad;
+				// derivative of cross entropy = Yi / (YHi + e) with epsilon = 1e-15f for stability
+				return expected.ewised(output, [](float expected, float output) { return -expected / (output + 1e-15f); });
 			})
 			{}
 		};

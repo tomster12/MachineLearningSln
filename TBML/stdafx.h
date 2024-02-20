@@ -10,3 +10,4 @@
 #include <mutex>
 #include <algorithm>
 #include <functional>
+#include <cassert>
