@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <uchar.h>
 
+#include "Tensor.h"
+
 typedef unsigned char uchar;
 
 class MNIST
@@ -83,5 +85,40 @@ public:
 
 		// File reading error
 		else throw std::runtime_error("Unable to open file `" + path + "`!");
+	}
+
+	static tbml::Tensor readImagesTensor(std::string path, size_t& imageCount, size_t& imageSize)
+	{
+		uchar** images = readImages(path, imageCount, imageSize);
+
+		tbml::Tensor tensor = tbml::Tensor({ imageCount, imageSize }, 0);
+
+		for (size_t i = 0; i < imageCount; i++)
+		{
+			for (size_t o = 0; o < imageSize; o++)
+			{
+				tensor(i, o) = (float)images[i][o] / 255.0f;
+			}
+
+			delete images[i];
+		}
+
+		delete images;
+		return tensor;
+	}
+
+	static tbml::Tensor readLabelsTensor(std::string path, size_t& labelCount)
+	{
+		uchar* labels = readLabels(path, labelCount);
+
+		tbml::Tensor tensor = tbml::Tensor({ labelCount, 10 }, 0);
+
+		for (size_t i = 0; i < labelCount; i++)
+		{
+			tensor(i, labels[i]) = 1.0f;
+		}
+
+		delete labels;
+		return tensor;
 	}
 };

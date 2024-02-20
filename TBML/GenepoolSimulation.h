@@ -1,8 +1,14 @@
 #pragma once
 
-#include "stdafx.h"
 #include "Utility.h"
 #include "ThreadPool.h"
+
+// Require SFML to be imported
+// TODO: Figure out if this is best way
+namespace sf
+{
+	class RenderWindow;
+}
 
 namespace tbml
 {
@@ -21,7 +27,6 @@ namespace tbml
 			Genome& operator=(const Genome&) = delete;
 			Genome(const Genome&&) = delete;
 			Genome& operator=(const Genome&&) = delete;
-
 			virtual GenomePtr crossover(const GenomePtr& otherGenome, float mutateChance = 0.0f) const = 0;
 		};
 
@@ -30,17 +35,14 @@ namespace tbml
 		{
 		protected:
 			using GenomePtr = std::shared_ptr<const TGenome>;
-
 			const GenomePtr genome;
 			bool isFinished = false;
 			float fitness = 0;
 
 		public:
 			Agent(GenomePtr&& genome) : genome(std::move(genome)), isFinished(false), fitness(0.0f) {};
-
 			virtual bool step() = 0;
 			virtual void render(sf::RenderWindow* window) = 0;
-
 			const GenomePtr& getData() const { return this->genome; };
 			bool getFinished() const { return this->isFinished; };
 			float getFitness() const { return this->fitness; };
@@ -50,12 +52,10 @@ namespace tbml
 		{
 		public:
 			virtual void render(sf::RenderWindow* window) = 0;
-
 			virtual void resetGenepool(int populationSize, float mutationRate) = 0;
 			virtual void initGeneration() = 0;
 			virtual void evaluateGeneration(bool step = false) = 0;
 			virtual void iterateGeneration() = 0;
-
 			virtual int getGenerationNumber() const = 0;
 			virtual float getBestFitness() const = 0;
 			virtual bool getInitialized() const = 0;

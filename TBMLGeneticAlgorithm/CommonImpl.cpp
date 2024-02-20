@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "CommonImpl.h"
-#include "Matrix.h"
+#include "Tensor.h"
 
 #pragma region - VectorListGenome
 
@@ -53,7 +53,7 @@ VectorListGenome::GenomePtr VectorListGenome::crossover(const VectorListGenome::
 #pragma region - NNGenome
 
 NNGenome::NNGenome(std::vector<size_t> layerSizes)
-	: network(layerSizes, tbml::nn::NeuralNetwork::WeightInitType::RANDOM)
+	: network(layerSizes, tbml::nn::NeuralNetwork::RANDOM)
 {}
 
 NNGenome::NNGenome(std::vector<size_t> layerSizes, std::vector<tbml::fn::ActivationFunction> actFns)
@@ -64,17 +64,17 @@ NNGenome::NNGenome(tbml::nn::NeuralNetwork&& network)
 	: network(std::move(network))
 {}
 
-tbml::Matrix NNGenome::propogate(tbml::Matrix& input) const { return this->network.propogate(input); }
+const tbml::Tensor& NNGenome::propogate(const tbml::Tensor& input) { return this->network.propogate(input); }
 
-void NNGenome::print() const { this->network.printLayers(); }
+void NNGenome::print() const { this->network.print(); }
 
 NNGenome::GenomePtr NNGenome::crossover(const NNGenome::GenomePtr& otherData, float mutateChance) const
 {
 	// Crossover weights
-	const std::vector<tbml::Matrix>& weights = this->network.getWeights();
-	const std::vector<tbml::Matrix>& oWeights = otherData->network.getWeights();
+	const std::vector<tbml::Tensor>& weights = this->network.getWeights();
+	const std::vector<tbml::Tensor>& oWeights = otherData->network.getWeights();
 
-	std::vector<tbml::Matrix> newWeights = std::vector<tbml::Matrix>(weights.size());
+	std::vector<tbml::Tensor> newWeights = std::vector<tbml::Tensor>(weights.size());
 	for (size_t i = 0; i < weights.size(); i++)
 	{
 		newWeights[i] = weights[i].ewised(oWeights[i], [mutateChance](float a, float b)
@@ -85,10 +85,10 @@ NNGenome::GenomePtr NNGenome::crossover(const NNGenome::GenomePtr& otherData, fl
 	}
 
 	// Crossover bias
-	const std::vector<tbml::Matrix>& bias = network.getBias();
-	const std::vector<tbml::Matrix>& oBias = otherData->network.getBias();
+	const std::vector<tbml::Tensor>& bias = network.getBias();
+	const std::vector<tbml::Tensor>& oBias = otherData->network.getBias();
 
-	std::vector<tbml::Matrix> newBias = std::vector<tbml::Matrix>(bias.size());
+	std::vector<tbml::Tensor> newBias = std::vector<tbml::Tensor>(bias.size());
 	for (size_t i = 0; i < bias.size(); i++)
 	{
 		newBias[i] = bias[i].ewised(oBias[i], [mutateChance](float a, float b)

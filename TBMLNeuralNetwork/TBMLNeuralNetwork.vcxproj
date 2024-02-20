@@ -22,7 +22,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\TBML\MachineLearning.vcxproj">
+    <ProjectReference Include="..\TBML\TBML.vcxproj">
       <Project>{55c5ea16-0f23-47bd-9c28-5aaaa4a9a9f7}</Project>
     </ProjectReference>
   </ItemGroup>
@@ -33,7 +33,7 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{29421366-bcd8-451a-8951-c8e8f7dd2cdb}</ProjectGuid>
-    <RootNamespace>NeuralNetwork</RootNamespace>
+    <RootNamespace>TBMLNeuralNetwork</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>TBMLNeuralNetwork</ProjectName>
   </PropertyGroup>

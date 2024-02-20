@@ -11,7 +11,7 @@ NNPoleBalancerAgent::NNPoleBalancerAgent(
 	: tbml::ga::Agent<NNGenome>(std::move(genome)),
 	cartMass(cartMass), poleMass(poleMass), poleLength(poleLength), force(force),
 	trackLimit(trackLimit), angleLimit(angleLimit), timeLimit(timeLimit),
-	netInput(1, 4), poleAngle(0.1f)
+	netInput({ 1, 4 }, 0), poleAngle(0.1f)
 {
 	this->initVisual();
 }
@@ -40,7 +40,7 @@ bool NNPoleBalancerAgent::step()
 	netInput(0, 1) = cartAcceleration;
 	netInput(0, 2) = poleAngle;
 	netInput(0, 3) = poleAcceleration;
-	tbml::Matrix output = this->genome->propogate(netInput);
+	const tbml::Tensor& output = this->genome->propogate(netInput);
 	float ft = output(0, 0) > 0.5f ? force : -force;
 
 	// Calculate acceleration

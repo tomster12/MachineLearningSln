@@ -1,27 +1,27 @@
-#include "stdafx.h"
-#include "_Tensor.h"
 #include <omp.h>
 #include <cassert>
+#include "stdafx.h"
+#include "Tensor.h"
 
 namespace tbml
 {
-	const _Tensor _Tensor::ZERO = _Tensor();
+	const Tensor Tensor::ZERO = Tensor();
 
-	_Tensor::_Tensor()
+	Tensor::Tensor()
 	{
 		// Default constructor
 		shape = {};
 		data = {};
 	}
 
-	_Tensor::_Tensor(const _Tensor& t)
+	Tensor::Tensor(const Tensor& t)
 	{
 		// Copy constructor
 		shape = t.shape;
 		data = t.data;
 	}
 
-	_Tensor::_Tensor(const std::vector<size_t>& shape, float v)
+	Tensor::Tensor(const std::vector<size_t>& shape, float v)
 	{
 		// Create tensor with shape and fill with v
 		this->shape = shape;
@@ -30,7 +30,7 @@ namespace tbml
 		data = std::vector<float>(dataSize, v);
 	}
 
-	_Tensor::_Tensor(const std::vector<size_t>& shape, const std::vector<float>& data)
+	Tensor::Tensor(const std::vector<size_t>& shape, const std::vector<float>& data)
 	{
 		// Create tensor with shape and data and assert data fits
 		this->shape = shape;
@@ -40,14 +40,14 @@ namespace tbml
 		this->data = data;
 	}
 
-	_Tensor::_Tensor(const std::vector<float>& data)
+	Tensor::Tensor(const std::vector<float>& data)
 	{
 		// Create 1D tensor
 		this->shape = { data.size() };
 		this->data = data;
 	}
 
-	_Tensor::_Tensor(const std::vector<std::vector<float>>& data)
+	Tensor::Tensor(const std::vector<std::vector<float>>& data)
 	{
 		// Create 2D tensor
 		shape = { data.size(), data[0].size() };
@@ -61,7 +61,7 @@ namespace tbml
 		}
 	}
 
-	_Tensor::_Tensor(const std::vector<std::vector<std::vector<float>>>& data)
+	Tensor::Tensor(const std::vector<std::vector<std::vector<float>>>& data)
 	{
 		// Create 3D tensor
 		shape = { data[0].size(), data[0][0].size(), data.size() };
@@ -78,12 +78,12 @@ namespace tbml
 		}
 	}
 
-	void _Tensor::zero()
+	void Tensor::zero()
 	{
 		for (size_t i = 0; i < data.size(); i++) data[i] = 0;
 	}
 
-	_Tensor& _Tensor::add(const _Tensor& t)
+	Tensor& Tensor::add(const Tensor& t)
 	{
 		if (getDims() == 0)
 		{
@@ -97,7 +97,7 @@ namespace tbml
 		return *this;
 	}
 
-	_Tensor& _Tensor::add(const _Tensor& t, size_t moddim)
+	Tensor& Tensor::add(const Tensor& t, size_t moddim)
 	{
 		// TODO: Figure out the more generic way to do this
 		assert(moddim < 2);
@@ -135,7 +135,7 @@ namespace tbml
 
 			for (size_t i = 0; i < data.size(); i++)
 			{
-				int ni = (int)(i / (shape[0] * shape[1])) + (i % shape[0]);
+				size_t ni = (i / (shape[0] * shape[1])) + (i % shape[0]);
 				data[i] += t.data[ni];
 			}
 		}
@@ -143,13 +143,13 @@ namespace tbml
 		return *this;
 	}
 
-	_Tensor& _Tensor::add(float v)
+	Tensor& Tensor::add(float v)
 	{
 		for (size_t i = 0; i < data.size(); i++) data[i] += v;
 		return *this;
 	}
 
-	_Tensor& _Tensor::sub(const _Tensor& t)
+	Tensor& Tensor::sub(const Tensor& t)
 	{
 		if (getDims() == 0)
 		{
@@ -164,59 +164,59 @@ namespace tbml
 		return *this;
 	}
 
-	_Tensor& _Tensor::sub(float v)
+	Tensor& Tensor::sub(float v)
 	{
 		for (size_t i = 0; i < data.size(); i++) data[i] -= v;
 		return *this;
 	}
 
-	_Tensor& _Tensor::mult(const _Tensor& t)
+	Tensor& Tensor::mult(const Tensor& t)
 	{
 		assert(shape == t.shape);
 		for (size_t i = 0; i < data.size(); i++) data[i] *= t.data[i];
 		return *this;
 	}
 
-	_Tensor& _Tensor::mult(float v)
+	Tensor& Tensor::mult(float v)
 	{
 		for (size_t i = 0; i < data.size(); i++) data[i] *= v;
 		return *this;
 	}
 
-	_Tensor& _Tensor::div(const _Tensor& t)
+	Tensor& Tensor::div(const Tensor& t)
 	{
 		assert(shape == t.shape);
 		for (size_t i = 0; i < data.size(); i++) data[i] /= t.data[i];
 		return *this;
 	}
 
-	_Tensor& _Tensor::div(float v)
+	Tensor& Tensor::div(float v)
 	{
 		for (size_t i = 0; i < data.size(); i++) data[i] /= v;
 		return *this;
 	}
 
-	float _Tensor::acc(std::function<float(float, float)> fn, float initial) const
+	float Tensor::acc(std::function<float(float, float)> fn, float initial) const
 	{
 		float acc = initial;
 		for (size_t i = 0; i < data.size(); i++) acc = fn(data[i], acc);
 		return acc;
 	}
 
-	_Tensor& _Tensor::map(std::function<float(float)> fn)
+	Tensor& Tensor::map(std::function<float(float)> fn)
 	{
 		for (size_t i = 0; i < data.size(); i++) data[i] = fn(data[i]);
 		return *this;
 	}
 
-	_Tensor& _Tensor::ewise(const _Tensor& t, std::function<float(float, float)> fn)
+	Tensor& Tensor::ewise(const Tensor& t, std::function<float(float, float)> fn)
 	{
 		assert(shape == t.shape);
 		for (size_t i = 0; i < data.size(); i++) data[i] = fn(data[i], t.data[i]);
 		return *this;
 	}
 
-	_Tensor& _Tensor::matmul(const _Tensor& t)
+	Tensor& Tensor::matmul(const Tensor& t)
 	{
 		if (getDims() == 1)
 		{
@@ -254,7 +254,7 @@ namespace tbml
 		throw std::runtime_error("Invalid shape for matrix multiplication");
 	}
 
-	_Tensor& _Tensor::transpose()
+	Tensor& Tensor::transpose()
 	{
 		if (getDims() == 1)
 		{
@@ -282,7 +282,7 @@ namespace tbml
 		throw std::runtime_error("Transpose not defined for dim > 2");
 	}
 
-	void _Tensor::print(std::string tag) const
+	void Tensor::print(std::string tag) const
 	{
 		std::cout << tag << std::endl;
 
@@ -323,7 +323,7 @@ namespace tbml
 		std::cout << dataStr << std::endl;
 	}
 
-	std::vector<_Tensor> _Tensor::groupRows(size_t targetGroupSize) const
+	std::vector<Tensor> Tensor::groupRows(size_t targetGroupSize) const
 	{
 		// TODO: More generic way to do this
 		assert(getDims() == 2);
@@ -331,12 +331,12 @@ namespace tbml
 		size_t groupCount = (size_t)(ceil((float)shape[0] / targetGroupSize));
 		bool hasUneven = (shape[0] % targetGroupSize) != 0;
 
-		std::vector<_Tensor> groups = std::vector<_Tensor>(groupCount);
+		std::vector<Tensor> groups = std::vector<Tensor>(groupCount);
 
 		for (size_t i = 0; i < groupCount; i++)
 		{
 			size_t groupSize = (hasUneven && (i == groupCount - 1)) ? (shape[0] % targetGroupSize) : targetGroupSize;
-			groups[i] = _Tensor{ { groupSize, shape[1] }, 0 };
+			groups[i] = Tensor{ { groupSize, shape[1] }, 0 };
 
 			for (size_t row = 0; row < groupSize; row++)
 			{
@@ -350,7 +350,7 @@ namespace tbml
 		return groups;
 	}
 
-	bool _Tensor::isZero() const
+	bool Tensor::isZero() const
 	{
 		if (getDims() == 0) return true;
 		for (size_t i = 0; i < getDims(); i++)
