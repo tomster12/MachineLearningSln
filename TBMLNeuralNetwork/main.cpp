@@ -211,14 +211,37 @@ void testMNIST()
 
 void testNew()
 {
+	/*
+	std::vector<tbml::_Tensor> inputs = {
+		tbml::_Tensor({ L, L }),
+		tbml::_Tensor({ L, H }),
+		tbml::_Tensor({ H, L }),
+		tbml::_Tensor({ H, H }) };
+	std::vector<tbml::_Tensor> expecteds = {
+		tbml::_Tensor({ L }),
+		tbml::_Tensor({ H }),
+		tbml::_Tensor({ H }),
+		tbml::_Tensor({ L }) };
+	*/
+
+	// Setup training data
+	const float L = -1.0f, H = 1.0f;
+
+	tbml::_Tensor input{
+		std::vector<std::vector<float>>{ { L, L }, { L, H }, { H, L }, { H, H } } };
+
+	tbml::_Tensor expected{
+		std::vector<std::vector<float>>{ { L }, { H }, { H }, { L } } };
+
+	// Setup network
 	tbml::nn::_NeuralNetwork network(tbml::fn::_SquareError(), {
-		new tbml::nn::_DenseLayer(2, 3, tbml::fn::_Sigmoid()),
-		new tbml::nn::_DenseLayer(3, 1, tbml::fn::_Sigmoid()) });
+		new tbml::nn::_DenseLayer(2, 2, tbml::fn::_Sigmoid()),
+		new tbml::nn::_DenseLayer(2, 1, tbml::fn::_Sigmoid()) });
 
-	// TODO: Figure out shape situation
-	tbml::_Tensor input({ 3, 1 }, { 1.0f, 3.0f, 4.0f });
-	tbml::_Tensor output = network.propogate(input);
-
-	input.print("Input: ");
-	output.print("Output: ");
+	// Print values and train
+	input.print("Input:");
+	expected.print("Expected:");
+	network.propogate(input).print("Initial: ");
+	network.train(input, expected, { -1, -1, 0.2f, 0.85f, 0.01f, 2 });
+	network.propogate(input).print("Trained: ");
 }

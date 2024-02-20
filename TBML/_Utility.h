@@ -6,24 +6,38 @@
 
 namespace tbml
 {
+	template <typename T>
+	class RefHolder
+	{
+	public:
+		RefHolder(const T& ref) : ref(ref) {}
+		RefHolder(const RefHolder<T>& other) : ref(other.ref) {}
+		const T& operator()() const { return ref; }
+
+	private:
+		const T& ref;
+	};
+
 	namespace fn
 	{
+		float _classificationAccuracy(const tbml::_Tensor& predicted, const tbml::_Tensor& expected);
+
 		class _ActivationFunction
 		{
 		public:
-			_ActivationFunction() : activateFn(nullptr), derivativeFn(nullptr) {}
-			virtual void operator()(_Tensor& x) const { activateFn(x); }
-			virtual _Tensor derive(const _Tensor& z, const _Tensor& pdToOut) const { return derivativeFn(z, pdToOut); }
+			_ActivationFunction() : activateFn(nullptr), chainDerivativeFn(nullptr) {}
+			virtual void activate(_Tensor& x) const { activateFn(x); }
+			virtual _Tensor chainDerivative(const _Tensor& z, const _Tensor& pdToOut) const { return chainDerivativeFn(z, pdToOut); }
 
 		private:
 			std::function<void(_Tensor&)> activateFn;
-			std::function<_Tensor(const _Tensor&, const _Tensor&)> derivativeFn;
+			std::function<_Tensor(const _Tensor&, const _Tensor&)> chainDerivativeFn;
 
 		protected:
 			_ActivationFunction(
 				std::function<void(_Tensor& x)> activateFn,
-				std::function<_Tensor(const _Tensor& z, const _Tensor& pdToOut)> derivativeFn)
-				: activateFn(activateFn), derivativeFn(derivativeFn)
+				std::function<_Tensor(const _Tensor& z, const _Tensor& pdToOut)> chainDerivativeFn)
+				: activateFn(activateFn), chainDerivativeFn(chainDerivativeFn)
 			{}
 		};
 
@@ -31,7 +45,7 @@ namespace tbml
 		{
 		public:
 			_LossFunction() : lossFn(nullptr), derivativeFn(nullptr) {}
-			virtual float operator()(const _Tensor& predicted, const _Tensor& expected) const { return lossFn(predicted, expected); }
+			virtual float activate(const _Tensor& predicted, const _Tensor& expected) const { return lossFn(predicted, expected); }
 			virtual _Tensor derive(const _Tensor& predicted, const _Tensor& expected) const { return derivativeFn(predicted, expected); }
 
 		private:

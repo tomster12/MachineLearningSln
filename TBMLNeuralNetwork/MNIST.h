@@ -31,7 +31,7 @@ public:
 			if (magic_number != 2051) throw std::runtime_error("Invalid MNIST image file!");
 
 			// Read dataset parameters
-			file.read((char*)&imageCount, sizeof(imageCount)), imageCount = reverseInt(imageCount);
+			file.read((char*)&imageCount, sizeof(imageCount)), imageCount = reverseInt((int)imageCount);
 			file.read((char*)&n_rows, sizeof(n_rows)), n_rows = reverseInt(n_rows);
 			file.read((char*)&n_cols, sizeof(n_cols)), n_cols = reverseInt(n_cols);
 			imageSize = n_rows * n_cols;
@@ -72,7 +72,7 @@ public:
 			if (magic_number != 2049) throw std::runtime_error("Invalid MNIST label file!");
 
 			// Read dataset parameters
-			file.read((char*)&labelCount, sizeof(labelCount)), labelCount = reverseInt(labelCount);
+			file.read((char*)&labelCount, sizeof(labelCount)), labelCount = reverseInt((int)labelCount);
 
 			// Read in dataset
 			uchar* _dataset = new uchar[labelCount];

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "_NeuralNetwork.h"
+#include "_Utility.h"
 
 namespace tbml
 {
@@ -28,32 +29,67 @@ namespace tbml
 		{
 			if (layers.size() == 0) return _Tensor::ZERO;
 
+			// Allow for column vector input
+			if (input.getShape().size() == 1)
+				layers[0]->propogate(input.transposed());
+			else layers[0]->propogate(input);
+
 			// Propogate layers using const refs
-			layers[0]->propogate(input);
 			for (size_t i = 1; i < layers.size(); i++)
 			{
-				layers[i]->propogate(layers[i - 1]->getPropogateOutput());
+				layers[i]->propogate(layers[i - 1]->getPredicted());
 			}
-			return layers[layers.size() - 1]->getPropogateOutput();
+
+			return layers[layers.size() - 1]->getPredicted();
 		}
 
-		void _NeuralNetwork::train(const std::vector<_Tensor>& inputs, const std::vector<_Tensor>& expectedOutputs, const _TrainingConfig& config)
+		void _NeuralNetwork::train(const _Tensor& input, const _Tensor& expected, const _TrainingConfig& config)
 		{
-			// Stochastic gradient descent without batches
-			for (size_t i = 0; i < inputs.size(); i++)
+			int epoch = 0;
+			int maxEpochs = (config.epochs == -1 && config.errorThreshold > 0.0f) ? MAX_EPOCHS : config.epochs;
+
+			std::chrono::steady_clock::time_point tTrainStart = std::chrono::steady_clock::now();
+			std::chrono::steady_clock::time_point tEpochStart = tTrainStart;
+
+			if (config.logLevel > 0) printf("Training started for %d epochs\n", maxEpochs);
+
+			// Train for maxEpochs or until errorThreshold is reached
+			for (; epoch < maxEpochs; epoch++)
 			{
-				// Propogate input to output
-				const _Tensor& output = propogate(inputs[i]);
+				// Propogate input and calculate loss
+				const _Tensor& output = propogate(input);
+				float epochLoss = lossFn.activate(output, expected);
 
-				// Backpropogate output through network
-				backpropogate(output, expectedOutputs[i]);
+				if (config.logLevel == 2)
+				{
+					std::chrono::steady_clock::time_point tEpochEnd = std::chrono::steady_clock::now();
+					float accuracy = fn::_classificationAccuracy(output, expected);
+					auto us = std::chrono::duration_cast<std::chrono::microseconds>(tEpochEnd - tEpochStart);
+					printf("Epoch %d: Loss: %f, Accuracy: %f, Time: %fms\n", epoch, epochLoss, accuracy, us.count() / 1000.0f);
+					tEpochStart = tEpochEnd;
+				}
 
-				// Update weights and biases
+				if (epochLoss < config.errorThreshold) break;
+
+				// Backpropogate and apply gradient descent
+				backpropogate(output, expected);
 				for (size_t j = 0; j < layers.size(); j++)
 				{
-					// TODO: Implement
+					layers[j]->gradientDescent(config.learningRate, config.momentumRate);
 				}
 			}
+
+			if (config.logLevel >= 1)
+			{
+				std::chrono::steady_clock::time_point tTrainEnd = std::chrono::steady_clock::now();
+				auto us = std::chrono::duration_cast<std::chrono::microseconds>(tTrainEnd - tTrainStart);
+				printf("Training complete for %d epochs, Time taken: %fms\n\n", epoch, us.count() / 1000.0f);
+			}
+		}
+
+		void _NeuralNetwork::print() const
+		{
+			for (const auto& layer : layers) layer->print();
 		}
 
 		void _NeuralNetwork::backpropogate(const _Tensor& predicted, const _Tensor& expected)
@@ -67,11 +103,12 @@ namespace tbml
 			layers[layers.size() - 1]->backpropogate(pdLossToOut);
 			for (int i = (int)layers.size() - 2; i >= 0; i--)
 			{
-				layers[i]->backpropogate(layers[i + 1]->getBackpropogateOutput());
+				layers[i]->backpropogate(layers[i + 1]->getPdToIn());
 			}
 		}
 
-		_DenseLayer::_DenseLayer(size_t inputSize, size_t outputSize, fn::_ActivationFunction&& actFn, _DenseInitType initType, bool useBias)
+		_DenseLayer::_DenseLayer(size_t inputSize, size_t outputSize, fn::_ActivationFunction&& activationFn, _DenseInitType initType, bool useBias)
+			: activationFn(activationFn)
 		{
 			weights = _Tensor({ inputSize, outputSize }, 0);
 
@@ -93,29 +130,56 @@ namespace tbml
 
 		void _DenseLayer::propogate(const _Tensor& input)
 		{
-			// TODO: Fix with bias being wrong
-			propogateOutput = input.transposed().matmul(weights);
+			propogateInput = RefHolder<_Tensor>(input);
+			predicted = input.matmulled(weights).add(bias, 0);
+			activationFn.activate(predicted);
 		}
 
 		void _DenseLayer::backpropogate(const _Tensor& pdToOut)
 		{
-			// TODO: Implement
-			backpropogateOutput = pdToOut;
+			// Calculate pd to neuron in and layer in
+			_Tensor pdToNet = activationFn.chainDerivative(predicted, pdToOut);
+			pdToIn = pdToNet.matmulled(weights.transposed());
+
+			// Calculate pd to weights and bias
+			GDPdErrorToWeights = propogateInput().matmulled(pdToNet);
+			GDPdErrorToBias = pdToNet;
 		}
 
-		_ConvLayer::_ConvLayer(std::vector<size_t> kernel, std::vector<size_t> stride, fn::_ActivationFunction&& actFn)
+		void _DenseLayer::gradientDescent(float learningRate, float momentumRate)
+		{
+			// Apply gradient descent with momentum
+			GDMomentumWeights = (GDMomentumWeights * momentumRate) + (GDPdErrorToWeights * -learningRate);
+			GDMomentumBias = (GDMomentumBias * momentumRate) + (GDPdErrorToBias * -learningRate);
+			weights += GDMomentumWeights;
+			bias += GDMomentumBias;
+		}
+
+		void _DenseLayer::print() const
+		{
+			weights.print("Weights:");
+			bias.print("Bias:");
+		}
+
+		_ConvLayer::_ConvLayer(std::vector<size_t> kernel, std::vector<size_t> stride, fn::_ActivationFunction&& activationFn)
+			: activationFn(activationFn)
 		{}
 
 		void _ConvLayer::propogate(const _Tensor& input)
 		{
 			// TODO: Implement
-			propogateOutput = _Tensor::ZERO;
+			predicted = _Tensor::ZERO;
 		}
 
 		void _ConvLayer::backpropogate(const _Tensor& pdToOut)
 		{
 			// TODO: Implement
-			backpropogateOutput = pdToOut;
+			pdToIn = pdToOut;
+		}
+
+		void _ConvLayer::gradientDescent(float learningRate, float momentumRate)
+		{
+			// TODO: Implement
 		}
 
 		_FlattenLayer::_FlattenLayer()
@@ -124,13 +188,13 @@ namespace tbml
 		void _FlattenLayer::propogate(const _Tensor& input)
 		{
 			// TODO: Implement
-			propogateOutput = _Tensor::ZERO;
+			predicted = _Tensor::ZERO;
 		}
 
 		void _FlattenLayer::backpropogate(const _Tensor& pdToOut)
 		{
 			// TODO: Implement
-			backpropogateOutput = pdToOut;
+			pdToIn = pdToOut;
 		}
 
 		_MaxPoolLayer::_MaxPoolLayer()
@@ -139,13 +203,13 @@ namespace tbml
 		void _MaxPoolLayer::propogate(const _Tensor& input)
 		{
 			// TODO: Implement
-			propogateOutput = _Tensor::ZERO;
+			predicted = _Tensor::ZERO;
 		}
 
 		void _MaxPoolLayer::backpropogate(const _Tensor& pdToOut)
 		{
 			// TODO: Implement
-			backpropogateOutput = pdToOut;
+			pdToIn = pdToOut;
 		}
 	}
 }
