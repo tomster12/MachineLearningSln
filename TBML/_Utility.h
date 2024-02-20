@@ -8,7 +8,7 @@ namespace tbml
 {
 	namespace fn
 	{
-		float _classificationAccuracy(const tbml::_Tensor& predicted, const tbml::_Tensor& expected);
+		float _classificationAccuracy(const tbml::_Tensor& output, const tbml::_Tensor& expected);
 
 		class _ActivationFunction
 		{
@@ -33,17 +33,17 @@ namespace tbml
 		{
 		public:
 			_LossFunction() : lossFn(nullptr), derivativeFn(nullptr) {}
-			virtual float activate(const _Tensor& predicted, const _Tensor& expected) const { return lossFn(predicted, expected); }
-			virtual _Tensor derive(const _Tensor& predicted, const _Tensor& expected) const { return derivativeFn(predicted, expected); }
+			virtual float activate(const _Tensor& output, const _Tensor& expected) const { return lossFn(output, expected); }
+			virtual _Tensor derive(const _Tensor& output, const _Tensor& expected) const { return derivativeFn(output, expected); }
 
 		private:
-			std::function<float(const _Tensor& predicted, const _Tensor& expected)> lossFn;
-			std::function<_Tensor(const _Tensor& predicted, const _Tensor& expected)> derivativeFn;
+			std::function<float(const _Tensor& output, const _Tensor& expected)> lossFn;
+			std::function<_Tensor(const _Tensor& output, const _Tensor& expected)> derivativeFn;
 
 		protected:
 			_LossFunction(
-				std::function<float(const _Tensor& predicted, const _Tensor& expected)> lossFn,
-				std::function<_Tensor(const _Tensor& predicted, const _Tensor& expected)> derivativeFn)
+				std::function<float(const _Tensor& output, const _Tensor& expected)> lossFn,
+				std::function<_Tensor(const _Tensor& output, const _Tensor& expected)> derivativeFn)
 				: lossFn(lossFn), derivativeFn(derivativeFn)
 			{}
 		};
@@ -169,9 +169,9 @@ namespace tbml
 		{
 		public:
 			_SquareError() : _LossFunction(
-				[](const _Tensor& predicted, const _Tensor& expected)
+				[](const _Tensor& output, const _Tensor& expected)
 			{
-				const auto& predicteddata = predicted.getData();
+				const auto& predicteddata = output.getData();
 				const auto& expecteddata = expected.getData();
 				assert(predicteddata.size() == expecteddata.size());
 
@@ -183,12 +183,12 @@ namespace tbml
 				}
 				return error;
 			},
-				[](const _Tensor& predicted, const _Tensor& expected)
+				[](const _Tensor& output, const _Tensor& expected)
 			{
-				assert(predicted.getShape() == expected.getShape());
+				assert(output.getShape() == expected.getShape());
 
 				// derivative of square error = YH - Y
-				return predicted - expected;
+				return output - expected;
 			})
 			{}
 		};
@@ -197,9 +197,9 @@ namespace tbml
 		{
 		public:
 			_CrossEntropy() : _LossFunction(
-				[](const _Tensor& predicted, const _Tensor& expected)
+				[](const _Tensor& output, const _Tensor& expected)
 			{
-				const auto& predictedData = predicted.getData();
+				const auto& predictedData = output.getData();
 				const auto& expectedData = expected.getData();
 				assert(predictedData.size() == expectedData.size());
 
@@ -209,14 +209,14 @@ namespace tbml
 				{
 					error += -expectedData[i] * std::log(predictedData[i] + float(1e-15f));
 				}
-				return error / predicted.getShape()[0];
+				return error / output.getShape()[0];
 			},
-				[](const _Tensor& predicted, const _Tensor& expected)
+				[](const _Tensor& output, const _Tensor& expected)
 			{
-				assert(predicted.getShape() == expected.getShape());
+				assert(output.getShape() == expected.getShape());
 
 				// derivative of cross entropy = Yi / (YHi + e) with epsilon = 1e-15f for stability
-				return expected.ewised(predicted, [](float expected, float predicted) { return -expected / (predicted + 1e-15f); });
+				return expected.ewised(output, [](float expected, float output) { return -expected / (output + 1e-15f); });
 			})
 			{}
 		};

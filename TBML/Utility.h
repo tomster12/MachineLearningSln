@@ -8,7 +8,7 @@ namespace tbml
 	namespace fn
 	{
 		float getRandomFloat();
-		float calculateAccuracy(tbml::Matrix const& predicted, tbml::Matrix const& expected);
+		float calculateAccuracy(tbml::Matrix const& output, tbml::Matrix const& expected);
 
 		class ActivationFunction
 		{
@@ -33,17 +33,17 @@ namespace tbml
 		{
 		public:
 			LossFunction() : lossFn(nullptr), derivativeFn(nullptr) {}
-			virtual float operator()(Matrix const& predicted, Matrix const& expected) const { return lossFn(predicted, expected); }
-			virtual Matrix derive(Matrix const& predicted, Matrix const& expected) const { return derivativeFn(predicted, expected); }
+			virtual float operator()(Matrix const& output, Matrix const& expected) const { return lossFn(output, expected); }
+			virtual Matrix derive(Matrix const& output, Matrix const& expected) const { return derivativeFn(output, expected); }
 
 		private:
-			std::function<float(Matrix const& predicted, Matrix const& expected)> lossFn;
-			std::function<Matrix(Matrix const& predicted, Matrix const& expected)> derivativeFn;
+			std::function<float(Matrix const& output, Matrix const& expected)> lossFn;
+			std::function<Matrix(Matrix const& output, Matrix const& expected)> derivativeFn;
 
 		protected:
 			LossFunction(
-				std::function<float(Matrix const& predicted, Matrix const& expected)> lossFn,
-				std::function<Matrix(Matrix const& predicted, Matrix const& expected)> derivativeFn)
+				std::function<float(Matrix const& output, Matrix const& expected)> lossFn,
+				std::function<Matrix(Matrix const& output, Matrix const& expected)> derivativeFn)
 				: lossFn(lossFn), derivativeFn(derivativeFn)
 			{}
 		};
@@ -141,23 +141,23 @@ namespace tbml
 		{
 		public:
 			SquareError() : LossFunction(
-				[](Matrix const& predicted, Matrix const& expected)
+				[](Matrix const& output, Matrix const& expected)
 			{
 				float error = 0;
-				for (size_t row = 0; row < predicted.getRowCount(); row++)
+				for (size_t row = 0; row < output.getRowCount(); row++)
 				{
 					// Sum of squared errors = Σ (Ei - Yi)^2
-					for (size_t i = 0; i < predicted.getColCount(); i++)
+					for (size_t i = 0; i < output.getColCount(); i++)
 					{
-						float diff = expected(row, i) - predicted(row, i);
+						float diff = expected(row, i) - output(row, i);
 						error += diff * diff;
 					}
 				}
 				return error;
 			},
-				[](Matrix const& predicted, Matrix const& expected)
+				[](Matrix const& output, Matrix const& expected)
 			{
-				return predicted - expected;
+				return output - expected;
 			})
 			{}
 		};
@@ -166,7 +166,7 @@ namespace tbml
 		{
 		public:
 			CrossEntropy() : LossFunction(
-				[](Matrix const& predicted, Matrix const& expected)
+				[](Matrix const& output, Matrix const& expected)
 			{
 				size_t rows = expected.getRowCount();
 				size_t cols = expected.getColCount();
@@ -177,13 +177,13 @@ namespace tbml
 					// Categorical cross entropy = Σ Ei * log(Yi + e) with epsilon = 1e-15f for stability
 					for (size_t i = 0; i < cols; i++)
 					{
-						error += -expected(row, i) * std::log(predicted(row, i) + float(1e-15f));
+						error += -expected(row, i) * std::log(output(row, i) + float(1e-15f));
 					}
 				}
 
 				return error / rows;
 			},
-				[](Matrix const& predicted, Matrix const& expected)
+				[](Matrix const& output, Matrix const& expected)
 			{
 				size_t rows = expected.getRowCount();
 				size_t cols = expected.getColCount();
@@ -194,7 +194,7 @@ namespace tbml
 					// Categorical cross entropy = Ei / (Yi + e) with epsilon = 1e-15f for stability
 					for (size_t i = 0; i < cols; i++)
 					{
-						grad(row, i) = -expected(row, i) / (predicted(row, i) + 1e-15f);
+						grad(row, i) = -expected(row, i) / (output(row, i) + 1e-15f);
 					}
 				}
 

@@ -289,11 +289,12 @@ namespace tbml
 	std::vector<Matrix> Matrix::groupRows(size_t targetGroupSize) const
 	{
 		size_t groupCount = (size_t)(ceil((float)rows / targetGroupSize));
+		bool hasUneven = (rows % targetGroupSize) != 0;
 		std::vector<Matrix> groups = std::vector<Matrix>(groupCount);
 
 		for (size_t group = 0; group < groupCount; group++)
 		{
-			size_t groupSize = (group < groupCount - 1) ? targetGroupSize : (rows % targetGroupSize);
+			size_t groupSize = (hasUneven && (group == groupCount - 1)) ? (rows % targetGroupSize) : targetGroupSize;
 			std::vector<float> groupData = std::vector<float>(groupSize * cols);
 
 			for (size_t row = 0; row < groupSize; row++)

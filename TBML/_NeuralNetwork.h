@@ -35,8 +35,6 @@ namespace tbml
 		private:
 			fn::_LossFunction lossFn;
 			std::vector<_Layer*> layers;
-
-			void backpropogate(const _Tensor& predicted, const _Tensor& expected);
 		};
 
 		class _Layer
@@ -45,12 +43,12 @@ namespace tbml
 			virtual void propogate(const _Tensor& input) = 0;
 			virtual void backpropogate(const _Tensor& pdToOut) = 0;
 			virtual void gradientDescent(float learningRate, float momentumRate) {};
-			const _Tensor& getPredicted() const { return predicted; }
+			const _Tensor& getOutput() const { return output; }
 			const _Tensor& getPdToIn() const { return pdToIn; }
 			virtual void print() const {};
 
 		protected:
-			_Tensor predicted;
+			_Tensor output;
 			_Tensor pdToIn;
 		};
 

@@ -43,7 +43,7 @@ namespace tbml
 			{
 				inputBatches = input.groupRows(config.batchSize);
 				expectedBatches = expected.groupRows(config.batchSize);
-				batchCount = config.batchSize;
+				batchCount = inputBatches.size();
 			}
 
 			// Initialize training loop variables
@@ -74,8 +74,8 @@ namespace tbml
 					{
 						std::chrono::steady_clock::time_point tBatchFinish = std::chrono::steady_clock::now();
 
-						Matrix predicted = propogate(inputBatches[batch]);
-						float accuracy = fn::calculateAccuracy(predicted, expectedBatches[batch]);
+						Matrix output = propogate(inputBatches[batch]);
+						float accuracy = fn::calculateAccuracy(output, expectedBatches[batch]);
 
 						auto us = std::chrono::duration_cast<std::chrono::microseconds>(tBatchFinish - tBatchStart);
 						std::cout << std::setw(20) << ("Batch = " + std::to_string(batch + 1) + " / " + std::to_string(batchCount))
@@ -93,12 +93,12 @@ namespace tbml
 				{
 					std::chrono::steady_clock::time_point tEpochFinish = std::chrono::steady_clock::now();
 
-					Matrix predicted = propogate(input);
-					float accuracy = fn::calculateAccuracy(predicted, expected);
+					Matrix output = propogate(input);
+					float accuracy = fn::calculateAccuracy(output, expected);
 
 					auto us = std::chrono::duration_cast<std::chrono::microseconds>(tEpochFinish - tEpochStart);
 					std::cout << std::setw(20) << ("Epoch = " + std::to_string(epoch + 1) + " / " + std::to_string(maxEpochs))
-						<< std::setw(24) << ("Duration = " + std::to_string(us.count() / 1000) + "ms")
+						<< std::setw(24) << ("Duration = " + std::to_string((float)us.count() / 1000) + "ms")
 						<< std::setw(35) << ("Avg. Batch Loss = " + std::to_string(epochLoss))
 						<< std::setw(35) << ("Epoch Accuracy = " + std::to_string(accuracy * 100) + "%")
 						<< std::endl;
@@ -114,8 +114,8 @@ namespace tbml
 			{
 				std::chrono::steady_clock::time_point tTrainFinish = std::chrono::steady_clock::now();
 
-				Matrix predicted = propogate(input);
-				float accuracy = fn::calculateAccuracy(predicted, expected);
+				Matrix output = propogate(input);
+				float accuracy = fn::calculateAccuracy(output, expected);
 
 				auto us = std::chrono::duration_cast<std::chrono::microseconds>(tTrainFinish - tTrainStart);
 				std::cout << "Training Finished"

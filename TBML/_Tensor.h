@@ -19,10 +19,16 @@ namespace tbml
 		void zero();
 
 		template<typename... Args>
-		float& operator()(Args... args) { return data[_getIndex(0, 1, args...)]; }
+		float& at(Args... args) { return data[_getIndex(0, 1, args...)]; }
 
 		template<typename... Args>
-		float operator()(Args... args) const { return data[_getIndex(0, 1, args...)]; }
+		float at(Args... args) const { return data[_getIndex(0, 1, args...)]; }
+
+		template<typename... Args>
+		float& operator()(Args... args) { return at(args...); }
+
+		template<typename... Args>
+		float operator()(Args... args) const { return at(args...); }
 
 		_Tensor& add(const _Tensor& t);
 		_Tensor& add(const _Tensor& t, size_t moddim);
@@ -61,8 +67,9 @@ namespace tbml
 		_Tensor operator/(float v) const { return _Tensor(*this).div(v); }
 
 		void print(std::string tag = "Tensor:") const;
+		std::vector<_Tensor> groupRows(size_t targetGroupSize) const;
 		const std::vector<size_t> getShape() const { return shape; }
-		const size_t getShape(int dim) const { return dim <= shape.size() ? shape[dim] : 1; }
+		const size_t getShape(size_t dim) const { return dim <= shape.size() ? shape[dim] : 1; }
 		const size_t getDims() const { return shape.size(); }
 		const std::vector<float>& getData() const { return data; }
 		bool isZero() const;

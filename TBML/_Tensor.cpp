@@ -26,7 +26,7 @@ namespace tbml
 		// Create tensor with shape and fill with v
 		this->shape = shape;
 		size_t dataSize = 1;
-		for (size_t i = 0; i < shape.size(); i++) dataSize *= shape[i];
+		for (size_t i = 0; i < getDims(); i++) dataSize *= shape[i];
 		data = std::vector<float>(dataSize, v);
 	}
 
@@ -35,7 +35,7 @@ namespace tbml
 		// Create tensor with shape and data and assert data fits
 		this->shape = shape;
 		size_t dataSize = 1;
-		for (size_t i = 0; i < shape.size(); i++) dataSize *= shape[i];
+		for (size_t i = 0; i < getDims(); i++) dataSize *= shape[i];
 		assert(dataSize == data.size());
 		this->data = data;
 	}
@@ -85,13 +85,13 @@ namespace tbml
 
 	_Tensor& _Tensor::add(const _Tensor& t)
 	{
-		if (shape.size() == 0)
+		if (getDims() == 0)
 		{
 			shape = t.shape;
 			data = t.data;
 			return *this;
 		}
-	
+
 		assert(shape == t.shape);
 		for (size_t i = 0; i < data.size(); i++) data[i] += t.data[i];
 		return *this;
@@ -101,7 +101,7 @@ namespace tbml
 	{
 		// TODO: Figure out the more generic way to do this
 		assert(moddim < 2);
-		for (size_t i = 0; i < shape.size(); i++)
+		for (size_t i = 0; i < getDims(); i++)
 		{
 			if (i != moddim) assert(shape[i] == t.shape[i]);
 		}
@@ -151,7 +151,7 @@ namespace tbml
 
 	_Tensor& _Tensor::sub(const _Tensor& t)
 	{
-		if (shape.size() == 0)
+		if (getDims() == 0)
 		{
 			shape = t.shape;
 			data = t.data;
@@ -218,14 +218,14 @@ namespace tbml
 
 	_Tensor& _Tensor::matmul(const _Tensor& t)
 	{
-		if (shape.size() == 1)
+		if (getDims() == 1)
 		{
 			assert(getShape(0) == t.getShape(0));
 
 			return this->operator*=(t);
 		}
 
-		else if (shape.size() == 2)
+		else if (getDims() == 2)
 		{
 			assert(getShape(1) == t.getShape(0));
 
@@ -256,13 +256,13 @@ namespace tbml
 
 	_Tensor& _Tensor::transpose()
 	{
-		if (shape.size() == 1)
+		if (getDims() == 1)
 		{
 			shape = { 1, shape[0] };
 			return *this;
 		}
 
-		else if (shape.size() == 2)
+		else if (getDims() == 2)
 		{
 			std::vector<float> result(shape[0] * shape[1]);
 
@@ -287,37 +287,73 @@ namespace tbml
 		std::cout << tag << std::endl;
 
 		std::string shapeStr;
-		for (size_t i = 0; i < shape.size(); i++) shapeStr += std::to_string(shape[i]) + " ";
+		for (size_t i = 0; i < getDims(); i++) shapeStr += std::to_string(shape[i]) + " ";
 		std::cout << "\t( " << shapeStr << ")" << std::endl;
 
 		std::string dataStr;
 
 		if (getDims() == 1)
 		{
-			dataStr += "\t[ ";
-			for (size_t i = 0; i < data.size(); i++) dataStr += std::to_string(data[i]) + " ";
-			dataStr += "]";
+			if (data.size() > 50) dataStr += "\t[ ... ]";
+			else
+			{
+				dataStr += "\t[ ";
+				for (size_t i = 0; i < data.size(); i++) dataStr += std::to_string(data[i]) + " ";
+				dataStr += "]";
+			}
 		}
 
 		else if (getDims() == 2)
 		{
-			for (size_t x = 0; x < shape[0]; x++)
+			if (data.size() > 50) dataStr += "\t[ ... ]";
+			else
 			{
-				dataStr += "\t[ ";
-				for (size_t y = 0; y < shape[1]; y++)
+				for (size_t x = 0; x < shape[0]; x++)
 				{
-					dataStr += std::to_string(data[x + shape[0] * y]) + " ";
+					dataStr += "\t[ ";
+					for (size_t y = 0; y < shape[1]; y++)
+					{
+						dataStr += std::to_string(data[x + shape[0] * y]) + " ";
+					}
+					dataStr += "]\n";
 				}
-				dataStr += "]\n";
 			}
 		}
 
 		std::cout << dataStr << std::endl;
 	}
 
+	std::vector<_Tensor> _Tensor::groupRows(size_t targetGroupSize) const
+	{
+		// TODO: More generic way to do this
+		assert(getDims() == 2);
+
+		size_t groupCount = (size_t)(ceil((float)shape[0] / targetGroupSize));
+		bool hasUneven = (shape[0] % targetGroupSize) != 0;
+
+		std::vector<_Tensor> groups = std::vector<_Tensor>(groupCount);
+
+		for (size_t i = 0; i < groupCount; i++)
+		{
+			size_t groupSize = (hasUneven && (i == groupCount - 1)) ? (shape[0] % targetGroupSize) : targetGroupSize;
+			groups[i] = _Tensor{ { groupSize, shape[1] }, 0 };
+
+			for (size_t row = 0; row < groupSize; row++)
+			{
+				for (size_t col = 0; col < shape[1]; col++)
+				{
+					groups[i](row, col) = at(i * groupSize + row, col);
+				}
+			}
+		}
+
+		return groups;
+	}
+
 	bool _Tensor::isZero() const
 	{
-		for (size_t i = 0; i < shape.size(); i++)
+		if (getDims() == 0) return true;
+		for (size_t i = 0; i < getDims(); i++)
 		{
 			if (shape[i] != 0) return false;
 		}
