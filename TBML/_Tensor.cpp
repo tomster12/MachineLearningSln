@@ -91,12 +91,10 @@ namespace tbml
 			data = t.data;
 			return *this;
 		}
-		else
-		{
-			assert(shape == t.shape);
-			for (size_t i = 0; i < data.size(); i++) data[i] += t.data[i];
-			return *this;
-		}
+	
+		assert(shape == t.shape);
+		for (size_t i = 0; i < data.size(); i++) data[i] += t.data[i];
+		return *this;
 	}
 
 	_Tensor& _Tensor::add(const _Tensor& t, size_t moddim)
@@ -153,6 +151,14 @@ namespace tbml
 
 	_Tensor& _Tensor::sub(const _Tensor& t)
 	{
+		if (shape.size() == 0)
+		{
+			shape = t.shape;
+			data = t.data;
+			for (size_t i = 0; i < data.size(); i++) data[i] = -data[i];
+			return *this;
+		}
+
 		assert(shape == t.shape);
 		for (size_t i = 0; i < data.size(); i++) data[i] -= t.data[i];
 		return *this;

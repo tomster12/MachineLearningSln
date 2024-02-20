@@ -130,6 +130,9 @@ namespace tbml
 
 		void _DenseLayer::propogate(const _Tensor& input)
 		{
+			assert(input.getDims() == 2 && input.getShape(1) == weights.getShape(0) && "Input shape does not match weights shape");
+
+			// Propogate input with weights and bias
 			propogateInput = &input;
 			predicted = input.matmulled(weights).add(bias, 0);
 			activationFn.activate(predicted);
@@ -142,23 +145,34 @@ namespace tbml
 			pdToIn = pdToNet.matmulled(weights.transposed());
 
 			// Calculate pd to weights and bias
-			// TODO: Check dimensions here
-			// Propogate input: (batchSize, 2)
-			// Weights: (2, 1)
-			// Bias: (1, 1)
-			// pdToNet: (batchSize, 1)
+			pdToWeights = _Tensor(weights.getShape(), 0);
+			pdToBias = _Tensor(bias.getShape(), 0);
 
-			// pdToWeight: (2, 1)
+			// Calculate pd as average of batch
+			size_t batchSize = propogateInput->getShape(0);
+			for (size_t batchRow = 0; batchRow < batchSize; batchRow++)
+			{
+				for (size_t i = 0; i < weights.getShape(0); i++)
+				{
+					for (size_t j = 0; j < weights.getShape(1); j++)
+					{
+						// TODO: Check this isnt copying propogateInput
+						pdToWeights(i, j) += ((*propogateInput)(batchRow, i) * pdToNet(batchRow, j)) / batchSize;
+					}
+				}
 
-			pdToWeights = propogateInput->matmulled(pdToNet);
-			pdToBias = pdToNet;
+				for (size_t j = 0; j < bias.getShape(1); j++)
+				{
+					pdToBias(0, j) += pdToNet(batchRow, j) / batchSize;
+				}
+			}
 		}
 
 		void _DenseLayer::gradientDescent(float learningRate, float momentumRate)
 		{
 			// Apply gradient descent with momentum
-			momentumWeights = (momentumWeights * momentumRate) + (pdToWeights * -learningRate);
-			momentumBias = (momentumBias * momentumRate) + (pdToBias * -learningRate);
+			momentumWeights = (momentumWeights * momentumRate) - (pdToWeights * learningRate);
+			momentumBias = (momentumBias * momentumRate) - (pdToBias * learningRate);
 			weights += momentumWeights;
 			bias += momentumBias;
 		}

@@ -211,19 +211,6 @@ void testMNIST()
 
 void testNew()
 {
-	/*
-	std::vector<tbml::_Tensor> inputs = {
-		tbml::_Tensor({ L, L }),
-		tbml::_Tensor({ L, H }),
-		tbml::_Tensor({ H, L }),
-		tbml::_Tensor({ H, H }) };
-	std::vector<tbml::_Tensor> expecteds = {
-		tbml::_Tensor({ L }),
-		tbml::_Tensor({ H }),
-		tbml::_Tensor({ H }),
-		tbml::_Tensor({ L }) };
-	*/
-
 	// Setup training data
 	const float L = -1.0f, H = 1.0f;
 
@@ -235,8 +222,8 @@ void testNew()
 
 	// Setup network
 	tbml::nn::_NeuralNetwork network(tbml::fn::_SquareError(), {
-		new tbml::nn::_DenseLayer(2, 2, tbml::fn::_Sigmoid()),
-		new tbml::nn::_DenseLayer(2, 1, tbml::fn::_Sigmoid()) });
+		new tbml::nn::_DenseLayer(2, 2, tbml::fn::_TanH()),
+		new tbml::nn::_DenseLayer(2, 1, tbml::fn::_TanH()) });
 
 	// Print values and train
 	input.print("Input:");
