@@ -37,6 +37,7 @@ namespace tbml
 			virtual std::vector<size_t> getOutputShape() const { return {}; }; // TODO: Make pure virtual
 			const Tensor& getOutput() const { return output; };
 			const Tensor& getPdToIn() const { return pdToIn; };
+			virtual int getParameterCount() const { return 0; };
 			virtual void print() const {};
 			virtual std::shared_ptr<Layer> clone() const = 0;
 
@@ -67,6 +68,7 @@ namespace tbml
 			std::vector<size_t> getOutputShape() const { return layers[layers.size() - 1]->getOutputShape(); }
 			const std::vector<LayerPtr>& getLayers() const { return layers; }
 			fn::LossFunctionPtr getLossFunction() const { return lossFn; }
+			int getParameterCount() const;
 			void print() const;
 
 			void saveToFile(const std::string& filename) const;
@@ -87,13 +89,14 @@ namespace tbml
 			DenseLayer(size_t inputSize, size_t outputSize, fn::ActivationFunctionPtr&& activationFn, _DenseInitType initType = _DenseInitType::RANDOM, bool useBias = true);
 			DenseLayer(Tensor&& weights, Tensor&& bias, fn::ActivationFunctionPtr&& activationFn);
 
-			virtual const Tensor& propogate(const Tensor& input) override;
-			virtual Tensor propogate(const Tensor& input) const override;
-			virtual void propogateMut(Tensor& input) const override;
-			virtual void backpropogate(const Tensor& pdToOut) override;
-			virtual void gradientDescent(float learningRate, float momentumRate) override;
-			virtual std::vector<size_t> getInputShape() const override { return { weights.getShape(0) }; }
-			virtual std::vector<size_t> getOutputShape() const override { return { weights.getShape(1) }; }
+			const Tensor& propogate(const Tensor& input) override;
+			Tensor propogate(const Tensor& input) const override;
+			void propogateMut(Tensor& input) const override;
+			void backpropogate(const Tensor& pdToOut) override;
+			void gradientDescent(float learningRate, float momentumRate) override;
+			std::vector<size_t> getInputShape() const override { return { weights.getShape(0) }; }
+			std::vector<size_t> getOutputShape() const override { return { weights.getShape(1) }; }
+			int getParameterCount() const override { return weights.getSize() + bias.getSize(); }
 			const Tensor& getWeights() const { return weights; }
 			const Tensor& getBias() const { return bias; }
 			const fn::ActivationFunctionPtr& getActivationFunction() const { return activationFn; }

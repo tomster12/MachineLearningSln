@@ -73,6 +73,7 @@ namespace tbml
 		const std::vector<size_t> getShape() const { return shape; }
 		const size_t getShape(size_t dim) const { return dim <= shape.size() ? shape[dim] : 1; }
 		const size_t getDims() const { return shape.size(); }
+		const size_t getSize() const { return data.size(); }
 		const std::vector<float>& getData() const { return data; }
 		bool isZero() const;
 

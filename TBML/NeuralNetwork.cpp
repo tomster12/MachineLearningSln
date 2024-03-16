@@ -134,6 +134,13 @@ namespace tbml
 			}
 		}
 
+		int NeuralNetwork::getParameterCount() const
+		{
+			int count = 0;
+			for (const auto& layer : layers) count += layer->getParameterCount();
+			return count;
+		}
+
 		void NeuralNetwork::print() const
 		{
 			for (const auto& layer : layers) layer->print();

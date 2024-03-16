@@ -18,7 +18,7 @@ void testMNISTSerialization();
 int main()
 {
 	srand(0);
-	testMNISTSerialization();
+	testMNIST();
 }
 
 void testTime()
@@ -102,7 +102,8 @@ void testMNIST()
 	tbml::nn::NeuralNetwork network(std::make_shared<tbml::fn::CrossEntropy>(), {
 		std::make_shared<tbml::nn::DenseLayer>(784, 100, std::make_shared<tbml::fn::ReLU>()),
 		std::make_shared<tbml::nn::DenseLayer>(100, 10, std::make_shared<tbml::fn::SoftMax>()) });
-	network.train(trainInput, trainExpected, { 1, 50, 0.02f, 0.8f, 0.01f, 3 });
+	std::cout << "Parameters: " << network.getParameterCount() << std::endl;
+	network.train(trainInput, trainExpected, { 15, 50, 0.02f, 0.8f, 0.01f, 3 });
 
 	// Test network against test data
 	tbml::Tensor testPredicted = network.propogate(testInput);
@@ -126,6 +127,10 @@ void testMNISTSerialization()
 
 	// Read network from file
 	tbml::nn::NeuralNetwork network = tbml::nn::NeuralNetwork::loadFromFile("MNIST.nn");
+
+	// Print network information
+	network.print();
+	std::cout << "Parameters: " << network.getParameterCount() << std::endl;
 
 	// Test network against test data
 	tbml::Tensor testPredicted = network.propogate(testInput);
