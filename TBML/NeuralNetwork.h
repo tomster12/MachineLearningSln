@@ -50,7 +50,7 @@ namespace tbml
 			void train(const Tensor& input, const Tensor& expected, const TrainingConfig& config);
 			std::vector<size_t> getInputShape() const { return layers[0]->getInputShape(); }
 			std::vector<size_t> getOutputShape() const { return layers[layers.size() - 1]->getOutputShape(); }
-			std::vector<std::shared_ptr<Layer>> getLayers() const { return layers; }
+			const std::vector<std::shared_ptr<Layer>>& getLayers() const { return layers; }
 			fn::LossFunction getLossFunction() const { return lossFn; }
 			void print() const;
 
@@ -66,7 +66,7 @@ namespace tbml
 		public:
 			DenseLayer(const DenseLayer& other);
 			DenseLayer(size_t inputSize, size_t outputSize, fn::ActivationFunction&& activationFn, _DenseInitType initType = _DenseInitType::RANDOM, bool useBias = true);
-			DenseLayer(Tensor weights, Tensor bias, fn::ActivationFunction activationFn);
+			DenseLayer(Tensor&& weights, Tensor&& bias, fn::ActivationFunction&& activationFn);
 			virtual const Tensor& propogate(const Tensor& input) override;
 			virtual Tensor propogate(const Tensor& input) const override;
 			virtual void backpropogate(const Tensor& pdToOut) override;

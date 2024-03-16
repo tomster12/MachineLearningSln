@@ -9,7 +9,7 @@
 
 NNTargetAgent::NNTargetAgent(
 	sf::Vector2f startPos, float radius, float moveAcc, int maxIterations,
-	const NNTargetGenepool* genepool, NNTargetAgent::GenomePtr&& genome)
+	const NNTargetGenepool* genepool, NNTargetAgent::GenomeCPtr&& genome)
 	: Agent(std::move(genome)), genepool(genepool), pos(startPos), radius(radius), moveAcc(moveAcc), maxIterations(maxIterations), currentIteration(0)
 {
 	if (global::showVisuals) initVisual();
@@ -98,10 +98,10 @@ float NNTargetAgent::calculateFitness()
 NNTargetGenepool::NNTargetGenepool(
 	sf::Vector2f instanceStartPos, float instanceRadius, float instancemoveAcc, int instancemaxIterations,
 	float targetRadius, sf::Vector2f targetRandomCentre, float targetRandomRadius,
-	tbml::fn::LossFunction lossFn, std::vector<std::shared_ptr<tbml::nn::Layer>> layers)
+	std::function<GenomeCPtr(void)> createGenomeFn)
 	: instanceStartPos(instanceStartPos), instanceRadius(instanceRadius), instancemoveAcc(instancemoveAcc), instancemaxIterations(instancemaxIterations),
 	targetRadius(targetRadius), targetRandomCentre(targetRandomCentre), targetRandomRadius(targetRandomRadius),
-	lossFn(lossFn), layers(layers)
+	createGenomeFn(createGenomeFn)
 {
 	// Initialize variables
 	this->targetPos = this->getRandomTargetPos();
@@ -113,25 +113,16 @@ NNTargetGenepool::NNTargetGenepool(
 	this->target.setPosition(this->targetPos);
 }
 
-NNTargetGenepool::GenomePtr NNTargetGenepool::createGenome() const
+NNTargetGenepool::GenomeCPtr NNTargetGenepool::createGenome() const
 {
-	tbml::fn::LossFunction lossFn = this->lossFn;
-	std::vector<std::shared_ptr<tbml::nn::Layer>> layers(this->layers.size());
-	for (size_t i = 0; i < this->layers.size(); i++) layers[i] = this->layers[i]->clone();
-	return std::make_shared<NNGenome>(std::move(lossFn), std::move(layers));
+	return createGenomeFn();
 }
 
-NNTargetGenepool::AgentPtr NNTargetGenepool::createAgent(NNTargetGenepool::GenomePtr&& genome) const
+NNTargetGenepool::AgentPtr NNTargetGenepool::createAgent(NNTargetGenepool::GenomeCPtr&& genome) const
 {
-	return std::make_unique<NNTargetAgent>(this->instanceStartPos, this->instanceRadius, this->instancemoveAcc, this->instancemaxIterations, this, std::move(genome));
-}
-
-void NNTargetGenepool::render(sf::RenderWindow* window)
-{
-	Genepool::render(window);
-
-	// Draw target
-	window->draw(this->target);
+	return std::make_unique<NNTargetAgent>(
+		this->instanceStartPos, this->instanceRadius, this->instancemoveAcc, this->instancemaxIterations,
+		this, std::move(genome));
 }
 
 void NNTargetGenepool::initGeneration()
@@ -139,6 +130,12 @@ void NNTargetGenepool::initGeneration()
 	// Randomize target location
 	this->targetPos = this->getRandomTargetPos();
 	this->target.setPosition(this->targetPos);
+}
+
+void NNTargetGenepool::render(sf::RenderWindow* window)
+{
+	Genepool::render(window);
+	window->draw(this->target);
 }
 
 sf::Vector2f NNTargetGenepool::getTargetPos() const { return this->targetPos; }

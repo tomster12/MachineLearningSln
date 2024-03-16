@@ -9,7 +9,7 @@
 
 NNIceTargetsAgent::NNIceTargetsAgent(
 	sf::Vector2f startPos, float radius, float moveAcc, float moveDrag, int maxIterations,
-	const NNIceTargetsGenepool* genepool, NNIceTargetsAgent::GenomePtr&& genome)
+	const NNIceTargetsGenepool* genepool, NNIceTargetsAgent::GenomeCPtr&& genome)
 	: netInput(tbml::Tensor({ 1, 6 }, 0.0f)), pos(startPos), radius(radius), moveAcc(moveAcc), moveDrag(moveDrag), maxIterations(maxIterations),
 	genepool(genepool), Agent(std::move(genome)),
 	currentIteration(0), currentTarget(0), vel(), anger(0.0f)
@@ -109,10 +109,10 @@ float NNIceTargetsAgent::calculateFitness()
 NNIceTargetsGenepool::NNIceTargetsGenepool(
 	sf::Vector2f instanceStartPos, float instanceRadius, float instanceMoveAcc, float instanceMoveDrag, int instancemaxIterations,
 	std::vector<sf::Vector2f> targets, float targetRadius,
-	tbml::fn::LossFunction lossFn, std::vector<std::shared_ptr<tbml::nn::Layer>> layers)
+	std::function<GenomeCPtr(void)> createGenomeFn)
 	: instanceStartPos(instanceStartPos), instanceRadius(instanceRadius), instanceMoveAcc(instanceMoveAcc), instanceMoveDrag(instanceMoveDrag), instancemaxIterations(instancemaxIterations),
 	targetPos(targets), targetRadius(targetRadius),
-	lossFn(lossFn), layers(layers)
+	createGenomeFn(createGenomeFn)
 {
 	// Initialize variables
 	this->targetShapes = std::vector<sf::CircleShape>();
@@ -129,24 +129,21 @@ NNIceTargetsGenepool::NNIceTargetsGenepool(
 	}
 };
 
-NNIceTargetsGenepool::GenomePtr NNIceTargetsGenepool::createGenome() const
+NNIceTargetsGenepool::GenomeCPtr NNIceTargetsGenepool::createGenome() const
 {
-	tbml::fn::LossFunction lossFn = this->lossFn;
-	std::vector<std::shared_ptr<tbml::nn::Layer>> layers(this->layers.size());
-	for (size_t i = 0; i < this->layers.size(); i++) layers[i] = this->layers[i]->clone();
-	return std::make_shared<NNGenome>(std::move(lossFn), std::move(layers));
+	return createGenomeFn();
 };
 
-NNIceTargetsGenepool::AgentPtr NNIceTargetsGenepool::createAgent(NNIceTargetsGenepool::GenomePtr&& data) const
+NNIceTargetsGenepool::AgentPtr NNIceTargetsGenepool::createAgent(NNIceTargetsGenepool::GenomeCPtr&& data) const
 {
-	return std::make_unique<NNIceTargetsAgent>(this->instanceStartPos, this->instanceRadius, this->instanceMoveAcc, this->instanceMoveDrag, this->instancemaxIterations, this, std::move(data));
+	return std::make_unique<NNIceTargetsAgent>(
+		this->instanceStartPos, this->instanceRadius, this->instanceMoveAcc, this->instanceMoveDrag, this->instancemaxIterations,
+		this, std::move(data));
 };
 
 void NNIceTargetsGenepool::render(sf::RenderWindow* window)
 {
 	Genepool::render(window);
-
-	// Draw target
 	for (auto& shape : this->targetShapes) window->draw(shape);
 }
 

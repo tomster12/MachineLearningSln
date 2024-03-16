@@ -11,7 +11,7 @@ public:
 	VectorListGenome(int dataSize);
 	VectorListGenome(std::vector<sf::Vector2f>&& values);
 
-	VectorListGenome::GenomePtr crossover(const VectorListGenome::GenomePtr& otherGenome, float chance) const override;
+	VectorListGenome::GenomeCPtr crossover(const VectorListGenome::GenomeCPtr& otherGenome, float chance) const override;
 	const std::vector<sf::Vector2f>& getValues() const;
 	const sf::Vector2f getValue(int index) const;
 	const size_t getSize() const;
@@ -29,7 +29,7 @@ public:
 	NNGenome(tbml::fn::LossFunction&& lossFn, std::vector<std::shared_ptr<tbml::nn::Layer>>&& layers);
 	NNGenome(tbml::nn::NeuralNetwork&& network);
 
-	NNGenome::GenomePtr crossover(const NNGenome::GenomePtr& otherData, float mutateChance) const override;
+	NNGenome::GenomeCPtr crossover(const NNGenome::GenomeCPtr& otherData, float mutateChance) const override;
 	tbml::Tensor propogate(const tbml::Tensor& input) const;
 	size_t getInputSize() const { return this->network.getInputShape()[0]; }
 	void print() const;

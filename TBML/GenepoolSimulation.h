@@ -18,32 +18,39 @@ namespace tbml
 		class Genome
 		{
 		protected:
-			using GenomePtr = std::shared_ptr<const TGenome>;
+			using GenomeCPtr = std::shared_ptr<const TGenome>;
 			Genome() = default;
 			~Genome() = default;
 
 		public:
-			Genome(const Genome&) = delete;
+			Genome(const Genome&) = default;
 			Genome& operator=(const Genome&) = delete;
 			Genome(const Genome&&) = delete;
 			Genome& operator=(const Genome&&) = delete;
-			virtual GenomePtr crossover(const GenomePtr& otherGenome, float mutateChance = 0.0f) const = 0;
+
+			virtual GenomeCPtr crossover(const GenomeCPtr& otherGenome, float mutateChance = 0.0f) const = 0;
 		};
 
 		template<class TGenome> // TGenome: Genome<TGenome>
 		class Agent
 		{
 		protected:
-			using GenomePtr = std::shared_ptr<const TGenome>;
-			const GenomePtr genome;
+			using GenomeCPtr = std::shared_ptr<const TGenome>;
+			const GenomeCPtr genome;
 			bool isFinished = false;
 			float fitness = 0;
 
 		public:
-			Agent(GenomePtr&& genome) : genome(std::move(genome)), isFinished(false), fitness(0.0f) {};
+			Agent(GenomeCPtr&& genome) : genome(std::move(genome)), isFinished(false), fitness(0.0f) {};
+
+			Agent(const Agent&) = delete;
+			Agent& operator=(const Agent&) = delete;
+			Agent(const Agent&&) = delete;
+			Agent& operator=(const Agent&&) = delete;
+
 			virtual bool step() = 0;
 			virtual void render(sf::RenderWindow* window) = 0;
-			const GenomePtr& getData() const { return this->genome; };
+			const GenomeCPtr& getData() const { return this->genome; };
 			bool getFinished() const { return this->isFinished; };
 			float getFitness() const { return this->fitness; };
 		};
@@ -68,7 +75,7 @@ namespace tbml
 		class Genepool : public IGenepool
 		{
 		protected:
-			using GenomePtr = std::shared_ptr<const TGenome>;
+			using GenomeCPtr = std::shared_ptr<const TGenome>;
 			using AgentPtr = std::unique_ptr<TAgent>;
 
 			bool enableMultithreadedStepEvaluation = false;
@@ -84,12 +91,12 @@ namespace tbml
 			int generationStepNumber = 0;
 			std::vector<AgentPtr> currentGeneration;
 			bool isGenerationEvaluated = false;
-			GenomePtr bestData = nullptr;
+			GenomeCPtr bestData = nullptr;
 			float bestFitness = 0.0f;
 
-			virtual GenomePtr createGenome() const { return std::make_shared<TGenome>(); }
+			virtual GenomeCPtr createGenome() const { return std::make_shared<TGenome>(); }
 
-			virtual AgentPtr createAgent(GenomePtr&& data) const { return std::make_unique<TAgent>(std::move(data)); }
+			virtual AgentPtr createAgent(GenomeCPtr&& data) const { return std::make_unique<TAgent>(std::move(data)); }
 
 		public:
 			Genepool(bool enableMultithreadedStepEvaluation = false, bool enableMultithreadedFullEvaluation = true, bool syncMultithreadedSteps = false)
@@ -116,7 +123,7 @@ namespace tbml
 				this->currentGeneration.clear();
 				for (int i = 0; i < populationSize; i++)
 				{
-					GenomePtr genome = createGenome();
+					GenomeCPtr genome = createGenome();
 					AgentPtr geneticInstance = createAgent(std::move(genome));
 					this->currentGeneration.push_back(std::move(geneticInstance));
 				}
@@ -140,7 +147,7 @@ namespace tbml
 				if (this->isGenerationEvaluated) return;
 
 				// Helper function captures generation
-				auto evalulateSubset = [&](bool step, int start, int end)
+				auto evaluateSubset = [&](bool step, int start, int end)
 				{
 					bool allFinished;
 					do
@@ -166,7 +173,7 @@ namespace tbml
 						{
 							int startIndex = i * subsetSize;
 							int endIndex = static_cast<int>(std::min(startIndex + subsetSize, this->populationSize));
-							threadResults[i] = this->threadPool.enqueue([=] { return evalulateSubset(step || syncMultithreadedSteps, startIndex, endIndex); });
+							threadResults[i] = this->threadPool.enqueue([=] { return evaluateSubset(step || syncMultithreadedSteps, startIndex, endIndex); });
 						}
 
 						for (auto&& result : threadResults) allFinished &= result.get();
@@ -177,7 +184,7 @@ namespace tbml
 				// Process generation (single-threaded)
 				else
 				{
-					allFinished = evalulateSubset(step, 0, this->currentGeneration.size());
+					allFinished = evaluateSubset(step, 0, this->currentGeneration.size());
 					this->generationStepNumber++;
 				}
 
@@ -196,15 +203,15 @@ namespace tbml
 				// Sort generation and get best data
 				std::sort(this->currentGeneration.begin(), this->currentGeneration.end(), [this](const auto& a, const auto& b) { return a->getFitness() > b->getFitness(); });
 				const AgentPtr& bestInstance = this->currentGeneration[0];
-				this->bestData = GenomePtr(bestInstance->getData());
+				this->bestData = GenomeCPtr(bestInstance->getData());
 				this->bestFitness = bestInstance->getFitness();
 				std::cout << "Generation: " << this->generationNumber << ", best fitness: " << this->bestFitness << std::endl;
 
 				// Create next generation with new instance of best data
 				std::vector<AgentPtr> nextGeneration;
-				nextGeneration.push_back(createAgent(std::move(GenomePtr(this->bestData))));
+				nextGeneration.push_back(std::move(createAgent(std::move(GenomeCPtr(this->bestData)))));
 
-				// Selection helper function to pick a parent
+				// Selection helper function to pick parents
 				int selectAmount = static_cast<int>(ceil(this->currentGeneration.size() / 2.0f));
 				auto transformFitness = [](float f) { return f * f; };
 				float totalFitness = 0.0f;
@@ -224,12 +231,12 @@ namespace tbml
 				for (int i = 0; i < this->populationSize - 1; i++)
 				{
 					// [SELECTION] Pick 2 parents from previous generation
-					const GenomePtr& parentDataA = pickWeightedParent();
-					const GenomePtr& parentDataB = pickWeightedParent();
+					const GenomeCPtr& parentDataA = pickWeightedParent();
+					const GenomeCPtr& parentDataB = pickWeightedParent();
 
 					// [CROSSOVER], [MUTATION] Crossover and mutate new child data
-					GenomePtr childData = parentDataA->crossover(parentDataB, this->mutationRate);
-					nextGeneration.push_back(createAgent(std::move(childData)));
+					GenomeCPtr childData = parentDataA->crossover(parentDataB, this->mutationRate);
+					nextGeneration.push_back(std::move(createAgent(std::move(childData))));
 				}
 
 				// Set to new generation and update variables
@@ -261,7 +268,7 @@ namespace tbml
 		public:
 			GenepoolController() {}
 
-			GenepoolController(IGenepoolPtr genepool)
+			GenepoolController(IGenepoolPtr&& genepool)
 				: genepool(std::move(genepool))
 			{}
 

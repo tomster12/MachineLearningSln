@@ -7,7 +7,7 @@
 
 VectorListTargetAgent::VectorListTargetAgent(
 	sf::Vector2f startPos, float radius, float moveAcc,
-	const VectorListTargetGenepool* genepool, VectorListTargetAgent::GenomePtr&& genome)
+	const VectorListTargetGenepool* genepool, VectorListTargetAgent::GenomeCPtr&& genome)
 	: Agent(std::move(genome)), genepool(genepool), pos(startPos), radius(radius), moveAcc(moveAcc), currentIndex(0)
 {
 	if (global::showVisuals) initVisual();
@@ -107,12 +107,12 @@ VectorListTargetGenepool::VectorListTargetGenepool(
 	this->target.setPosition(this->targetPos);
 };
 
-VectorListTargetGenepool::GenomePtr VectorListTargetGenepool::createGenome() const
+VectorListTargetGenepool::GenomeCPtr VectorListTargetGenepool::createGenome() const
 {
 	return std::make_shared<VectorListGenome>(this->dataSize);
 };
 
-VectorListTargetGenepool::AgentPtr VectorListTargetGenepool::createAgent(VectorListTargetGenepool::GenomePtr&& genome) const
+VectorListTargetGenepool::AgentPtr VectorListTargetGenepool::createAgent(VectorListTargetGenepool::GenomeCPtr&& genome) const
 {
 	return std::make_unique<VectorListTargetAgent>(this->instanceStartPos, this->instanceRadius, this->instancemoveAcc, this, std::move(genome));
 };

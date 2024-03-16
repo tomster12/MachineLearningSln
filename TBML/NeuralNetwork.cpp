@@ -168,7 +168,7 @@ namespace tbml
 			}
 		}
 
-		DenseLayer::DenseLayer(Tensor weights, Tensor bias, fn::ActivationFunction activationFn)
+		DenseLayer::DenseLayer(Tensor&& weights, Tensor&& bias, fn::ActivationFunction&& activationFn)
 			: weights(std::move(weights)), bias(std::move(bias)), activationFn(std::move(activationFn))
 		{}
 
@@ -178,7 +178,7 @@ namespace tbml
 
 			// Propogate input with weights and bias
 			propogateInput = &input;
-			output = input.matmulled(weights).add(bias, 0); // TODO: Can this add be in place?
+			output = input.matmulled(weights).add(bias, 0);
 			activationFn.activate(output);
 			return output;
 		}

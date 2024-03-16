@@ -27,7 +27,7 @@ const sf::Vector2f VectorListGenome::getValue(int index) const { return this->va
 
 const size_t VectorListGenome::getSize() const { return this->dataSize; }
 
-VectorListGenome::GenomePtr VectorListGenome::crossover(const VectorListGenome::GenomePtr& otherData, float mutateChance) const
+VectorListGenome::GenomeCPtr VectorListGenome::crossover(const VectorListGenome::GenomeCPtr& otherData, float mutateChance) const
 {
 	std::vector<sf::Vector2f> newValues(this->getSize());
 
@@ -71,40 +71,38 @@ tbml::Tensor NNGenome::propogate(const tbml::Tensor& input) const
 
 void NNGenome::print() const { this->network.print(); }
 
-NNGenome::GenomePtr NNGenome::crossover(const NNGenome::GenomePtr& otherData, float mutateChance) const
+NNGenome::GenomeCPtr NNGenome::crossover(const NNGenome::GenomeCPtr& otherData, float mutateChance) const
 {
-	const std::vector<std::shared_ptr<tbml::nn::Layer>> layers = this->network.getLayers();
-	const std::vector<std::shared_ptr<tbml::nn::Layer>> oLayers = otherData->network.getLayers();
+	const std::vector<std::shared_ptr<tbml::nn::Layer>>& layers = this->network.getLayers();
+	const std::vector<std::shared_ptr<tbml::nn::Layer>>& oLayers = otherData->network.getLayers();
 	std::vector<std::shared_ptr<tbml::nn::Layer>> newLayers(layers.size());
 
 	for (size_t i = 0; i < layers.size(); i++)
 	{
+		// Pull out dense layers
 		const tbml::nn::Layer& layer = *layers[i];
 		const tbml::nn::Layer& oLayer = *oLayers[i];
 		const tbml::nn::DenseLayer& dLayer = dynamic_cast<const tbml::nn::DenseLayer&>(layer);
 		const tbml::nn::DenseLayer& oDLayer = dynamic_cast<const tbml::nn::DenseLayer&>(oLayer);
 
-		// Perform crossover, assuming dense layers
+		// Perform crossover
 		const tbml::Tensor& weights = dLayer.getWeights();
 		const tbml::Tensor& oWeights = oDLayer.getWeights();
 		const tbml::Tensor& biases = dLayer.getBias();
 		const tbml::Tensor& oBiases = oDLayer.getBias();
 
-		tbml::Tensor newWeights = tbml::Tensor(weights.getShape(), 0.0f);
-		tbml::Tensor newBiases = tbml::Tensor(biases.getShape(), 0.0f);
-
-		weights.ewised(oWeights, [&](float a, float b) -> float
+		tbml::Tensor newWeights = weights.ewised(oWeights, [&](float a, float b) -> float
 		{
 			if (tbml::fn::getRandomFloat() < mutateChance) return tbml::fn::getRandomFloat() * 2 - 1;
 			if (tbml::fn::getRandomFloat() < 0.5f) return a;
-			else return b;
+			return b;
 		});
 
-		biases.ewised(oBiases, [&](float a, float b) -> float
+		tbml::Tensor newBiases = biases.ewised(oBiases, [&](float a, float b) -> float
 		{
 			if (tbml::fn::getRandomFloat() < mutateChance) return tbml::fn::getRandomFloat() * 2 - 1;
 			if (tbml::fn::getRandomFloat() < 0.5f) return a;
-			else return b;
+			return b;
 		});
 
 		tbml::fn::ActivationFunction activationFn = dLayer.getActivationFunction();

@@ -8,16 +8,15 @@ class NNPoleBalancerGenepool;
 class NNPoleBalancerAgent : public tbml::ga::Agent<NNGenome>
 {
 public:
-	NNPoleBalancerAgent(NNPoleBalancerAgent::GenomePtr&& genome) : Agent(std::move(genome)) {};
+	NNPoleBalancerAgent(NNPoleBalancerAgent::GenomeCPtr&& genome) : Agent(std::move(genome)) {};
 	NNPoleBalancerAgent(
 		float cartMass, float poleMass, float poleLength, float force,
 		float trackLimit, float angleLimit, float timeLimit,
-		NNPoleBalancerAgent::GenomePtr&& genome);
-	void initVisual();
+		NNPoleBalancerAgent::GenomeCPtr&& genome);
 
+	void initVisual();
 	bool step() override;
 	void render(sf::RenderWindow* window) override;
-
 	float calculateFitness();
 
 private:
@@ -52,7 +51,7 @@ public:
 	NNPoleBalancerGenepool(
 		float cartMass, float poleMass, float poleLength, float force,
 		float trackLimit, float angleLimit, float timeLimit,
-		tbml::fn::LossFunction lossFn, std::vector<std::shared_ptr<tbml::nn::Layer>> layers);
+		std::function<GenomeCPtr(void)> createGenomeFn);
 
 protected:
 	float cartMass;
@@ -62,9 +61,8 @@ protected:
 	float trackLimit;
 	float angleLimit;
 	float timeLimit;
-	tbml::fn::LossFunction lossFn;
-	std::vector<std::shared_ptr<tbml::nn::Layer>> layers;
+	std::function<GenomeCPtr(void)> createGenomeFn;
 
-	GenomePtr createGenome() const override;
-	AgentPtr createAgent(GenomePtr&& data) const override;
+	GenomeCPtr createGenome() const override;
+	AgentPtr createAgent(GenomeCPtr&& data) const override;
 };

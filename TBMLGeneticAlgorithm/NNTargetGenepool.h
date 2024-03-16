@@ -7,15 +7,14 @@ class NNTargetGenepool;
 class NNTargetAgent : public tbml::ga::Agent<NNGenome>
 {
 public:
-	NNTargetAgent(NNTargetAgent::GenomePtr&& genome) : Agent(std::move(genome)) {};
+	NNTargetAgent(NNTargetAgent::GenomeCPtr&& genome) : Agent(std::move(genome)) {};
 	NNTargetAgent(
 		sf::Vector2f startPos, float radius, float moveAcc, int maxIterations,
-		const NNTargetGenepool* genepool, NNTargetAgent::GenomePtr&& genome);
-	void initVisual();
+		const NNTargetGenepool* genepool, NNTargetAgent::GenomeCPtr&& genome);
 
+	void initVisual();
 	bool step() override;
 	void render(sf::RenderWindow* window) override;
-
 	float calculateDist();
 	float calculateFitness();
 
@@ -38,12 +37,10 @@ public:
 	NNTargetGenepool(
 		sf::Vector2f instanceStartPos, float instanceRadius, float instancemoveAcc, int instancemaxIterations,
 		float targetRadius, sf::Vector2f targetRandomCentre, float targetRandomRadius,
-		tbml::fn::LossFunction lossFn, std::vector<std::shared_ptr<tbml::nn::Layer>> layers);
-
-	void render(sf::RenderWindow* window) override;
+		std::function<GenomeCPtr(void)> createGenomeFn);
 
 	void initGeneration() override;
-
+	void render(sf::RenderWindow* window) override;
 	sf::Vector2f getTargetPos() const;
 	float getTargetRadius() const;
 
@@ -57,11 +54,9 @@ protected:
 	sf::Vector2f targetRandomCentre;
 	float targetRandomRadius = 0.0f;
 	sf::Vector2f targetPos;
-	tbml::fn::LossFunction lossFn;
-	std::vector<std::shared_ptr<tbml::nn::Layer>> layers;
+	std::function<GenomeCPtr(void)> createGenomeFn;
 
-	GenomePtr createGenome() const override;
-	AgentPtr createAgent(GenomePtr&& genome) const override;
-
+	GenomeCPtr createGenome() const override;
+	AgentPtr createAgent(GenomeCPtr&& genome) const override;
 	sf::Vector2f getRandomTargetPos() const;
 };

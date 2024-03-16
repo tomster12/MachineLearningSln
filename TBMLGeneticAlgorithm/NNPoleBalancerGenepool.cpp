@@ -7,7 +7,7 @@
 NNPoleBalancerAgent::NNPoleBalancerAgent(
 	float cartMass, float poleMass, float poleLength, float force,
 	float trackLimit, float angleLimit, float timeLimit,
-	NNPoleBalancerAgent::GenomePtr&& genome)
+	NNPoleBalancerAgent::GenomeCPtr&& genome)
 	: tbml::ga::Agent<NNGenome>(std::move(genome)),
 	cartMass(cartMass), poleMass(poleMass), poleLength(poleLength), force(force),
 	trackLimit(trackLimit), angleLimit(angleLimit), timeLimit(timeLimit),
@@ -92,27 +92,23 @@ float NNPoleBalancerAgent::calculateFitness()
 
 #pragma endregion
 
-#pragma region - NNPoleBalancerAgent
+#pragma region - NNPoleBalancerGenepool
 
 NNPoleBalancerGenepool::NNPoleBalancerGenepool(
 	float cartMass, float poleMass, float poleLength, float force,
 	float trackLimit, float angleLimit, float timeLimit,
-	tbml::fn::LossFunction lossFn, std::vector<std::shared_ptr<tbml::nn::Layer>> layers)
+	std::function<GenomeCPtr(void)> createGenomeFn)
 	: cartMass(cartMass), poleMass(poleMass), poleLength(poleLength), force(force),
 	trackLimit(trackLimit), angleLimit(angleLimit), timeLimit(timeLimit),
-	lossFn(lossFn), layers(layers)
+	createGenomeFn(createGenomeFn)
 {}
 
-NNPoleBalancerGenepool::GenomePtr NNPoleBalancerGenepool::createGenome() const
+NNPoleBalancerGenepool::GenomeCPtr NNPoleBalancerGenepool::createGenome() const
 {
-	// TODO: Figure out how to do this but random
-	tbml::fn::LossFunction lossFn = this->lossFn;
-	std::vector<std::shared_ptr<tbml::nn::Layer>> layers(this->layers.size());
-	for (size_t i = 0; i < this->layers.size(); i++) layers[i] = this->layers[i]->clone();
-	return std::make_shared<NNGenome>(std::move(lossFn), std::move(layers));
+	return createGenomeFn();
 };
 
-NNPoleBalancerGenepool::AgentPtr NNPoleBalancerGenepool::createAgent(NNPoleBalancerGenepool::GenomePtr&& data) const
+NNPoleBalancerGenepool::AgentPtr NNPoleBalancerGenepool::createAgent(NNPoleBalancerGenepool::GenomeCPtr&& data) const
 {
 	return std::make_unique<NNPoleBalancerAgent>(
 		cartMass, poleMass, poleLength, force,
