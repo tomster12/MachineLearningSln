@@ -18,7 +18,7 @@ void testMNISTSerialization();
 int main()
 {
 	srand(0);
-	testMNISTSerialization();
+	testMNIST();
 }
 
 void testTime()
@@ -98,12 +98,12 @@ void testMNIST()
 	testExpected.print("Test Expected: ");
 
 	// Create network and train
-	// Batch: ~11ms, Epoch: ~15000ms, Total: ~226s, Accuracy: 95.22%
+	// Batch: ~11ms, Epoch: ~15000ms, Total: ~226s, (15 epochs = 95.22%, 50 epochs = 96.34%)
 	tbml::nn::NeuralNetwork network(std::make_shared<tbml::fn::CrossEntropy>(), {
 		std::make_shared<tbml::nn::DenseLayer>(784, 100, std::make_shared<tbml::fn::ReLU>()),
 		std::make_shared<tbml::nn::DenseLayer>(100, 10, std::make_shared<tbml::fn::SoftMax>()) });
 	std::cout << "Parameters: " << network.getParameterCount() << std::endl;
-	network.train(trainInput, trainExpected, { 15, 50, 0.02f, 0.8f, 0.01f, 3 });
+	network.train(trainInput, trainExpected, { 50, 50, 0.02f, 0.8f, 0.01f, 3 });
 
 	// Test network against test data
 	tbml::Tensor testPredicted = network.propogate(testInput);
