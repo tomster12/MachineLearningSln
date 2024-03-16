@@ -50,8 +50,8 @@ void Game::initialize()
 		20.0f, { 700.0f, 150.0f }, 500.0f,
 		[]()
 	{
-		return std::make_shared<NNGenome>(tbml::fn::SquareError(),
-		std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::DenseLayer>(2, 2, tbml::fn::TanH()) });
+		return std::make_shared<NNGenome>(std::make_shared<tbml::fn::SquareError>(),
+		std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::DenseLayer>(2, 2, std::make_shared<tbml::fn::TanH>()) });
 	}));*/
 
 	/*tbml::ga::IGenepoolPtr genepool(new NNIceTargetsGenepool(
@@ -59,8 +59,8 @@ void Game::initialize()
 		{ { 300.0f, 150.0f }, { 1100.0f, 400.0f }, { 450.0f, 850.0f }, { 700.0f, 320.0f } }, 4.0f,
 		[]()
 	{
-		return std::make_shared<NNGenome>(tbml::fn::SquareError(),
-		std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::DenseLayer>(6, 4, tbml::fn::TanH()), std::make_shared<tbml::nn::DenseLayer>(4, 2, tbml::fn::TanH()) });
+		return std::make_shared<NNGenome>(std::make_shared<tbml::fn::SquareError>(),
+		std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::DenseLayer>(6, 4, std::make_shared<tbml::fn::TanH>()), std::make_shared<tbml::nn::DenseLayer>(4, 2, std::make_shared<tbml::fn::TanH>()) });
 	}));*/
 
 	tbml::ga::IGenepoolPtr genepool(new NNPoleBalancerGenepool(
@@ -68,8 +68,8 @@ void Game::initialize()
 		0.6f, 0.25f, 20.0f,
 		[]()
 	{
-		return std::make_shared<NNGenome>(tbml::fn::SquareError(),
-		std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::DenseLayer>(4, 1, tbml::fn::TanH()) });
+		return std::make_shared<NNGenome>(std::make_shared<tbml::fn::SquareError>(),
+		std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::DenseLayer>(4, 1, std::make_shared<tbml::fn::TanH>()) });
 	}));
 
 	genepool->resetGenepool(2000, 0.05f);

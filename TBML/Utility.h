@@ -11,71 +11,67 @@ namespace tbml
 
 		float classificationAccuracy(const tbml::Tensor& output, const tbml::Tensor& expected);
 
+		class ActivationFunction;
+		class ReLU;
+		class Sigmoid;
+		class TanH;
+		class SoftMax;
+
 		class ActivationFunction
 		{
 		public:
-			ActivationFunction() : activateFn(nullptr), chainDerivativeFn(nullptr) {}
-			virtual ~ActivationFunction() = default;
-			virtual void activate(Tensor& x) const { activateFn(x); }
-			virtual Tensor chainDerivative(const Tensor& z, const Tensor& pdToOut) const { return chainDerivativeFn(z, pdToOut); }
+			virtual void activate(Tensor& x) const = 0;
+			virtual Tensor chainDerivative(const Tensor& z, const Tensor& pdToOut) const = 0;
 
-		protected:
-			ActivationFunction(
-				std::function<void(Tensor& x)> activateFn,
-				std::function<Tensor(const Tensor& z, const Tensor& pdToOut)> chainDerivativeFn)
-				: activateFn(activateFn), chainDerivativeFn(chainDerivativeFn)
-			{}
-
-		private:
-			std::function<void(Tensor&)> activateFn;
-			std::function<Tensor(const Tensor&, const Tensor&)> chainDerivativeFn;
+			virtual void serialize(std::ostream& os) const = 0;
+			static std::shared_ptr<ActivationFunction> deserialize(std::istream& is);
 		};
+
+		class SquareError;
+		class CrossEntropy;
 
 		class LossFunction
 		{
 		public:
-			LossFunction() : lossFn(nullptr), derivativeFn(nullptr) {}
-			virtual ~LossFunction() = default;
-			virtual float activate(const Tensor& output, const Tensor& expected) const { return lossFn(output, expected); }
-			virtual Tensor derive(const Tensor& output, const Tensor& expected) const { return derivativeFn(output, expected); }
+			virtual float activate(const Tensor& output, const Tensor& expected) const = 0;
+			virtual Tensor derive(const Tensor& output, const Tensor& expected) const = 0;
 
-		protected:
-			LossFunction(
-				std::function<float(const Tensor& output, const Tensor& expected)> lossFn,
-				std::function<Tensor(const Tensor& output, const Tensor& expected)> derivativeFn)
-				: lossFn(lossFn), derivativeFn(derivativeFn)
-			{}
-
-		private:
-			std::function<float(const Tensor& output, const Tensor& expected)> lossFn;
-			std::function<Tensor(const Tensor& output, const Tensor& expected)> derivativeFn;
+			virtual void serialize(std::ostream& os) const = 0;
+			static std::shared_ptr<LossFunction> deserialize(std::istream& is);
 		};
+
+		using ActivationFunctionPtr = std::shared_ptr<fn::ActivationFunction>;
+		using LossFunctionPtr = std::shared_ptr<fn::LossFunction>;
 
 		class ReLU : public ActivationFunction
 		{
 		public:
-			ReLU() : ActivationFunction(
-				[](Tensor& x)
+			void activate(Tensor& x) const override
 			{
 				x.map([](float x) { return std::max(0.0f, x); });
-			},
-				[](const Tensor& z, const Tensor& pdToOut)
+			};
+
+			Tensor chainDerivative(const Tensor& z, const Tensor& pdToOut) const override
 			{
 				Tensor pdOutToIn = z.mapped([](float v) { return v > 0 ? 1.0f : 0.0f; });
 				return pdOutToIn * pdToOut;
-			})
-			{}
+			};
+
+			void serialize(std::ostream& os) const override
+			{
+				os << "ReLU\n";
+			}
 		};
 
 		class Sigmoid : public ActivationFunction
 		{
 		public:
-			Sigmoid() : ActivationFunction(
-				[this](Tensor& x)
+			void activate(Tensor& x) const override
 			{
 				x.map([this](float x) { return sigmoid(x); });
-			},
-				[this](const Tensor& z, const Tensor& pdToOut)
+			};
+
+			Tensor chainDerivative(const Tensor& z, const Tensor& pdToOut) const override
 			{
 				Tensor pdOutToIn = z.mapped([this](float v)
 				{
@@ -84,22 +80,26 @@ namespace tbml
 				});
 
 				return pdOutToIn * pdToOut;
-			})
-			{}
+			};
+
+			void serialize(std::ostream& os) const override
+			{
+				os << "Sigmoid\n";
+			}
 
 		private:
-			float sigmoid(float x) { return 1.0f / (1.0f + std::exp(-x)); }
+			float sigmoid(float x) const { return 1.0f / (1.0f + std::exp(-x)); }
 		};
 
 		class TanH : public ActivationFunction
 		{
 		public:
-			TanH() : ActivationFunction(
-				[](Tensor& x)
+			void activate(Tensor& x) const override
 			{
 				x.map([](float x) { return tanhf(x); });
-			},
-				[](const Tensor& z, const Tensor& pdToOut)
+			};
+
+			Tensor chainDerivative(const Tensor& z, const Tensor& pdToOut) const override
 			{
 				Tensor pdOutToIn = z.mapped([](float v)
 				{
@@ -108,15 +108,18 @@ namespace tbml
 				});
 
 				return pdOutToIn * pdToOut;
-			})
-			{}
+			};
+
+			void serialize(std::ostream& os) const override
+			{
+				os << "TanH\n";
+			}
 		};
 
 		class SoftMax : public ActivationFunction
 		{
 		public:
-			SoftMax() : ActivationFunction(
-				[this](Tensor& x)
+			void activate(Tensor& x) const override
 			{
 				auto shape = x.getShape();
 				assert(shape.size() == 2);
@@ -137,8 +140,9 @@ namespace tbml
 					}
 					for (size_t i = 0; i < shape[1]; i++) x(row, i) /= sum;
 				}
-			},
-				[this](const Tensor& z, const Tensor& pdToOut)
+			};
+
+			Tensor chainDerivative(const Tensor& z, const Tensor& pdToOut) const override
 			{
 				auto shape = z.getShape();
 				assert(shape.size() == 2);
@@ -164,15 +168,18 @@ namespace tbml
 				}
 
 				return result;
-			})
-			{}
+			};
+
+			void serialize(std::ostream& os) const override
+			{
+				os << "SoftMax\n";
+			}
 		};
 
 		class SquareError : public LossFunction
 		{
 		public:
-			SquareError() : LossFunction(
-				[](const Tensor& output, const Tensor& expected)
+			float activate(const Tensor& output, const Tensor& expected) const override
 			{
 				const auto& predicteddata = output.getData();
 				const auto& expecteddata = expected.getData();
@@ -185,22 +192,26 @@ namespace tbml
 					error += diff * diff;
 				}
 				return error;
-			},
-				[](const Tensor& output, const Tensor& expected)
+			};
+
+			Tensor derive(const Tensor& output, const Tensor& expected) const override
 			{
 				assert(output.getShape() == expected.getShape());
 
 				// derivative of square error = YH - Y
 				return output - expected;
-			})
-			{}
+			};
+
+			void serialize(std::ostream& os) const override
+			{
+				os << "SquareError\n";
+			}
 		};
 
 		class CrossEntropy : public LossFunction
 		{
 		public:
-			CrossEntropy() : LossFunction(
-				[](const Tensor& output, const Tensor& expected)
+			float activate(const Tensor& output, const Tensor& expected) const override
 			{
 				const auto& predictedData = output.getData();
 				const auto& expectedData = expected.getData();
@@ -213,15 +224,20 @@ namespace tbml
 					error += -expectedData[i] * std::log(predictedData[i] + float(1e-15f));
 				}
 				return error / output.getShape()[0];
-			},
-				[](const Tensor& output, const Tensor& expected)
+			};
+
+			Tensor derive(const Tensor& output, const Tensor& expected) const override
 			{
 				assert(output.getShape() == expected.getShape());
 
 				// derivative of cross entropy = Yi / (YHi + e) with epsilon = 1e-15f for stability
 				return expected.ewised(output, [](float expected, float output) { return -expected / (output + 1e-15f); });
-			})
-			{}
+			};
+
+			void serialize(std::ostream& os) const override
+			{
+				os << "CrossEntropy\n";
+			}
 		};
 	};
 }

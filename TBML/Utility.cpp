@@ -45,3 +45,29 @@ float tbml::fn::classificationAccuracy(const tbml::Tensor& output, const tbml::T
 
 	return accuracy;
 }
+
+std::shared_ptr<tbml::fn::ActivationFunction> tbml::fn::ActivationFunction::deserialize(std::istream& is)
+{
+	std::string type;
+	is >> type;
+
+	if (type == "ReLU") return std::make_shared<ReLU>();
+	if (type == "Sigmoid") return std::make_shared<Sigmoid>();
+	if (type == "TanH") return std::make_shared<TanH>();
+	if (type == "SoftMax") return std::make_shared<SoftMax>();
+
+	assert(false);
+	return nullptr;
+};
+
+std::shared_ptr<tbml::fn::LossFunction> tbml::fn::LossFunction::deserialize(std::istream& is)
+{
+	std::string type;
+	is >> type;
+
+	if (type == "SquareError") return std::make_shared<SquareError>();
+	if (type == "CrossEntropy") return std::make_shared<CrossEntropy>();
+
+	assert(false);
+	return nullptr;
+};

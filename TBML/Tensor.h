@@ -76,6 +76,9 @@ namespace tbml
 		const std::vector<float>& getData() const { return data; }
 		bool isZero() const;
 
+		void serialize(std::ostream& os) const;
+		static Tensor deserialize(std::istream& is);
+
 	private:
 		std::vector<size_t> shape;
 		std::vector<float> data;

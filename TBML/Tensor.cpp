@@ -359,4 +359,35 @@ namespace tbml
 		}
 		return true;
 	}
+
+	void Tensor::serialize(std::ostream& os) const
+	{
+		os << "Tensor\n";
+		os << getDims() << "\n";
+		for (size_t i = 0; i < getDims(); i++) os << shape[i] << " ";
+		os << "\n";
+		for (size_t i = 0; i < data.size(); i++) os << data[i] << " ";
+		os << "\n";
+	}
+
+	Tensor Tensor::deserialize(std::istream& is)
+	{
+		std::string type;
+		size_t dims;
+		std::vector<size_t> shape;
+		std::vector<float> data;
+
+		is >> type;
+		is >> dims;
+		shape = std::vector<size_t>(dims);
+		int size = 1;
+		for (size_t i = 0; i < dims; i++)
+		{
+			is >> shape[i];
+			size *= shape[i];
+		}
+		data = std::vector<float>(size);
+		for (size_t i = 0; i < size; i++) is >> data[i];
+		return Tensor(shape, data);
+	}
 }

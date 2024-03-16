@@ -52,11 +52,11 @@ VectorListGenome::GenomeCPtr VectorListGenome::crossover(const VectorListGenome:
 
 #pragma region - NNGenome
 
-NNGenome::NNGenome(tbml::fn::LossFunction&& lossFn)
+NNGenome::NNGenome(tbml::nn::LossFunctionPtr&& lossFn)
 	: network(std::move(lossFn))
 {}
 
-NNGenome::NNGenome(tbml::fn::LossFunction&& lossFn, std::vector<std::shared_ptr<tbml::nn::Layer>>&& layers)
+NNGenome::NNGenome(tbml::nn::LossFunctionPtr&& lossFn, std::vector<std::shared_ptr<tbml::nn::Layer>>&& layers)
 	: network(std::move(lossFn), std::move(layers))
 {}
 
@@ -72,7 +72,7 @@ NNGenome::GenomeCPtr NNGenome::crossover(const NNGenome::GenomeCPtr& otherData, 
 	const std::vector<std::shared_ptr<tbml::nn::Layer>>& layers = this->network.getLayers();
 	const std::vector<std::shared_ptr<tbml::nn::Layer>>& oLayers = otherData->network.getLayers();
 
-	tbml::fn::LossFunction lossFunction = this->network.getLossFunction();
+	tbml::nn::LossFunctionPtr lossFunction = this->network.getLossFunction();
 	std::vector<std::shared_ptr<tbml::nn::Layer>> newLayers(layers.size());
 
 	for (size_t i = 0; i < layers.size(); i++)
@@ -103,7 +103,7 @@ NNGenome::GenomeCPtr NNGenome::crossover(const NNGenome::GenomeCPtr& otherData, 
 			return b;
 		});
 
-		tbml::fn::ActivationFunction activationFn = dLayer.getActivationFunction();
+		tbml::nn::ActivationFunctionPtr activationFn = dLayer.getActivationFunction();
 
 		newLayers[i] = std::make_shared<tbml::nn::DenseLayer>(std::move(newWeights), std::move(newBiases), std::move(activationFn));
 	}

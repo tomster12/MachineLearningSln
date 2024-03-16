@@ -1,0 +1,22 @@
+SquareError
+2
+Dense
+ReLU
+Tensor
+2
+2 2 
+-0.997681 -0.528855 0.296304 -0.851253 
+Tensor
+2
+1 2 
+-0.459517 -0.279946 
+Dense
+Sigmoid
+Tensor
+2
+2 1 
+-0.489425 0.97058 
+Tensor
+2
+1 1 
+-0.362163 
