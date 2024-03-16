@@ -15,7 +15,7 @@ void testMNIST();
 
 int main()
 {
-	testBackprop();
+	testMNIST();
 }
 
 void testTime()
@@ -36,7 +36,6 @@ void testTime()
 	auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0);
 
 	// Print output
-	network.print();
 	input.print("Input: ");
 	std::cout << std::endl << "Epochs: " << epoch << std::endl;
 	std::cout << "Time taken: " << us.count() / 1000.0f << "ms" << std::endl;
