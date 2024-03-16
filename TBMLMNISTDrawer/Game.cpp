@@ -26,7 +26,7 @@ void Game::initVariables()
 	this->window->setVerticalSyncEnabled(verticalSyncEnabled);
 
 	// Read the trained MNIST model
-	network = tbml::nn::NeuralNetwork::loadFromFile("MNIST.nn");
+	network = tbml::nn::NeuralNetwork::loadFromFile("../TBMLNeuralNetwork/MNIST.nn");
 	network.print();
 	std::cout << "Parameters: " << network.getParameterCount() << std::endl;
 
