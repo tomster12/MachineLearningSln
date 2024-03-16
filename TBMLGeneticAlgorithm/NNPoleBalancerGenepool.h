@@ -36,6 +36,7 @@ private:
 	float timeLimit = 5.0f;
 
 	tbml::Tensor netInput;
+	tbml::nn::NeuralNetwork network;
 	float poleAngle = 0.0f;
 	float poleVelocity = 0.0f;
 	float poleAcceleration = 0.0f;

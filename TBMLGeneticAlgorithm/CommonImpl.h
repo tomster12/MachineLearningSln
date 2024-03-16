@@ -27,10 +27,10 @@ public:
 	NNGenome() {};
 	NNGenome(tbml::fn::LossFunction&& lossFn);
 	NNGenome(tbml::fn::LossFunction&& lossFn, std::vector<std::shared_ptr<tbml::nn::Layer>>&& layers);
-	NNGenome(tbml::nn::NeuralNetwork&& network);
 
 	NNGenome::GenomeCPtr crossover(const NNGenome::GenomeCPtr& otherData, float mutateChance) const override;
 	tbml::Tensor propogate(const tbml::Tensor& input) const;
+	const tbml::nn::NeuralNetwork& getNetwork() const { return this->network; }
 	size_t getInputSize() const { return this->network.getInputShape()[0]; }
 	void print() const;
 

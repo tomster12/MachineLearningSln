@@ -15,12 +15,9 @@ namespace tbml
 		{
 		public:
 			ActivationFunction() : activateFn(nullptr), chainDerivativeFn(nullptr) {}
+			virtual ~ActivationFunction() = default;
 			virtual void activate(Tensor& x) const { activateFn(x); }
 			virtual Tensor chainDerivative(const Tensor& z, const Tensor& pdToOut) const { return chainDerivativeFn(z, pdToOut); }
-
-		private:
-			std::function<void(Tensor&)> activateFn;
-			std::function<Tensor(const Tensor&, const Tensor&)> chainDerivativeFn;
 
 		protected:
 			ActivationFunction(
@@ -28,18 +25,19 @@ namespace tbml
 				std::function<Tensor(const Tensor& z, const Tensor& pdToOut)> chainDerivativeFn)
 				: activateFn(activateFn), chainDerivativeFn(chainDerivativeFn)
 			{}
+
+		private:
+			std::function<void(Tensor&)> activateFn;
+			std::function<Tensor(const Tensor&, const Tensor&)> chainDerivativeFn;
 		};
 
 		class LossFunction
 		{
 		public:
 			LossFunction() : lossFn(nullptr), derivativeFn(nullptr) {}
+			virtual ~LossFunction() = default;
 			virtual float activate(const Tensor& output, const Tensor& expected) const { return lossFn(output, expected); }
 			virtual Tensor derive(const Tensor& output, const Tensor& expected) const { return derivativeFn(output, expected); }
-
-		private:
-			std::function<float(const Tensor& output, const Tensor& expected)> lossFn;
-			std::function<Tensor(const Tensor& output, const Tensor& expected)> derivativeFn;
 
 		protected:
 			LossFunction(
@@ -47,6 +45,10 @@ namespace tbml
 				std::function<Tensor(const Tensor& output, const Tensor& expected)> derivativeFn)
 				: lossFn(lossFn), derivativeFn(derivativeFn)
 			{}
+
+		private:
+			std::function<float(const Tensor& output, const Tensor& expected)> lossFn;
+			std::function<Tensor(const Tensor& output, const Tensor& expected)> derivativeFn;
 		};
 
 		class ReLU : public ActivationFunction

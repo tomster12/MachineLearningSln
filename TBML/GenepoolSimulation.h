@@ -23,7 +23,7 @@ namespace tbml
 			~Genome() = default;
 
 		public:
-			Genome(const Genome&) = default;
+			Genome(const Genome&) = delete;
 			Genome& operator=(const Genome&) = delete;
 			Genome(const Genome&&) = delete;
 			Genome& operator=(const Genome&&) = delete;
@@ -42,7 +42,7 @@ namespace tbml
 
 		public:
 			Agent(GenomeCPtr&& genome) : genome(std::move(genome)), isFinished(false), fitness(0.0f) {};
-
+			~Agent() = default;
 			Agent(const Agent&) = delete;
 			Agent& operator=(const Agent&) = delete;
 			Agent(const Agent&&) = delete;
@@ -50,7 +50,7 @@ namespace tbml
 
 			virtual bool step() = 0;
 			virtual void render(sf::RenderWindow* window) = 0;
-			const GenomeCPtr& getData() const { return this->genome; };
+			const GenomeCPtr& getGenome() const { return this->genome; };
 			bool getFinished() const { return this->isFinished; };
 			float getFitness() const { return this->fitness; };
 		};
@@ -99,12 +99,12 @@ namespace tbml
 			virtual AgentPtr createAgent(GenomeCPtr&& data) const { return std::make_unique<TAgent>(std::move(data)); }
 
 		public:
-			Genepool(bool enableMultithreadedStepEvaluation = false, bool enableMultithreadedFullEvaluation = false, bool syncMultithreadedSteps = false)
+			Genepool(bool enableMultithreadedStepEvaluation = false, bool enableMultithreadedFullEvaluation = true, bool syncMultithreadedSteps = false)
 			{
 				if (enableMultithreadedFullEvaluation && enableMultithreadedStepEvaluation)
 					throw std::runtime_error("tbml::GenepoolSimulation: Cannot have both enableMultithreadedFullEvaluation and enableMultithreadedStepEvaluation.");
 				if (syncMultithreadedSteps && !enableMultithreadedFullEvaluation)
-					throw std::runtime_error("tbml::GenepoolSimulation: Cannot have multithreadSyncSteps without enableMultithreadedFullEvaluation.");
+					throw std::runtime_error("tbml::GenepoolSimulation: Cannot have syncMultithreadedSteps without enableMultithreadedFullEvaluation.");
 				this->enableMultithreadedStepEvaluation = enableMultithreadedStepEvaluation;
 				this->enableMultithreadedFullEvaluation = enableMultithreadedFullEvaluation;
 				this->syncMultithreadedSteps = syncMultithreadedSteps;
@@ -124,8 +124,8 @@ namespace tbml
 				for (int i = 0; i < populationSize; i++)
 				{
 					GenomeCPtr genome = createGenome();
-					AgentPtr geneticInstance = createAgent(std::move(genome));
-					this->currentGeneration.push_back(std::move(geneticInstance));
+					AgentPtr agent = createAgent(std::move(genome));
+					this->currentGeneration.push_back(std::move(agent));
 				}
 
 				this->isInitialized = true;
@@ -191,6 +191,7 @@ namespace tbml
 				std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 				auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0);
 				std::cout << "Processed generation: " << us.count() / 1000.0f << "ms" << std::endl;
+
 				this->generationStepNumber++;
 				if (allFinished) this->isGenerationEvaluated = true;
 			}
@@ -203,11 +204,12 @@ namespace tbml
 				// Sort generation and get best data
 				std::sort(this->currentGeneration.begin(), this->currentGeneration.end(), [this](const auto& a, const auto& b) { return a->getFitness() > b->getFitness(); });
 				const AgentPtr& bestInstance = this->currentGeneration[0];
-				this->bestData = GenomeCPtr(bestInstance->getData());
+				this->bestData = GenomeCPtr(bestInstance->getGenome());
 				this->bestFitness = bestInstance->getFitness();
+
 				std::cout << "Generation: " << this->generationNumber << ", best fitness: " << this->bestFitness << std::endl;
 
-				// Create next generation with new instance of best data
+				// Initialize next generation with new instance of best data
 				std::vector<AgentPtr> nextGeneration;
 				nextGeneration.push_back(std::move(createAgent(std::move(GenomeCPtr(this->bestData)))));
 
@@ -223,9 +225,9 @@ namespace tbml
 					for (int i = 0; i < selectAmount; i++)
 					{
 						cumSum += transformFitness(this->currentGeneration[i]->getFitness());
-						if (r <= cumSum) return this->currentGeneration[i]->getData();
+						if (r <= cumSum) return this->currentGeneration[i]->getGenome();
 					}
-					return this->currentGeneration[selectAmount - 1]->getData();
+					return this->currentGeneration[selectAmount - 1]->getGenome();
 				};
 
 				for (int i = 0; i < this->populationSize - 1; i++)

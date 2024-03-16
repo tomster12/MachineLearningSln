@@ -20,6 +20,13 @@ namespace tbml
 		class Layer
 		{
 		public:
+			Layer() = default;
+			virtual ~Layer() = default;
+			Layer(const Layer&) = delete;
+			Layer& operator=(const Layer&) = delete;
+			Layer(Layer&&) = delete;
+			Layer& operator=(Layer&&) = delete;
+
 			virtual const Tensor& propogate(const Tensor& input) = 0;
 			virtual Tensor propogate(const Tensor& input) const = 0;
 			virtual void propogateMut(Tensor& input) const = 0;
@@ -45,6 +52,7 @@ namespace tbml
 			NeuralNetwork() {}
 			NeuralNetwork(fn::LossFunction&& lossFn) : lossFn(std::move(lossFn)) {}
 			NeuralNetwork(fn::LossFunction&& lossFn, std::vector<std::shared_ptr<Layer>>&& layers) : lossFn(std::move(lossFn)), layers(std::move(layers)) {}
+
 			void addLayer(std::shared_ptr<Layer>&& layer);
 			const Tensor& propogate(const Tensor& input);
 			Tensor propogate(const Tensor& input) const;
@@ -68,6 +76,7 @@ namespace tbml
 			DenseLayer(const DenseLayer& other);
 			DenseLayer(size_t inputSize, size_t outputSize, fn::ActivationFunction&& activationFn, _DenseInitType initType = _DenseInitType::RANDOM, bool useBias = true);
 			DenseLayer(Tensor&& weights, Tensor&& bias, fn::ActivationFunction&& activationFn);
+
 			virtual const Tensor& propogate(const Tensor& input) override;
 			virtual Tensor propogate(const Tensor& input) const override;
 			virtual void propogateMut(Tensor& input) const override;

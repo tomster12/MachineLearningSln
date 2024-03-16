@@ -60,10 +60,6 @@ NNGenome::NNGenome(tbml::fn::LossFunction&& lossFn, std::vector<std::shared_ptr<
 	: network(std::move(lossFn), std::move(layers))
 {}
 
-NNGenome::NNGenome(tbml::nn::NeuralNetwork&& network)
-	: network(std::move(network))
-{}
-
 tbml::Tensor NNGenome::propogate(const tbml::Tensor& input) const
 {
 	return this->network.propogate(input);
@@ -75,6 +71,8 @@ NNGenome::GenomeCPtr NNGenome::crossover(const NNGenome::GenomeCPtr& otherData, 
 {
 	const std::vector<std::shared_ptr<tbml::nn::Layer>>& layers = this->network.getLayers();
 	const std::vector<std::shared_ptr<tbml::nn::Layer>>& oLayers = otherData->network.getLayers();
+
+	tbml::fn::LossFunction lossFunction = this->network.getLossFunction();
 	std::vector<std::shared_ptr<tbml::nn::Layer>> newLayers(layers.size());
 
 	for (size_t i = 0; i < layers.size(); i++)
@@ -110,7 +108,7 @@ NNGenome::GenomeCPtr NNGenome::crossover(const NNGenome::GenomeCPtr& otherData, 
 		newLayers[i] = std::make_shared<tbml::nn::DenseLayer>(std::move(newWeights), std::move(newBiases), std::move(activationFn));
 	}
 
-	return std::make_shared<NNGenome>(std::move(tbml::nn::NeuralNetwork(std::move(this->network.getLossFunction()), std::move(newLayers))));
-};
+	return std::make_shared<NNGenome>(std::move(lossFunction), std::move(newLayers));
+}
 
 #pragma endregion

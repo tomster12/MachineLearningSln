@@ -10,9 +10,10 @@
 NNIceTargetsAgent::NNIceTargetsAgent(
 	sf::Vector2f startPos, float radius, float moveAcc, float moveDrag, int maxIterations,
 	const NNIceTargetsGenepool* genepool, NNIceTargetsAgent::GenomeCPtr&& genome)
-	: netInput(tbml::Tensor({ 1, 6 }, 0.0f)), pos(startPos), radius(radius), moveAcc(moveAcc), moveDrag(moveDrag), maxIterations(maxIterations),
+	: pos(startPos), radius(radius), moveAcc(moveAcc), moveDrag(moveDrag), maxIterations(maxIterations),
 	genepool(genepool), Agent(std::move(genome)),
-	currentIteration(0), currentTarget(0), vel(), anger(0.0f)
+	currentIteration(0), currentTarget(0), vel(), anger(0.0f),
+	netInput({ 1, 6 }, 0.0f), network(this->genome->getNetwork())
 {
 	if (global::showVisuals) initVisual();
 }
@@ -39,7 +40,7 @@ bool NNIceTargetsAgent::step()
 	netInput(0, 3) = targetPos2.y - this->pos.y;
 	netInput(0, 4) = this->vel.x;
 	netInput(0, 5) = this->vel.y;
-	tbml::Tensor output = this->genome->propogate(netInput);
+	const tbml::Tensor& output = this->network.propogate(netInput);
 
 	// Update position, velocity, drag
 	this->vel.x += (output(0, 0) * 2 - 1) * this->moveAcc * (1.0f / 60.0f);

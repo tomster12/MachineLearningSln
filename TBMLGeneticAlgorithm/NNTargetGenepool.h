@@ -28,6 +28,7 @@ private:
 	int maxIterations = 0;
 
 	tbml::Tensor netInput;
+	tbml::nn::NeuralNetwork network;
 	sf::Vector2f pos;
 	int currentIteration = 0;
 };

@@ -12,7 +12,7 @@ NNTargetAgent::NNTargetAgent(
 	const NNTargetGenepool* genepool, NNTargetAgent::GenomeCPtr&& genome)
 	: Agent(std::move(genome)), genepool(genepool),
 	pos(startPos), radius(radius), moveAcc(moveAcc), maxIterations(maxIterations),
-	netInput({ 1, 2 }, 0.0f), currentIteration(0)
+	netInput({ 1, 2 }, 0.0f), network(this->genome->getNetwork()), currentIteration(0)
 {
 	if (global::showVisuals) initVisual();
 }
@@ -35,7 +35,7 @@ bool NNTargetAgent::step()
 	sf::Vector2f targetPos = this->genepool->getTargetPos();
 	netInput(0, 0) = this->pos.x - targetPos.x;
 	netInput(0, 1) = this->pos.y - targetPos.y;
-	tbml::Tensor output = this->genome->propogate(netInput);
+	const tbml::Tensor& output = this->network.propogate(netInput);
 	this->pos.x += output(0, 0) * this->moveAcc;
 	this->pos.y += output(0, 1) * this->moveAcc;
 	this->currentIteration++;
