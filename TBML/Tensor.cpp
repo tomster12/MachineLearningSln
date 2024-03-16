@@ -320,7 +320,7 @@ namespace tbml
 			}
 		}
 
-		std::cout << dataStr << std::endl;
+		std::cout << dataStr << std::endl << std::endl;
 	}
 
 	std::vector<Tensor> Tensor::groupRows(size_t targetGroupSize) const

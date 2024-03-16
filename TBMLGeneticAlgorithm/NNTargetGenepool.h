@@ -38,7 +38,7 @@ public:
 	NNTargetGenepool(
 		sf::Vector2f instanceStartPos, float instanceRadius, float instancemoveAcc, int instancemaxIterations,
 		float targetRadius, sf::Vector2f targetRandomCentre, float targetRandomRadius,
-		std::vector<size_t> layerSizes, std::vector<tbml::fn::ActivationFunction> actFns);
+		tbml::fn::LossFunction lossFn, std::vector<std::shared_ptr<tbml::nn::Layer>> layers);
 
 	void render(sf::RenderWindow* window) override;
 
@@ -57,8 +57,8 @@ protected:
 	sf::Vector2f targetRandomCentre;
 	float targetRandomRadius = 0.0f;
 	sf::Vector2f targetPos;
-	std::vector<size_t> layerSizes;
-	std::vector<tbml::fn::ActivationFunction> actFns;
+	tbml::fn::LossFunction lossFn;
+	std::vector<std::shared_ptr<tbml::nn::Layer>> layers;
 
 	GenomePtr createGenome() const override;
 	AgentPtr createAgent(GenomePtr&& genome) const override;

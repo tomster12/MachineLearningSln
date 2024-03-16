@@ -57,7 +57,8 @@ void Game::initialize()
 	tbml::ga::IGenepoolPtr genepool(new NNPoleBalancerGenepool(
 		1.0f, 0.1f, 0.5f, 2.0f,
 		0.6f, 0.25f, 20.0f,
-		{ 4, 1 }, { tbml::fn::TanH() }));
+		tbml::fn::SquareError(), {
+			std::make_shared<tbml::nn::DenseLayer>(4, 1, tbml::fn::TanH()) }));
 
 	genepool->resetGenepool(2000, 0.05f);
 

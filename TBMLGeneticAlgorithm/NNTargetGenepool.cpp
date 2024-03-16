@@ -3,7 +3,7 @@
 #include "NNTargetGenepool.h"
 #include "Utility.h"
 #include "CommonImpl.h"
-#include "Matrix.h"
+#include "Tensor.h"
 
 #pragma region - NNTargetAgent
 
@@ -31,8 +31,8 @@ bool NNTargetAgent::step()
 
 	// Move position by current vector
 	sf::Vector2f targetPos = this->genepool->getTargetPos();
-	tbml::Matrix input = tbml::Matrix({ { this->pos.x - targetPos.x, this->pos.y - targetPos.y } });
-	tbml::Matrix output = this->genome->propogate(input);
+	tbml::Tensor input = tbml::Tensor({ { this->pos.x - targetPos.x, this->pos.y - targetPos.y } });
+	tbml::Tensor output = this->genome->propogate(input);
 	this->pos.x += output(0, 0) * this->moveAcc;
 	this->pos.y += output(0, 1) * this->moveAcc;
 	this->currentIteration++;
@@ -98,10 +98,10 @@ float NNTargetAgent::calculateFitness()
 NNTargetGenepool::NNTargetGenepool(
 	sf::Vector2f instanceStartPos, float instanceRadius, float instancemoveAcc, int instancemaxIterations,
 	float targetRadius, sf::Vector2f targetRandomCentre, float targetRandomRadius,
-	std::vector<size_t> layerSizes, std::vector<tbml::fn::ActivationFunction> actFns)
+	tbml::fn::LossFunction lossFn, std::vector<std::shared_ptr<tbml::nn::Layer>> layers)
 	: instanceStartPos(instanceStartPos), instanceRadius(instanceRadius), instancemoveAcc(instancemoveAcc), instancemaxIterations(instancemaxIterations),
 	targetRadius(targetRadius), targetRandomCentre(targetRandomCentre), targetRandomRadius(targetRandomRadius),
-	layerSizes(layerSizes), actFns(actFns)
+	lossFn(lossFn), layers(layers)
 {
 	// Initialize variables
 	this->targetPos = this->getRandomTargetPos();
@@ -115,7 +115,10 @@ NNTargetGenepool::NNTargetGenepool(
 
 NNTargetGenepool::GenomePtr NNTargetGenepool::createGenome() const
 {
-	return std::make_shared<NNGenome>(this->layerSizes, this->actFns);
+	tbml::fn::LossFunction lossFn = this->lossFn;
+	std::vector<std::shared_ptr<tbml::nn::Layer>> layers(this->layers.size());
+	for (size_t i = 0; i < this->layers.size(); i++) layers[i] = this->layers[i]->clone();
+	return std::make_shared<NNGenome>(std::move(lossFn), std::move(layers));
 }
 
 NNTargetGenepool::AgentPtr NNTargetGenepool::createAgent(NNTargetGenepool::GenomePtr&& genome) const

@@ -29,7 +29,7 @@ private:
 	float moveDrag = 0;
 	int maxIterations = 0;
 
-	tbml::Matrix netInput;
+	tbml::Tensor netInput;
 	sf::Vector2f pos;
 	sf::Vector2f vel;
 	int currentIteration = 0;
@@ -44,7 +44,7 @@ public:
 	NNIceTargetsGenepool(
 		sf::Vector2f instanceStartPos, float instanceRadius, float instanceMoveAcc, float instanceMoveDrag, int instancemaxIterations,
 		std::vector<sf::Vector2f> targets, float targetRadius,
-		std::vector<size_t> layerSizes, std::vector<tbml::fn::ActivationFunction> actFns);
+		tbml::fn::LossFunction lossFn, std::vector<std::shared_ptr<tbml::nn::Layer>> layers);
 
 	void render(sf::RenderWindow* window) override;
 
@@ -61,8 +61,8 @@ protected:
 	int instancemaxIterations = 0;
 	std::vector<sf::Vector2f> targetPos;
 	float targetRadius = 0.0f;
-	std::vector<size_t> layerSizes;
-	std::vector<tbml::fn::ActivationFunction> actFns;
+	tbml::fn::LossFunction lossFn;
+	std::vector<std::shared_ptr<tbml::nn::Layer>> layers;
 
 	GenomePtr createGenome() const override;
 	AgentPtr createAgent(GenomePtr&& data) const override;

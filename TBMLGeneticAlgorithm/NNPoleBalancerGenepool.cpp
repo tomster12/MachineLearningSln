@@ -40,8 +40,8 @@ bool NNPoleBalancerAgent::step()
 	netInput(0, 1) = cartAcceleration;
 	netInput(0, 2) = poleAngle;
 	netInput(0, 3) = poleAcceleration;
-	const tbml::Tensor& output = this->genome->propogate(netInput);
-	float ft = output(0, 0) > 0.5f ? force : -force;
+	tbml::Tensor output = this->genome->propogate(netInput);
+	float ft = output(0, 0) > 0.0f ? force : -force;
 
 	// Calculate acceleration
 	cartAcceleration = (ft + poleMass * poleLength * (poleVelocity * poleVelocity * sin(poleAngle) - poleAcceleration * cos(poleAngle))) / (cartMass + poleMass);
@@ -97,15 +97,19 @@ float NNPoleBalancerAgent::calculateFitness()
 NNPoleBalancerGenepool::NNPoleBalancerGenepool(
 	float cartMass, float poleMass, float poleLength, float force,
 	float trackLimit, float angleLimit, float timeLimit,
-	std::vector<size_t> layerSizes, std::vector<tbml::fn::ActivationFunction> actFns)
+	tbml::fn::LossFunction lossFn, std::vector<std::shared_ptr<tbml::nn::Layer>> layers)
 	: cartMass(cartMass), poleMass(poleMass), poleLength(poleLength), force(force),
 	trackLimit(trackLimit), angleLimit(angleLimit), timeLimit(timeLimit),
-	layerSizes(layerSizes), actFns(actFns)
+	lossFn(lossFn), layers(layers)
 {}
 
 NNPoleBalancerGenepool::GenomePtr NNPoleBalancerGenepool::createGenome() const
 {
-	return std::make_shared<NNGenome>(this->layerSizes, actFns);
+	// TODO: Figure out how to do this but random
+	tbml::fn::LossFunction lossFn = this->lossFn;
+	std::vector<std::shared_ptr<tbml::nn::Layer>> layers(this->layers.size());
+	for (size_t i = 0; i < this->layers.size(); i++) layers[i] = this->layers[i]->clone();
+	return std::make_shared<NNGenome>(std::move(lossFn), std::move(layers));
 };
 
 NNPoleBalancerGenepool::AgentPtr NNPoleBalancerGenepool::createAgent(NNPoleBalancerGenepool::GenomePtr&& data) const

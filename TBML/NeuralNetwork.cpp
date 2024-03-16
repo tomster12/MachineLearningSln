@@ -7,15 +7,9 @@ namespace tbml
 {
 	namespace nn
 	{
-		NeuralNetwork::~NeuralNetwork()
+		void NeuralNetwork::addLayer(std::shared_ptr<Layer>&& layer)
 		{
-			for (size_t i = 0; i < layers.size(); i++) delete layers[i];
-			layers.clear();
-		}
-
-		void NeuralNetwork::addLayer(Layer* layer)
-		{
-			layers.push_back(layer);
+			layers.push_back(std::move(layer));
 		}
 
 		const Tensor& NeuralNetwork::propogate(const Tensor& input)
@@ -45,7 +39,7 @@ namespace tbml
 			Tensor current = input.getShape().size() == 1 ? input.transposed() : input;
 
 			// Propogate rest of layers
-			for (size_t i = 1; i < layers.size(); i++)
+			for (size_t i = 0; i < layers.size(); i++)
 			{
 				current = layers[i]->propogate(current);
 			}
@@ -146,6 +140,13 @@ namespace tbml
 			for (const auto& layer : layers) layer->print();
 		}
 
+		DenseLayer::DenseLayer(const DenseLayer& other)
+		{
+			weights = other.weights;
+			bias = other.bias;
+			activationFn = fn::ActivationFunction(other.activationFn);
+		}
+
 		DenseLayer::DenseLayer(size_t inputSize, size_t outputSize, fn::ActivationFunction&& activationFn, _DenseInitType initType, bool useBias)
 			: activationFn(activationFn)
 		{
@@ -167,13 +168,17 @@ namespace tbml
 			}
 		}
 
+		DenseLayer::DenseLayer(Tensor weights, Tensor bias, fn::ActivationFunction activationFn)
+			: weights(std::move(weights)), bias(std::move(bias)), activationFn(std::move(activationFn))
+		{}
+
 		const Tensor& DenseLayer::propogate(const Tensor& input)
 		{
 			assert(input.getDims() == 2 && input.getShape(1) == weights.getShape(0) && "Input shape does not match weights shape");
 
 			// Propogate input with weights and bias
 			propogateInput = &input;
-			output = input.matmulled(weights).add(bias, 0);
+			output = input.matmulled(weights).add(bias, 0); // TODO: Can this add be in place?
 			activationFn.activate(output);
 			return output;
 		}
@@ -236,6 +241,11 @@ namespace tbml
 			bias.print("Bias:");
 		}
 
+		std::shared_ptr<Layer> DenseLayer::clone() const
+		{
+			return std::make_shared<DenseLayer>(*this);
+		}
+
 		ConvLayer::ConvLayer(std::vector<size_t> kernel, std::vector<size_t> stride, fn::ActivationFunction&& activationFn)
 			: activationFn(activationFn)
 		{}
@@ -264,6 +274,12 @@ namespace tbml
 			// TODO: Implement
 		}
 
+		std::shared_ptr<Layer> ConvLayer::clone() const
+		{
+			// TODO: Implement
+			return std::shared_ptr<ConvLayer>();
+		}
+
 		FlattenLayer::FlattenLayer()
 		{}
 
@@ -286,6 +302,12 @@ namespace tbml
 			pdToIn = pdToOut;
 		}
 
+		std::shared_ptr<Layer> FlattenLayer::clone() const
+		{
+			// TODO: Implement
+			return std::shared_ptr<FlattenLayer>();
+		}
+
 		MaxPoolLayer::MaxPoolLayer()
 		{}
 
@@ -306,6 +328,12 @@ namespace tbml
 		{
 			// TODO: Implement
 			pdToIn = pdToOut;
+		}
+
+		std::shared_ptr<Layer> MaxPoolLayer::clone() const
+		{
+			// TODO: Implement
+			return std::shared_ptr<MaxPoolLayer>();
 		}
 	}
 }

@@ -52,7 +52,7 @@ public:
 	NNPoleBalancerGenepool(
 		float cartMass, float poleMass, float poleLength, float force,
 		float trackLimit, float angleLimit, float timeLimit,
-		std::vector<size_t> layerSizes, std::vector<tbml::fn::ActivationFunction> actFns);
+		tbml::fn::LossFunction lossFn, std::vector<std::shared_ptr<tbml::nn::Layer>> layers);
 
 protected:
 	float cartMass;
@@ -62,8 +62,8 @@ protected:
 	float trackLimit;
 	float angleLimit;
 	float timeLimit;
-	std::vector<size_t> layerSizes;
-	std::vector<tbml::fn::ActivationFunction> actFns;
+	tbml::fn::LossFunction lossFn;
+	std::vector<std::shared_ptr<tbml::nn::Layer>> layers;
 
 	GenomePtr createGenome() const override;
 	AgentPtr createAgent(GenomePtr&& data) const override;

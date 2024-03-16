@@ -15,17 +15,16 @@ void testMNIST();
 
 int main()
 {
-	testMNIST();
-	return 0;
+	testBackprop();
 }
 
 void testTime()
 {
 	// Create network and input
 	tbml::nn::NeuralNetwork network(tbml::fn::SquareError(), {
-		new tbml::nn::DenseLayer(8, 8, tbml::fn::Sigmoid()),
-		new tbml::nn::DenseLayer(8, 8, tbml::fn::Sigmoid()),
-		new tbml::nn::DenseLayer(8, 1, tbml::fn::Sigmoid()) });
+		std::make_shared<tbml::nn::DenseLayer>(8, 8, tbml::fn::Sigmoid()),
+		std::make_shared<tbml::nn::DenseLayer>(8, 8, tbml::fn::Sigmoid()),
+		std::make_shared<tbml::nn::DenseLayer>(8, 1, tbml::fn::Sigmoid()) });
 
 	tbml::Tensor input = tbml::Tensor({ { 1, 0, -1, 0.2f, 0.7f, -0.3f, -1, -1 } });
 	size_t epoch = 1'000'000;
@@ -51,8 +50,8 @@ void testBackprop()
 	tbml::Tensor expected{ std::vector<std::vector<float>>{ { L }, { H }, { H }, { L } } };
 
 	tbml::nn::NeuralNetwork network(tbml::fn::SquareError(), {
-		new tbml::nn::DenseLayer(2, 2, tbml::fn::TanH()),
-		new tbml::nn::DenseLayer(2, 1, tbml::fn::TanH()) });
+		std::make_shared<tbml::nn::DenseLayer>(2, 2, tbml::fn::TanH()),
+		std::make_shared<tbml::nn::DenseLayer>(2, 1, tbml::fn::TanH()) });
 
 	// Print values and train
 	input.print("Input:");
@@ -74,18 +73,18 @@ void testMNIST()
 	assert(trainImageSize == 784 && testImageSize == 784);
 
 	// Print out dataset information
-	std::cout << "\nTraining Image Count: " << trainImageCount << std::endl;
-	trainInput.print("\nTraining Input: ");
-	trainExpected.print("\nTraining Expected: ");
-	std::cout << "\nTest Image Count: " << testImageCount << std::endl;
-	testInput.print("\nTest Input: ");
-	testExpected.print("\nTest Expected: ");
+	std::cout << "Training Image Count: " << trainImageCount << std::endl;
+	trainInput.print("Training Input: ");
+	trainExpected.print("Training Expected: ");
+	std::cout << "Test Image Count: " << testImageCount << std::endl;
+	testInput.print("Test Input: ");
+	testExpected.print("Test Expected: ");
 
 	// Create network and train
 	// Batch: ~13ms, Epoch: ~19200ms, Total: ~300s, Accuracy: 95.23%
 	tbml::nn::NeuralNetwork network(tbml::fn::CrossEntropy(), {
-		new tbml::nn::DenseLayer(784, 100, tbml::fn::ReLU()),
-		new tbml::nn::DenseLayer(100, 10, tbml::fn::SoftMax()) });
+		std::make_shared<tbml::nn::DenseLayer>(784, 100, tbml::fn::ReLU()),
+		std::make_shared<tbml::nn::DenseLayer>(100, 10, tbml::fn::SoftMax()) });
 	network.train(trainInput, trainExpected, { 15, 50, 0.02f, 0.8f, 0.01f, 3 });
 
 	// Test network against test data

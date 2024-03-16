@@ -25,12 +25,12 @@ class NNGenome : public tbml::ga::Genome<NNGenome>
 {
 public:
 	NNGenome() {};
-	NNGenome(std::vector<size_t> layerSizes);
-	NNGenome(std::vector<size_t> layerSizes, std::vector<tbml::fn::ActivationFunction> actFns);
+	NNGenome(tbml::fn::LossFunction&& lossFn);
+	NNGenome(tbml::fn::LossFunction&& lossFn, std::vector<std::shared_ptr<tbml::nn::Layer>>&& layers);
 	NNGenome(tbml::nn::NeuralNetwork&& network);
 
 	NNGenome::GenomePtr crossover(const NNGenome::GenomePtr& otherData, float mutateChance) const override;
-	const tbml::Tensor& propogate(const tbml::Tensor& input);
+	tbml::Tensor propogate(const tbml::Tensor& input) const;
 	size_t getInputSize() const { return this->network.getInputShape()[0]; }
 	void print() const;
 

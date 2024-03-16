@@ -3,14 +3,14 @@
 #include "NNIceTargetsGenepool.h"
 #include "CommonImpl.h"
 #include "Utility.h"
-#include "Matrix.h"
+#include "Tensor.h"
 
 #pragma region - NNIceTargetsAgent
 
 NNIceTargetsAgent::NNIceTargetsAgent(
 	sf::Vector2f startPos, float radius, float moveAcc, float moveDrag, int maxIterations,
 	const NNIceTargetsGenepool* genepool, NNIceTargetsAgent::GenomePtr&& genome)
-	: netInput(1, 6), pos(startPos), radius(radius), moveAcc(moveAcc), moveDrag(moveDrag), maxIterations(maxIterations),
+	: netInput(tbml::Tensor({ 1, 6 }, 0.0f)), pos(startPos), radius(radius), moveAcc(moveAcc), moveDrag(moveDrag), maxIterations(maxIterations),
 	genepool(genepool), Agent(std::move(genome)),
 	currentIteration(0), currentTarget(0), vel(), anger(0.0f)
 {
@@ -39,7 +39,7 @@ bool NNIceTargetsAgent::step()
 	netInput(0, 3) = targetPos2.y - this->pos.y;
 	netInput(0, 4) = this->vel.x;
 	netInput(0, 5) = this->vel.y;
-	tbml::Matrix output = this->genome->propogate(netInput);
+	tbml::Tensor output = this->genome->propogate(netInput);
 
 	// Update position, velocity, drag
 	this->vel.x += (output(0, 0) * 2 - 1) * this->moveAcc * (1.0f / 60.0f);
@@ -109,10 +109,10 @@ float NNIceTargetsAgent::calculateFitness()
 NNIceTargetsGenepool::NNIceTargetsGenepool(
 	sf::Vector2f instanceStartPos, float instanceRadius, float instanceMoveAcc, float instanceMoveDrag, int instancemaxIterations,
 	std::vector<sf::Vector2f> targets, float targetRadius,
-	std::vector<size_t> layerSizes, std::vector<tbml::fn::ActivationFunction> actFns)
+	tbml::fn::LossFunction lossFn, std::vector<std::shared_ptr<tbml::nn::Layer>> layers)
 	: instanceStartPos(instanceStartPos), instanceRadius(instanceRadius), instanceMoveAcc(instanceMoveAcc), instanceMoveDrag(instanceMoveDrag), instancemaxIterations(instancemaxIterations),
 	targetPos(targets), targetRadius(targetRadius),
-	layerSizes(layerSizes), actFns(actFns)
+	lossFn(lossFn), layers(layers)
 {
 	// Initialize variables
 	this->targetShapes = std::vector<sf::CircleShape>();
@@ -131,7 +131,10 @@ NNIceTargetsGenepool::NNIceTargetsGenepool(
 
 NNIceTargetsGenepool::GenomePtr NNIceTargetsGenepool::createGenome() const
 {
-	return std::make_shared<NNGenome>(this->layerSizes, this->actFns);
+	tbml::fn::LossFunction lossFn = this->lossFn;
+	std::vector<std::shared_ptr<tbml::nn::Layer>> layers(this->layers.size());
+	for (size_t i = 0; i < this->layers.size(); i++) layers[i] = this->layers[i]->clone();
+	return std::make_shared<NNGenome>(std::move(lossFn), std::move(layers));
 };
 
 NNIceTargetsGenepool::AgentPtr NNIceTargetsGenepool::createAgent(NNIceTargetsGenepool::GenomePtr&& data) const
