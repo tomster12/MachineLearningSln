@@ -26,6 +26,8 @@ private:
 	float radius = 0;
 	float moveAcc = 0;
 	int maxIterations = 0;
+
+	tbml::Tensor netInput;
 	sf::Vector2f pos;
 	int currentIteration = 0;
 };

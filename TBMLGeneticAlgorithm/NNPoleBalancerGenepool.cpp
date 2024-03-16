@@ -8,7 +8,7 @@ NNPoleBalancerAgent::NNPoleBalancerAgent(
 	float cartMass, float poleMass, float poleLength, float force,
 	float trackLimit, float angleLimit, float timeLimit,
 	NNPoleBalancerAgent::GenomeCPtr&& genome)
-	: tbml::ga::Agent<NNGenome>(std::move(genome)),
+	: Agent(std::move(genome)),
 	cartMass(cartMass), poleMass(poleMass), poleLength(poleLength), force(force),
 	trackLimit(trackLimit), angleLimit(angleLimit), timeLimit(timeLimit),
 	netInput({ 1, 4 }, 0), poleAngle(0.1f)

@@ -22,6 +22,7 @@ namespace tbml
 		public:
 			virtual const Tensor& propogate(const Tensor& input) = 0;
 			virtual Tensor propogate(const Tensor& input) const = 0;
+			virtual void propogateMut(Tensor& input) const = 0;
 			virtual void backpropogate(const Tensor& pdToOut) = 0;
 			virtual void gradientDescent(float learningRate, float momentumRate) {};
 			virtual std::vector<size_t> getInputShape() const { return {}; }; // TODO: Make pure virtual
@@ -69,6 +70,7 @@ namespace tbml
 			DenseLayer(Tensor&& weights, Tensor&& bias, fn::ActivationFunction&& activationFn);
 			virtual const Tensor& propogate(const Tensor& input) override;
 			virtual Tensor propogate(const Tensor& input) const override;
+			virtual void propogateMut(Tensor& input) const override;
 			virtual void backpropogate(const Tensor& pdToOut) override;
 			virtual void gradientDescent(float learningRate, float momentumRate) override;
 			virtual std::vector<size_t> getInputShape() const override { return { weights.getShape(0) }; }
@@ -91,12 +93,14 @@ namespace tbml
 			Tensor momentumBias;
 		};
 
+		/*
 		class ConvLayer : public Layer
 		{
 		public:
 			ConvLayer(std::vector<size_t> kernel, std::vector<size_t> stride, fn::ActivationFunction&& activationFn);
 			virtual const Tensor& propogate(const Tensor& input) override;
 			virtual Tensor propogate(const Tensor& input) const override;
+			virtual void propogate(Tensor& input) const override;
 			virtual void backpropogate(const Tensor& pdToOut) override;
 			virtual void gradientDescent(float learningRate, float momentumRate) override;
 			virtual std::shared_ptr<Layer> clone() const override;
@@ -111,6 +115,7 @@ namespace tbml
 			FlattenLayer();
 			virtual const Tensor& propogate(const Tensor& input) override;
 			virtual Tensor propogate(const Tensor& input) const override;
+			virtual void propogate(Tensor& input) const override;
 			virtual void backpropogate(const Tensor& pdToOut) override;
 			virtual std::shared_ptr<Layer> clone() const override;
 		};
@@ -121,8 +126,10 @@ namespace tbml
 			MaxPoolLayer();
 			virtual const Tensor& propogate(const Tensor& input) override;
 			virtual Tensor propogate(const Tensor& input) const override;
+			virtual void propogate(Tensor& input) const override;
 			virtual void backpropogate(const Tensor& pdToOut) override;
 			virtual std::shared_ptr<Layer> clone() const override;
 		};
+		*/
 	}
 };
