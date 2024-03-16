@@ -18,7 +18,7 @@ void testMNISTSerialization();
 int main()
 {
 	srand(0);
-	testMNIST();
+	testMNISTSerialization();
 }
 
 void testTime()
@@ -98,7 +98,7 @@ void testMNIST()
 	testExpected.print("Test Expected: ");
 
 	// Create network and train
-	// Batch: ~13ms, Epoch: ~19200ms, Total: ~300s, Accuracy: 95.23%
+	// Batch: ~11ms, Epoch: ~15000ms, Total: ~226s, Accuracy: 95.22%
 	tbml::nn::NeuralNetwork network(std::make_shared<tbml::fn::CrossEntropy>(), {
 		std::make_shared<tbml::nn::DenseLayer>(784, 100, std::make_shared<tbml::fn::ReLU>()),
 		std::make_shared<tbml::nn::DenseLayer>(100, 10, std::make_shared<tbml::fn::SoftMax>()) });
