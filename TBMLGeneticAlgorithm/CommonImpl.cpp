@@ -60,11 +60,6 @@ NNGenome::NNGenome(tbml::fn::LossFunctionPtr&& lossFn, std::vector<std::shared_p
 	: network(std::move(lossFn), std::move(layers))
 {}
 
-tbml::Tensor NNGenome::propogate(const tbml::Tensor& input) const
-{
-	return this->network.propogate(input);
-}
-
 void NNGenome::print() const { this->network.print(); }
 
 NNGenome::GenomeCPtr NNGenome::crossover(const NNGenome::GenomeCPtr& otherData, float mutateChance) const

@@ -12,39 +12,32 @@ namespace tbml
 			layers.push_back(std::move(layer));
 		}
 
-		const Tensor& NeuralNetwork::propogate(const Tensor& input)
-		{
-			if (layers.size() == 0) return Tensor::ZERO;
-
-			// Propogate first layer
-			layers[0]->propogate(input);
-
-			// Propogate rest of layers, using const refs
-			for (size_t i = 1; i < layers.size(); i++)
-			{
-				layers[i]->propogate(layers[i - 1]->getOutput());
-			}
-
-			// Return predicted output of last layer
-			return layers[layers.size() - 1]->getOutput();
-		}
-
 		Tensor NeuralNetwork::propogate(const Tensor& input) const
 		{
 			if (layers.size() == 0) return Tensor(Tensor::ZERO);
 
-			// Copy input into a local tensor
+			// Copy to local, propogate layers mutably
 			Tensor current = input;
+			for (size_t i = 0; i < layers.size(); i++) layers[i]->propogateMut(current);
+			return current;
+		}
 
-			// Propogate each layer without copies
-			layers[0]->propogateMut(current);
-			for (size_t i = 0; i < layers.size(); i++)
-			{
-				current = layers[i]->propogate(current);
-			}
+		void NeuralNetwork::propogateMut(Tensor& input) const
+		{
+			if (layers.size() == 0) return;
 
-			// Return predicted of last layer
-			return std::move(current);
+			// Propogate layers with mutable input
+			for (size_t i = 0; i < layers.size(); i++) layers[i]->propogateMut(input);
+		}
+
+		const Tensor& NeuralNetwork::propogateRef(const Tensor& input)
+		{
+			if (layers.size() == 0) return Tensor::ZERO;
+
+			// Copy to local, propogate layers mutably
+			layers[0]->propogateRef(input);
+			for (size_t i = 1; i < layers.size(); i++) layers[i]->propogateRef(layers[i - 1]->getOutput());
+			return layers[layers.size() - 1]->getOutput();
 		}
 
 		void NeuralNetwork::train(const Tensor& input, const Tensor& expected, const TrainingConfig& config)
@@ -68,6 +61,9 @@ namespace tbml
 				batchCount = inputBatches.size();
 			}
 
+			// Set layers to retain values
+			for (const auto& layer : layers) layer->setRetainValues(true);
+
 			std::chrono::steady_clock::time_point tTrainStart = std::chrono::steady_clock::now();
 			std::chrono::steady_clock::time_point tEpochStart = tTrainStart;
 			std::chrono::steady_clock::time_point tBatchStart = tTrainStart;
@@ -84,7 +80,7 @@ namespace tbml
 				for (size_t batch = 0; batch < batchCount; batch++)
 				{
 					// Propogate input then calculate loss
-					const Tensor& predicted = propogate(inputBatches[batch]);
+					const Tensor& predicted = propogateRef(inputBatches[batch]);
 					float batchLoss = lossFn->activate(predicted, expectedBatches[batch]);
 					epochLoss += batchLoss / batchCount;
 
@@ -115,7 +111,7 @@ namespace tbml
 				if (config.logLevel >= 2)
 				{
 					std::chrono::steady_clock::time_point tEpochEnd = std::chrono::steady_clock::now();
-					Tensor predicted = propogate(input);
+					const Tensor& predicted = propogateRef(input);
 					float accuracy = fn::classificationAccuracy(predicted, expected);
 					auto us = std::chrono::duration_cast<std::chrono::microseconds>(tEpochEnd - tEpochStart);
 					printf("Epoch %d: Loss: %f, Accuracy: %f, Time: %fms\n", epoch, epochLoss, accuracy, us.count() / 1000.0f);
@@ -132,6 +128,9 @@ namespace tbml
 				auto us = std::chrono::duration_cast<std::chrono::microseconds>(tTrainEnd - tTrainStart);
 				printf("Training complete for %d epochs, Time taken: %fms\n\n", epoch, us.count() / 1000.0f);
 			}
+
+			// Reset layers to not retain values
+			for (const auto& layer : layers) layer->setRetainValues(false);
 		}
 
 		int NeuralNetwork::getParameterCount() const
@@ -240,37 +239,31 @@ namespace tbml
 			: weights(std::move(weights)), bias(std::move(bias)), activationFn(std::move(activationFn))
 		{}
 
-		const Tensor& DenseLayer::propogate(const Tensor& input)
+		void DenseLayer::propogateMut(Tensor& input) const
+		{
+			assert(input.getDims() == 2 && input.getShape(1) == weights.getShape(0) && "Input shape does not match weights shape");
+
+			// Mutably propogate input with weights and bias
+			input.matmul(weights).add(bias, 0);
+			activationFn->activate(input);
+		}
+
+		const Tensor& DenseLayer::propogateRef(const Tensor& input)
 		{
 			assert(input.getDims() == 2 && input.getShape(1) == weights.getShape(0) && "Input shape does not match weights shape");
 
 			// Propogate input with weights and bias
+			// Retain3 input and output for backprop
 			propogateInput = &input;
 			output = input.matmulled(weights).add(bias, 0);
 			activationFn->activate(output);
 			return output;
 		}
 
-		Tensor DenseLayer::propogate(const Tensor& input) const
-		{
-			assert(input.getDims() == 2 && input.getShape(1) == weights.getShape(0) && "Input shape does not match weights shape");
-
-			Tensor output = input.matmulled(weights).add(bias, 0);
-			activationFn->activate(output);
-			return output;
-		}
-
-		void DenseLayer::propogateMut(Tensor& input) const
-		{
-			assert(input.getDims() == 2 && input.getShape(1) == weights.getShape(0) && "Input shape does not match weights shape");
-
-			input.matmul(weights).add(bias, 0);
-			activationFn->activate(input);
-		}
-
 		void DenseLayer::backpropogate(const Tensor& pdToOut)
 		{
 			assert(pdToOut.getDims() == 2 && pdToOut.getShape(1) == weights.getShape(1) && "pdToOut shape does not match weights shape");
+			assert(this->retainValues && "Cannot backpropogate when not retaining values");
 
 			// Calculate pd to neuron in and layer in
 			Tensor pdToNet = activationFn->chainDerivative(output, pdToOut);
@@ -284,7 +277,7 @@ namespace tbml
 			pdToBias = Tensor(bias.getShape(), 0);
 
 			// Calculate pd to weights and bias as average of batch
-			#pragma omp parallel for num_threads(4)
+			#pragma omp parallel for num_threads(12)
 			for (int batchRow = 0; batchRow < batchSize; batchRow++)
 			{
 				for (int i = 0; i < m; i++)

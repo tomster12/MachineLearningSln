@@ -99,8 +99,9 @@ namespace tbml
 			virtual AgentPtr createAgent(GenomeCPtr&& data) const { return std::make_unique<TAgent>(std::move(data)); }
 
 		public:
-			Genepool(bool enableMultithreadedStepEvaluation = false, bool enableMultithreadedFullEvaluation = true, bool syncMultithreadedSteps = false)
+			Genepool(bool enableMultithreadedStepEvaluation = false, bool enableMultithreadedFullEvaluation = false, bool syncMultithreadedSteps = false)
 			{
+				std::cout << "Threading Settings (Step: " << enableMultithreadedStepEvaluation << ", Full: " << enableMultithreadedFullEvaluation << ", Sync: " << syncMultithreadedSteps << ")" << std::endl;
 				if (enableMultithreadedFullEvaluation && enableMultithreadedStepEvaluation)
 					throw std::runtime_error("tbml::GenepoolSimulation: Cannot have both enableMultithreadedFullEvaluation and enableMultithreadedStepEvaluation.");
 				if (syncMultithreadedSteps && !enableMultithreadedFullEvaluation)

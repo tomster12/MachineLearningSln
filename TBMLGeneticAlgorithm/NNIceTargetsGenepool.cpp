@@ -40,7 +40,7 @@ bool NNIceTargetsAgent::step()
 	netInput(0, 3) = targetPos2.y - this->pos.y;
 	netInput(0, 4) = this->vel.x;
 	netInput(0, 5) = this->vel.y;
-	const tbml::Tensor& output = this->network.propogate(netInput);
+	const tbml::Tensor& output = this->network.propogateMC(netInput);
 
 	// Update position, velocity, drag
 	this->vel.x += (output(0, 0) * 2 - 1) * this->moveAcc * (1.0f / 60.0f);

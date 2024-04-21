@@ -40,7 +40,7 @@ bool NNPoleBalancerAgent::step()
 	netInput(0, 1) = cartAcceleration;
 	netInput(0, 2) = poleAngle;
 	netInput(0, 3) = poleAcceleration;
-	const tbml::Tensor& output = this->network.propogate(netInput);
+	const tbml::Tensor& output = this->network.propogateMC(netInput);
 	float ft = output(0, 0) > 0.5f ? force : -force;
 
 	// Calculate acceleration

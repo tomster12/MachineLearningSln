@@ -23,25 +23,36 @@ int main()
 
 void testTime()
 {
-	// Create network and input
+	// Create networks
 	tbml::nn::NeuralNetwork network(std::make_shared<tbml::fn::SquareError>(), {
 		std::make_shared<tbml::nn::DenseLayer>(8, 8, std::make_shared<tbml::fn::Sigmoid>()),
 		std::make_shared<tbml::nn::DenseLayer>(8, 8, std::make_shared<tbml::fn::Sigmoid>()),
-		std::make_shared<tbml::nn::DenseLayer>(8, 1, std::make_shared<tbml::fn::Sigmoid>()) });
+		std::make_shared<tbml::nn::DenseLayer>(8, 8, std::make_shared<tbml::fn::Sigmoid>()) });
 
+	// Setup and print input
 	tbml::Tensor input = tbml::Tensor({ { 1, 0, -1, 0.2f, 0.7f, -0.3f, -1, -1 } });
-	size_t epoch = 1'000'000;
+	input.print("Input: ");
 
-	// Time network propogation
-	std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
+	// Time different propogation methods
+	size_t epoch = 5'000'000;
+	std::chrono::steady_clock::time_point t00 = std::chrono::steady_clock::now();
 	for (size_t i = 0; i < epoch; i++) network.propogate(input);
-	std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-	auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0);
+	std::chrono::steady_clock::time_point t01 = std::chrono::steady_clock::now();
+	std::chrono::steady_clock::time_point t10 = std::chrono::steady_clock::now();
+	for (size_t i = 0; i < epoch; i++) network.propogateMut(input);
+	std::chrono::steady_clock::time_point t11 = std::chrono::steady_clock::now();
+	std::chrono::steady_clock::time_point t20 = std::chrono::steady_clock::now();
+	for (size_t i = 0; i < epoch; i++) network.propogateRef(input);
+	std::chrono::steady_clock::time_point t21 = std::chrono::steady_clock::now();
 
 	// Print output
-	input.print("Input: ");
 	std::cout << std::endl << "Epochs: " << epoch << std::endl;
-	std::cout << "Time taken: " << us.count() / 1000.0f << "ms" << std::endl;
+	float t0 = std::chrono::duration_cast<std::chrono::milliseconds>(t01 - t00).count() / (float)epoch;
+	float t1 = std::chrono::duration_cast<std::chrono::milliseconds>(t11 - t10).count() / (float)epoch;
+	float t2 = std::chrono::duration_cast<std::chrono::milliseconds>(t21 - t20).count() / (float)epoch;
+	std::cout << "Prop: " << t0 << "ms" << std::endl;
+	std::cout << "Prop Mut: " << t1 << "ms" << std::endl;
+	std::cout << "Prop Ref: " << t2 << "ms" << std::endl;
 }
 
 void testBackprop()
@@ -98,7 +109,7 @@ void testMNIST()
 	testExpected.print("Test Expected: ");
 
 	// Create network and train
-	// Batch: ~11ms, Epoch: ~15000ms, Total: ~226s, (15 epochs = 95.22%, 50 epochs = 96.34%)
+	// Batch: ~6.7ms, Epoch: ~10100ms, (15 epochs = 95.22%, 50 epochs = 96.34%)
 	tbml::nn::NeuralNetwork network(std::make_shared<tbml::fn::CrossEntropy>(), {
 		std::make_shared<tbml::nn::DenseLayer>(784, 100, std::make_shared<tbml::fn::ReLU>()),
 		std::make_shared<tbml::nn::DenseLayer>(100, 10, std::make_shared<tbml::fn::SoftMax>()) });
