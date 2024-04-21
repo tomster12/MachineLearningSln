@@ -43,6 +43,7 @@ namespace tbml
 		using ActivationFunctionPtr = std::shared_ptr<fn::ActivationFunction>;
 		using LossFunctionPtr = std::shared_ptr<fn::LossFunction>;
 
+		// Output range [0, inf]
 		class ReLU : public ActivationFunction
 		{
 		public:
@@ -63,6 +64,7 @@ namespace tbml
 			}
 		};
 
+		// Output range [0, 1]
 		class Sigmoid : public ActivationFunction
 		{
 		public:
@@ -91,6 +93,7 @@ namespace tbml
 			float sigmoid(float x) const { return 1.0f / (1.0f + std::exp(-x)); }
 		};
 
+		// Output range [-1, 1]
 		class TanH : public ActivationFunction
 		{
 		public:
@@ -116,6 +119,7 @@ namespace tbml
 			}
 		};
 
+		// Output range [0, 1] per row, sum of row = 1
 		class SoftMax : public ActivationFunction
 		{
 		public:

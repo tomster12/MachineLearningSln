@@ -19,6 +19,7 @@ namespace tbml
 		Tensor(const std::vector<std::vector<float>>& data);
 		Tensor(const std::vector<std::vector<std::vector<float>>>& data);
 		void zero();
+		void setData(std::vector<size_t>&& shape, std::vector<float>&& data);
 
 		template<typename... Args>
 		float& at(Args... args) { return data[_getIndex(0, 1, args...)]; }

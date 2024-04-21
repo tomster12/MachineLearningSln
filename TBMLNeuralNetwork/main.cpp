@@ -109,7 +109,7 @@ void testMNIST()
 	testExpected.print("Test Expected: ");
 
 	// Create network and train
-	// Batch: ~6.7ms, Epoch: ~10100ms, (15 epochs = 95.22%, 50 epochs = 96.34%)
+	// Timing: (Batch: ~6.7ms, Epoch: ~10100ms) @ 12 matmul threads, Fitness: (15 epochs = 95.22%, 50 epochs = 96.34%)
 	tbml::nn::NeuralNetwork network(std::make_shared<tbml::fn::CrossEntropy>(), {
 		std::make_shared<tbml::nn::DenseLayer>(784, 100, std::make_shared<tbml::fn::ReLU>()),
 		std::make_shared<tbml::nn::DenseLayer>(100, 10, std::make_shared<tbml::fn::SoftMax>()) });

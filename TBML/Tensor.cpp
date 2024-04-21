@@ -83,6 +83,13 @@ namespace tbml
 		for (size_t i = 0; i < data.size(); i++) data[i] = 0;
 	}
 
+	void Tensor::setData(std::vector<size_t>&& shape, std::vector<float>&& data)
+	{
+		// Set tensor with shape and data and assert data fits
+		this->shape = std::move(shape);
+		this->data = std::move(data);
+	}
+
 	Tensor& Tensor::add(const Tensor& t)
 	{
 		if (getDims() == 0)
@@ -233,7 +240,7 @@ namespace tbml
 			const std::vector<float>& b = t.data;
 			std::vector<float> result(shape[0] * t.shape[1]);
 
-			#pragma omp parallel for num_threads(12)
+			//#pragma omp parallel for num_threads(12)
 			for (int row = 0; row < (int)shape[0]; row++)
 			{
 				for (int ocol = 0; ocol < (int)t.shape[1]; ocol++)
@@ -380,7 +387,7 @@ namespace tbml
 		is >> type;
 		is >> dims;
 		shape = std::vector<size_t>(dims);
-		int size = 1;
+		size_t size = 1;
 		for (size_t i = 0; i < dims; i++)
 		{
 			is >> shape[i];

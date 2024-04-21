@@ -36,12 +36,13 @@ bool NNPoleBalancerAgent::step()
 	if (this->isFinished) return true;
 
 	// Calculate force with network
-	netInput(0, 0) = cartPosition;
-	netInput(0, 1) = cartAcceleration;
-	netInput(0, 2) = poleAngle;
-	netInput(0, 3) = poleAcceleration;
-	const tbml::Tensor& output = this->network.propogateMC(netInput);
-	float ft = output(0, 0) > 0.5f ? force : -force;
+	netInput.setData({ 1, 4 }, {
+		cartPosition,
+		cartAcceleration,
+		poleAngle,
+		poleAcceleration });
+	this->network.propogateMut(netInput);
+	float ft = netInput(0, 0) > 0.5f ? force : -force;
 
 	// Calculate acceleration
 	cartAcceleration = (ft + poleMass * poleLength * (poleVelocity * poleVelocity * sin(poleAngle) - poleAcceleration * cos(poleAngle))) / (cartMass + poleMass);
@@ -74,7 +75,7 @@ void NNPoleBalancerAgent::render(sf::RenderWindow* window)
 	// Update shape positions and rotations
 	this->cartShape.setPosition(700.0f + cartPosition * METRE_TO_UNIT, 700.0f);
 	this->poleShape.setPosition(700.0f + cartPosition * METRE_TO_UNIT, 700.0f);
-	this->poleShape.setRotation(poleAngle * (180.0f / 3.141592653589793238463f));
+	this->poleShape.setRotation(poleAngle * (180.0f / 3.141592653f));
 
 	// Draw both to screen
 	window->draw(this->cartShape);

@@ -34,17 +34,18 @@ bool NNIceTargetsAgent::step()
 	// Calculate with brain
 	const sf::Vector2f& targetPos1 = this->genepool->getTarget(this->currentTarget);
 	const sf::Vector2f& targetPos2 = this->genepool->getTarget(this->currentTarget + 1);
-	netInput(0, 0) = targetPos1.x - this->pos.x;
-	netInput(0, 1) = targetPos1.y - this->pos.y;
-	netInput(0, 2) = targetPos2.x - this->pos.x;
-	netInput(0, 3) = targetPos2.y - this->pos.y;
-	netInput(0, 4) = this->vel.x;
-	netInput(0, 5) = this->vel.y;
-	const tbml::Tensor& output = this->network.propogateMC(netInput);
+	netInput.setData({ 1, 6 }, {
+		targetPos1.x - this->pos.x,
+		targetPos1.y - this->pos.y,
+		targetPos2.x - this->pos.x,
+		targetPos2.y - this->pos.y,
+		this->vel.x,
+		this->vel.y });
+	this->network.propogateMut(netInput);
 
 	// Update position, velocity, drag
-	this->vel.x += (output(0, 0) * 2 - 1) * this->moveAcc * (1.0f / 60.0f);
-	this->vel.y += (output(0, 1) * 2 - 1) * this->moveAcc * (1.0f / 60.0f);
+	this->vel.x += (netInput(0, 0) * 2 - 1) * this->moveAcc * (1.0f / 60.0f);
+	this->vel.y += (netInput(0, 1) * 2 - 1) * this->moveAcc * (1.0f / 60.0f);
 	this->pos.x += this->vel.x * (1.0f / 60.0f);
 	this->pos.y += this->vel.y * (1.0f / 60.0f);
 	this->vel.x *= this->moveDrag;

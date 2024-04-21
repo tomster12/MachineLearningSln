@@ -33,11 +33,12 @@ bool NNTargetAgent::step()
 
 	// Move position by current vector
 	sf::Vector2f targetPos = this->genepool->getTargetPos();
-	netInput(0, 0) = this->pos.x - targetPos.x;
-	netInput(0, 1) = this->pos.y - targetPos.y;
-	const tbml::Tensor& output = this->network.propogateMC(netInput);
-	this->pos.x += output(0, 0) * this->moveAcc;
-	this->pos.y += output(0, 1) * this->moveAcc;
+	netInput.setData({ 1, 2 }, {
+		this->pos.x - targetPos.x,
+		this->pos.y - targetPos.y });
+	this->network.propogateMut(netInput);
+	this->pos.x += netInput(0, 0) * this->moveAcc;
+	this->pos.y += netInput(0, 1) * this->moveAcc;
 	this->currentIteration++;
 
 	// Check finish conditions
