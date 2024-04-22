@@ -129,7 +129,7 @@ NNTargetGenepool::AgentPtr NNTargetGenepool::createAgent(NNTargetGenepool::Genom
 		this, std::move(genome));
 }
 
-void NNTargetGenepool::initGeneration()
+void NNTargetGenepool::initializeGeneration()
 {
 	// Randomize target location
 	this->targetPos = this->getRandomTargetPos();

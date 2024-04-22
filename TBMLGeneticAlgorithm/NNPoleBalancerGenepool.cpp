@@ -92,21 +92,3 @@ float NNPoleBalancerAgent::calculateFitness()
 }
 
 #pragma endregion
-
-#pragma region - NNPoleBalancerGenepool
-
-NNPoleBalancerGenepool::NNPoleBalancerGenepool(std::function<NNPoleBalancerGenepool::GenomeCPtr(void)> createGenomeFn, std::function<AgentPtr(NNPoleBalancerGenepool::GenomeCPtr&&)> createAgentFn)
-	: createGenomeFn(createGenomeFn), createAgentFn(createAgentFn)
-{}
-
-NNPoleBalancerGenepool::GenomeCPtr NNPoleBalancerGenepool::createGenome() const
-{
-	return createGenomeFn();
-};
-
-NNPoleBalancerGenepool::AgentPtr NNPoleBalancerGenepool::createAgent(NNPoleBalancerGenepool::GenomeCPtr&& data) const
-{
-	return createAgentFn(std::move(data));
-};
-
-#pragma endregion

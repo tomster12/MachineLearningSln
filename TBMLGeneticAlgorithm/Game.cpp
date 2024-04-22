@@ -7,6 +7,8 @@
 #include "NNIceTargetsGenepool.h"
 #include "NNPoleBalancerGenepool.h"
 
+#define GENEPOOL_TYPE 3
+
 Game::Game()
 	: window(NULL), dt(0)
 {
@@ -36,15 +38,13 @@ void Game::initialize()
 	this->window->setFramerateLimit(framerateLimit);
 	this->window->setVerticalSyncEnabled(verticalSyncEnabled);
 
-	// Initialize different genepools
-	/*
+	#if GENEPOOL_TYPE == 0
 	tbml::ga::IGenepoolPtr genepool(new VectorListTargetGenepool(
 		{ 700.0f, 600.0f }, 4.0f, 4.0f,
 		{ 700.0f, 100.0f }, 20.0f,
 		500
 	));
-	*/
-	/*
+	#elif GENEPOOL_TYPE == 1
 	tbml::ga::IGenepoolPtr genepool(new NNTargetGenepool(
 		{ 700.0f, 850.0f }, 2.0f, 2.0f, 1000,
 		20.0f, { 700.0f, 150.0f }, 500.0f,
@@ -53,8 +53,7 @@ void Game::initialize()
 		return std::make_shared<NNGenome>(std::make_shared<tbml::fn::SquareError>(),
 		std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::DenseLayer>(2, 2, std::make_shared<tbml::fn::TanH>()) });
 	}));
-	*/
-	/*
+	#elif GENEPOOL_TYPE == 2
 	tbml::ga::IGenepoolPtr genepool(new NNIceTargetsGenepool(
 		{ 700.0f, 850.0f }, 2.0f, 400.0f, 0.99f, 3000,
 		{ { 300.0f, 150.0f }, { 1100.0f, 400.0f }, { 450.0f, 850.0f }, { 700.0f, 320.0f } }, 4.0f,
@@ -64,21 +63,22 @@ void Game::initialize()
 		std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::DenseLayer>(6, 4, std::make_shared<tbml::fn::TanH>()), std::make_shared<tbml::nn::DenseLayer>(6, 2, std::make_shared<tbml::fn::TanH>())
 	});
 	}));
-	*/
-	tbml::ga::IGenepoolPtr genepool(new NNPoleBalancerGenepool(
-		[]()
+	#elif GENEPOOL_TYPE == 3
+	auto genepool = new NNPoleBalancerGenepool();
+	genepool->setCreateGenomeFn([]()
 	{
 		return std::make_shared<NNGenome>(std::make_shared<tbml::fn::SquareError>(), std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::DenseLayer>(4, 1, std::make_shared<tbml::fn::TanH>()) });
-	},
-		[](NNPoleBalancerGenepool::GenomeCPtr data)
+	});
+	genepool->setCreateAgentFn([](NNPoleBalancerGenepool::GenomeCPtr data)
 	{
 		return std::make_unique<NNPoleBalancerAgent>(1.0f, 0.1f, 0.5f, 2.0f, 0.6f, 0.25f, 20.0f, std::move(data));
-	}));
+	});
+	#endif
 
 	// Reset genepool generation, initialize controller
-	genepool->setThreading(false, true, false);
+	genepool->configThreading(false, true, false);
 	genepool->resetGenepool(2000, 0.05f);
-	this->genepoolController = std::make_unique<tbml::ga::GenepoolController>(std::move(genepool));
+	this->genepoolController = std::make_unique<tbml::ga::GenepoolController>(tbml::ga::IGenepoolPtr(genepool));
 
 	// Initialize UI using spacing constants
 	this->uiManager = std::make_unique<UIManager>();

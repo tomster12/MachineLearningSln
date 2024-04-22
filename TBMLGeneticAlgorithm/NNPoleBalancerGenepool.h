@@ -46,17 +46,4 @@ private:
 	float time = 0.0f;
 };
 
-class NNPoleBalancerGenepool : public tbml::ga::Genepool<NNGenome, NNPoleBalancerAgent>
-{
-public:
-	NNPoleBalancerGenepool(
-		std::function<GenomeCPtr(void)> createGenomeFn,
-		std::function<AgentPtr(GenomeCPtr&&)> createAgentFn);
-
-protected:
-	std::function<GenomeCPtr(void)> createGenomeFn;
-	std::function<AgentPtr(GenomeCPtr&&)> createAgentFn;
-
-	GenomeCPtr createGenome() const override;
-	AgentPtr createAgent(GenomeCPtr&& data) const override;
-};
+class NNPoleBalancerGenepool : public tbml::ga::Genepool<NNGenome, NNPoleBalancerAgent> {};

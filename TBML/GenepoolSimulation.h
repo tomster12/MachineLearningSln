@@ -14,11 +14,14 @@ namespace tbml
 {
 	namespace ga
 	{
+		// TGenome: Self
 		template<class TGenome>
 		class Genome
 		{
-		protected:
+		public:
 			using GenomeCPtr = std::shared_ptr<const TGenome>;
+
+		protected:
 			Genome() = default;
 			~Genome() = default;
 
@@ -27,15 +30,17 @@ namespace tbml
 			Genome& operator=(const Genome&) = delete;
 			Genome(const Genome&&) = delete;
 			Genome& operator=(const Genome&&) = delete;
-
 			virtual GenomeCPtr crossover(const GenomeCPtr& otherGenome, float mutateChance = 0.0f) const = 0;
 		};
 
-		template<class TGenome> // TGenome: Genome<TGenome>
+		// TGenome: Genome<TGenome>
+		template<class TGenome>
 		class Agent
 		{
-		protected:
+		public:
 			using GenomeCPtr = std::shared_ptr<const TGenome>;
+
+		protected:
 			const GenomeCPtr genome;
 			bool isFinished = false;
 			float fitness = 0;
@@ -47,7 +52,6 @@ namespace tbml
 			Agent& operator=(const Agent&) = delete;
 			Agent(const Agent&&) = delete;
 			Agent& operator=(const Agent&&) = delete;
-
 			virtual bool step() = 0;
 			virtual void render(sf::RenderWindow* window) = 0;
 			const GenomeCPtr& getGenome() const { return this->genome; };
@@ -58,21 +62,22 @@ namespace tbml
 		class IGenepool
 		{
 		public:
-			virtual void setThreading(bool enableMultithreadedStepEvaluation = false, bool enableMultithreadedFullEvaluation = false, bool syncMultithreadedSteps = false) = 0;
+			virtual void configThreading(bool enableMultithreadedStepEvaluation = false, bool enableMultithreadedFullEvaluation = false, bool syncMultithreadedSteps = false) = 0;
 			virtual void resetGenepool(int populationSize, float mutationRate) = 0;
 			virtual void render(sf::RenderWindow* window) = 0;
-			virtual void initGeneration() = 0;
-			virtual void evaluateGeneration(bool step = false) = 0;
+			virtual void initializeGeneration() = 0;
+			virtual void stepGeneration(bool step = false) = 0;
 			virtual void iterateGeneration() = 0;
 			virtual int getGenerationNumber() const = 0;
 			virtual float getBestFitness() const = 0;
-			virtual bool getInitialized() const = 0;
+			virtual bool getGenepoolInitialized() const = 0;
 			virtual bool getGenerationEvaluated() const = 0;
 		};
 
 		using IGenepoolPtr = std::unique_ptr<IGenepool>;
 
-		template<class TGenome, class TAgent> // TGenome: Genome<TGenome>, TAgent: Agent<TGenome>
+		// TGenome: Genome<TGenome>, TAgent: Agent<TGenome>
+		template<class TGenome, class TAgent>
 		class Genepool : public IGenepool
 		{
 		public:
@@ -80,45 +85,43 @@ namespace tbml
 			using AgentPtr = std::unique_ptr<TAgent>;
 
 		protected:
-			bool enableMultithreadedStepEvaluation = false;
-			bool enableMultithreadedFullEvaluation = false;
-			bool syncMultithreadedSteps = false;
-
-			bool isInitialized = false;
+			std::function<GenomeCPtr(void)> createGenomeFn;
+			std::function<AgentPtr(GenomeCPtr&&)> createAgentFn;
+			bool useThreadedStep = false;
+			bool useThreadedFullStep = false;
+			bool syncThreadedFullSteps = false;
 			int populationSize = 0;
 			float mutationRate = 0.0f;
 
-			ThreadPool threadPool;
+			bool isGenepoolInitialized = false;
+			bool isGenerationEvaluated = false;
 			int currentGeneration = 0;
 			int currentStep = 0;
-			std::vector<AgentPtr> currentAgents;
-			bool isGenerationEvaluated = false;
 			GenomeCPtr bestData = nullptr;
 			float bestFitness = 0.0f;
+			ThreadPool stepThreadPool;
+			std::vector<AgentPtr> currentAgents;
 
-			virtual GenomeCPtr createGenome() const { return std::make_shared<TGenome>(); }
+			virtual GenomeCPtr createGenome() const { return createGenomeFn(); }
 
-			virtual AgentPtr createAgent(GenomeCPtr&& data) const { return std::make_unique<TAgent>(std::move(data)); }
+			virtual AgentPtr createAgent(GenomeCPtr&& data) const { return createAgentFn(std::move(data)); }
 
 		public:
-			void setThreading(bool enableMultithreadedStepEvaluation = false, bool enableMultithreadedFullEvaluation = false, bool syncMultithreadedSteps = false)
+			void setCreateGenomeFn(std::function<GenomeCPtr(void)> createGenomeFn) { this->createGenomeFn = createGenomeFn; }
+
+			void setCreateAgentFn(std::function<AgentPtr(GenomeCPtr&&)> createAgentFn) { this->createAgentFn = createAgentFn; }
+
+			void configThreading(bool enableMultithreadedStepEvaluation = false, bool enableMultithreadedFullEvaluation = false, bool syncMultithreadedSteps = false)
 			{
 				if (enableMultithreadedFullEvaluation && enableMultithreadedStepEvaluation)
 					throw std::runtime_error("tbml::GenepoolSimulation: Cannot have both enableMultithreadedFullEvaluation and enableMultithreadedStepEvaluation.");
 				if (syncMultithreadedSteps && !enableMultithreadedFullEvaluation)
 					throw std::runtime_error("tbml::GenepoolSimulation: Cannot have syncMultithreadedSteps without enableMultithreadedFullEvaluation.");
 
-				this->enableMultithreadedStepEvaluation = enableMultithreadedStepEvaluation;
-				this->enableMultithreadedFullEvaluation = enableMultithreadedFullEvaluation;
-				this->syncMultithreadedSteps = syncMultithreadedSteps;
+				this->useThreadedStep = enableMultithreadedStepEvaluation;
+				this->useThreadedFullStep = enableMultithreadedFullEvaluation;
+				this->syncThreadedFullSteps = syncMultithreadedSteps;
 			}
-
-			void render(sf::RenderWindow* window)
-			{
-				if (!this->isInitialized) throw std::runtime_error("tbml::GenepoolSimulation: Cannot render because uninitialized.");
-
-				for (const auto& inst : currentAgents) inst->render(window);
-			};
 
 			void resetGenepool(int populationSize, float mutationRate)
 			{
@@ -131,7 +134,7 @@ namespace tbml
 					this->currentAgents.push_back(std::move(agent));
 				}
 
-				this->isInitialized = true;
+				this->isGenepoolInitialized = true;
 				this->populationSize = populationSize;
 				this->mutationRate = mutationRate;
 
@@ -139,14 +142,14 @@ namespace tbml
 				this->currentStep = 0;
 				this->isGenerationEvaluated = false;
 
-				initGeneration();
+				initializeGeneration();
 			};
 
-			void initGeneration() {}
+			void initializeGeneration() {}
 
-			void evaluateGeneration(bool step)
+			void stepGeneration(bool step)
 			{
-				if (!this->isInitialized) throw std::runtime_error("tbml::GenepoolSimulation: Cannot evaluateGeneration because uninitialized.");
+				if (!this->isGenepoolInitialized) throw std::runtime_error("tbml::GenepoolSimulation: Cannot evaluateGeneration because uninitialized.");
 				if (this->isGenerationEvaluated) return;
 
 				// Helper function captures generation
@@ -165,9 +168,9 @@ namespace tbml
 				bool allFinished = true;
 
 				// Process generation (multi-threaded)
-				if ((this->enableMultithreadedStepEvaluation && step) || (this->enableMultithreadedFullEvaluation && !step))
+				if ((this->useThreadedStep && step) || (this->useThreadedFullStep && !step))
 				{
-					size_t threadCount = static_cast<size_t>(std::min(static_cast<int>(threadPool.size()), this->populationSize));
+					size_t threadCount = static_cast<size_t>(std::min(static_cast<int>(stepThreadPool.size()), this->populationSize));
 					std::vector<std::future<bool>> threadResults(threadCount);
 					int subsetSize = static_cast<int>(ceil((float)this->populationSize / threadCount));
 					do
@@ -176,7 +179,7 @@ namespace tbml
 						{
 							int startIndex = i * subsetSize;
 							int endIndex = static_cast<int>(std::min(startIndex + subsetSize, this->populationSize));
-							threadResults[i] = this->threadPool.enqueue([=] { return evaluateSubset(step || syncMultithreadedSteps, startIndex, endIndex); });
+							threadResults[i] = this->stepThreadPool.enqueue([=] { return evaluateSubset(step || syncThreadedFullSteps, startIndex, endIndex); });
 						}
 
 						for (auto&& result : threadResults) allFinished &= result.get();
@@ -201,7 +204,7 @@ namespace tbml
 
 			void iterateGeneration()
 			{
-				if (!this->isInitialized) throw std::runtime_error("tbml::GenepoolSimulation: Cannot iterateGeneration because uninitialized.");
+				if (!this->isGenepoolInitialized) throw std::runtime_error("tbml::GenepoolSimulation: Cannot iterateGeneration because uninitialized.");
 				if (!this->isGenerationEvaluated) return;
 
 				// Sort generation and get best data
@@ -248,7 +251,14 @@ namespace tbml
 				this->currentAgents = std::move(nextGeneration);
 				this->currentGeneration++;
 				this->isGenerationEvaluated = false;
-				initGeneration();
+				initializeGeneration();
+			};
+
+			void render(sf::RenderWindow* window)
+			{
+				if (!this->isGenepoolInitialized) throw std::runtime_error("tbml::GenepoolSimulation: Cannot render because uninitialized.");
+
+				for (const auto& inst : currentAgents) inst->render(window);
 			};
 
 			int getGenerationNumber() const { return this->currentGeneration; }
@@ -257,7 +267,7 @@ namespace tbml
 
 			float getBestFitness() const { return this->bestFitness; }
 
-			bool getInitialized() const { return this->isInitialized; }
+			bool getGenepoolInitialized() const { return this->isGenepoolInitialized; }
 
 			bool getGenerationEvaluated() const { return this->isGenerationEvaluated; }
 		};
@@ -280,7 +290,7 @@ namespace tbml
 
 			void update()
 			{
-				if (!this->genepool->getInitialized()) throw std::runtime_error("tbml::GenepoolSimulationController: Cannot update because uninitialized.");
+				if (!this->genepool->getGenepoolInitialized()) throw std::runtime_error("tbml::GenepoolSimulationController: Cannot update because uninitialized.");
 				if (this->genepool->getGenerationEvaluated() || !this->isRunning) return;
 
 				this->evaluateGeneration(!this->autoFullEvaluate);
@@ -288,23 +298,23 @@ namespace tbml
 
 			void render(sf::RenderWindow* window)
 			{
-				if (!this->genepool->getInitialized()) throw std::runtime_error("tbml::GenepoolSimulation: Cannot render because uninitialized.");
+				if (!this->genepool->getGenepoolInitialized()) throw std::runtime_error("tbml::GenepoolSimulation: Cannot render because uninitialized.");
 
 				this->genepool->render(window);
 			};
 
 			void evaluateGeneration(bool step = false)
 			{
-				if (!this->genepool->getInitialized()) throw std::runtime_error("tbml::GenepoolSimulationController: Cannot evaluateGeneration because uninitialized.");
+				if (!this->genepool->getGenepoolInitialized()) throw std::runtime_error("tbml::GenepoolSimulationController: Cannot evaluateGeneration because uninitialized.");
 				if (this->genepool->getGenerationEvaluated()) return;
 
-				this->genepool->evaluateGeneration(step);
+				this->genepool->stepGeneration(step);
 				if (this->autoIterate && this->genepool->getGenerationEvaluated()) this->iterateGeneration();
 			}
 
 			void iterateGeneration()
 			{
-				if (!this->genepool->getInitialized()) throw std::runtime_error("tbml::GenepoolSimulationController: Cannot iterateGeneration because uninitialized.");
+				if (!this->genepool->getGenepoolInitialized()) throw std::runtime_error("tbml::GenepoolSimulationController: Cannot iterateGeneration because uninitialized.");
 				if (!this->genepool->getGenerationEvaluated()) return;
 
 				this->genepool->iterateGeneration();

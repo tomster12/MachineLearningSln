@@ -42,7 +42,7 @@ public:
 		float targetRadius, sf::Vector2f targetRandomCentre, float targetRandomRadius,
 		std::function<GenomeCPtr(void)> createGenomeFn);
 
-	void initGeneration() override;
+	void initializeGeneration() override;
 	void render(sf::RenderWindow* window) override;
 	sf::Vector2f getTargetPos() const;
 	float getTargetRadius() const;
