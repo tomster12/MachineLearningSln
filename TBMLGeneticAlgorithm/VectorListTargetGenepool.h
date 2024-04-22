@@ -33,9 +33,9 @@ class VectorListTargetGenepool : public tbml::ga::Genepool<VectorListGenome, Vec
 public:
 	VectorListTargetGenepool() {};
 	VectorListTargetGenepool(
-		sf::Vector2f instanceStartPos, float instanceRadius, float instancemoveAcc,
 		sf::Vector2f targetPos, float targetRadius,
-		int dataSize);
+		std::function<GenomeCPtr(void)> createGenomeFn,
+		std::function<AgentPtr(GenomeCPtr&&)> createAgentFn);
 
 	void render(sf::RenderWindow* window) override;
 
@@ -43,9 +43,9 @@ public:
 	float getTargetRadius() const;
 
 protected:
+	std::function<GenomeCPtr(void)> createGenomeFn;
+	std::function<AgentPtr(GenomeCPtr&&)> createAgentFn;
 	sf::CircleShape target;
-	sf::Vector2f instanceStartPos;
-	float instanceRadius = 0.0f;
 	sf::Vector2f targetPos;
 	float targetRadius = 0.0f;
 	float instancemoveAcc = 0.0f;

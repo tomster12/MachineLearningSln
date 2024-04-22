@@ -36,7 +36,7 @@ void Game::initialize()
 	this->window->setFramerateLimit(framerateLimit);
 	this->window->setVerticalSyncEnabled(verticalSyncEnabled);
 
-	// Initialize genepool object
+	// Initialize different genepools
 	/*
 	tbml::ga::IGenepoolPtr genepool(new VectorListTargetGenepool(
 		{ 700.0f, 600.0f }, 4.0f, 4.0f,
@@ -44,7 +44,6 @@ void Game::initialize()
 		500
 	));
 	*/
-
 	/*
 	tbml::ga::IGenepoolPtr genepool(new NNTargetGenepool(
 		{ 700.0f, 850.0f }, 2.0f, 2.0f, 1000,
@@ -55,7 +54,6 @@ void Game::initialize()
 		std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::DenseLayer>(2, 2, std::make_shared<tbml::fn::TanH>()) });
 	}));
 	*/
-
 	/*
 	tbml::ga::IGenepoolPtr genepool(new NNIceTargetsGenepool(
 		{ 700.0f, 850.0f }, 2.0f, 400.0f, 0.99f, 3000,
@@ -67,26 +65,26 @@ void Game::initialize()
 	});
 	}));
 	*/
-
 	tbml::ga::IGenepoolPtr genepool(new NNPoleBalancerGenepool(
-		1.0f, 0.1f, 0.5f, 2.0f,
-		0.6f, 0.25f, 20.0f,
 		[]()
 	{
-		return std::make_shared<NNGenome>(std::make_shared<tbml::fn::SquareError>(),
-		std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::DenseLayer>(4, 1, std::make_shared<tbml::fn::TanH>()) });
+		return std::make_shared<NNGenome>(std::make_shared<tbml::fn::SquareError>(), std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::DenseLayer>(4, 1, std::make_shared<tbml::fn::TanH>()) });
+	},
+		[](NNPoleBalancerGenepool::GenomeCPtr data)
+	{
+		return std::make_unique<NNPoleBalancerAgent>(1.0f, 0.1f, 0.5f, 2.0f, 0.6f, 0.25f, 20.0f, std::move(data));
 	}));
 
+	// Reset genepool generation, initialize controller
+	genepool->setThreading(false, true, false);
 	genepool->resetGenepool(2000, 0.05f);
-
 	this->genepoolController = std::make_unique<tbml::ga::GenepoolController>(std::move(genepool));
 
-	// Initialize UI
+	// Initialize UI using spacing constants
 	this->uiManager = std::make_unique<UIManager>();
 	float osp = 6.0f;
 	float sp = 6.0f;
 	float sz = 30.0f;
-
 	this->uiManager->addElement(std::shared_ptr<UIElement>(new UIButton(
 		this->window, { osp + sp + 0 * (sp + sz), osp + sp + 0 * (sp + sz) }, { sz, sz }, "assets/startStepping.png", [&]() { this->genepoolController->setRunning(true); })));
 	this->uiManager->addElement(std::shared_ptr<UIElement>(new UIButton(
@@ -103,7 +101,6 @@ void Game::initialize()
 		this->window, { osp + sp + 2 * (sp + sz), osp + sp + 1 * (sp + sz) }, { sz, sz }, "assets/autoEvaluate.png", false, [&](bool toggled) { this->genepoolController->setAutoFullEvaluate(toggled); })));
 	this->uiManager->addElement(std::shared_ptr<UIElement>(new UIToggleButton(
 		this->window, { osp + sp + 3 * (sp + sz), osp + sp + 1 * (sp + sz) }, { sz, sz }, "assets/autoIterate.png", false, [&](bool toggled) { this->genepoolController->setAutoIterate(toggled); })));
-
 	this->uiManager->addElement(std::shared_ptr<UIElement>(new UIDynamicText(
 		this->window, { osp + sp * 1.2f, osp + sp + osp + 2 * (sp + sz) + 0 }, 15, [&]() { return std::string("Generation: ") + std::to_string(this->genepoolController->getGenepool()->getGenerationNumber()); })));
 	this->uiManager->addElement(std::shared_ptr<UIElement>(new UIDynamicText(

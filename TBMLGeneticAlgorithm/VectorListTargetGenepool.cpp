@@ -91,12 +91,10 @@ float VectorListTargetAgent::calculateFitness()
 #pragma region - VectorListTargetGenepool
 
 VectorListTargetGenepool::VectorListTargetGenepool(
-	sf::Vector2f instanceStartPos, float instanceRadius, float instancemoveAcc,
 	sf::Vector2f targetPos, float targetRadius,
-	int dataSize)
-	: instanceStartPos(instanceStartPos), instanceRadius(instanceRadius), instancemoveAcc(instancemoveAcc),
-	targetPos(targetPos), targetRadius(targetRadius),
-	dataSize(dataSize)
+	std::function<GenomeCPtr(void)> createGenomeFn,
+	std::function<AgentPtr(GenomeCPtr&&)> createAgentFn)
+	: createGenomeFn(createGenomeFn), createAgentFn(createAgentFn)
 {
 	// Initialize variables
 	this->target.setRadius(this->targetRadius);
@@ -109,12 +107,12 @@ VectorListTargetGenepool::VectorListTargetGenepool(
 
 VectorListTargetGenepool::GenomeCPtr VectorListTargetGenepool::createGenome() const
 {
-	return std::make_shared<VectorListGenome>(this->dataSize);
+	return createGenomeFn();
 };
 
 VectorListTargetGenepool::AgentPtr VectorListTargetGenepool::createAgent(VectorListTargetGenepool::GenomeCPtr&& genome) const
 {
-	return std::make_unique<VectorListTargetAgent>(this->instanceStartPos, this->instanceRadius, this->instancemoveAcc, this, std::move(genome));
+	return createAgentFn(std::move(genome));
 };
 
 void VectorListTargetGenepool::render(sf::RenderWindow* window)

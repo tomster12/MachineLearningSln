@@ -95,13 +95,8 @@ float NNPoleBalancerAgent::calculateFitness()
 
 #pragma region - NNPoleBalancerGenepool
 
-NNPoleBalancerGenepool::NNPoleBalancerGenepool(
-	float cartMass, float poleMass, float poleLength, float force,
-	float trackLimit, float angleLimit, float timeLimit,
-	std::function<GenomeCPtr(void)> createGenomeFn)
-	: cartMass(cartMass), poleMass(poleMass), poleLength(poleLength), force(force),
-	trackLimit(trackLimit), angleLimit(angleLimit), timeLimit(timeLimit),
-	createGenomeFn(createGenomeFn)
+NNPoleBalancerGenepool::NNPoleBalancerGenepool(std::function<NNPoleBalancerGenepool::GenomeCPtr(void)> createGenomeFn, std::function<AgentPtr(NNPoleBalancerGenepool::GenomeCPtr&&)> createAgentFn)
+	: createGenomeFn(createGenomeFn), createAgentFn(createAgentFn)
 {}
 
 NNPoleBalancerGenepool::GenomeCPtr NNPoleBalancerGenepool::createGenome() const
@@ -111,10 +106,7 @@ NNPoleBalancerGenepool::GenomeCPtr NNPoleBalancerGenepool::createGenome() const
 
 NNPoleBalancerGenepool::AgentPtr NNPoleBalancerGenepool::createAgent(NNPoleBalancerGenepool::GenomeCPtr&& data) const
 {
-	return std::make_unique<NNPoleBalancerAgent>(
-		cartMass, poleMass, poleLength, force,
-		trackLimit, angleLimit, timeLimit,
-		std::move(data));
+	return createAgentFn(std::move(data));
 };
 
 #pragma endregion

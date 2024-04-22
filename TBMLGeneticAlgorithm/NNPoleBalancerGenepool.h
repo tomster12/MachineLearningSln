@@ -50,19 +50,12 @@ class NNPoleBalancerGenepool : public tbml::ga::Genepool<NNGenome, NNPoleBalance
 {
 public:
 	NNPoleBalancerGenepool(
-		float cartMass, float poleMass, float poleLength, float force,
-		float trackLimit, float angleLimit, float timeLimit,
-		std::function<GenomeCPtr(void)> createGenomeFn);
+		std::function<GenomeCPtr(void)> createGenomeFn,
+		std::function<AgentPtr(GenomeCPtr&&)> createAgentFn);
 
 protected:
-	float cartMass;
-	float poleMass;
-	float poleLength;
-	float force;
-	float trackLimit;
-	float angleLimit;
-	float timeLimit;
 	std::function<GenomeCPtr(void)> createGenomeFn;
+	std::function<AgentPtr(GenomeCPtr&&)> createAgentFn;
 
 	GenomeCPtr createGenome() const override;
 	AgentPtr createAgent(GenomeCPtr&& data) const override;

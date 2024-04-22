@@ -58,8 +58,9 @@ namespace tbml
 		class IGenepool
 		{
 		public:
-			virtual void render(sf::RenderWindow* window) = 0;
+			virtual void setThreading(bool enableMultithreadedStepEvaluation = false, bool enableMultithreadedFullEvaluation = false, bool syncMultithreadedSteps = false) = 0;
 			virtual void resetGenepool(int populationSize, float mutationRate) = 0;
+			virtual void render(sf::RenderWindow* window) = 0;
 			virtual void initGeneration() = 0;
 			virtual void evaluateGeneration(bool step = false) = 0;
 			virtual void iterateGeneration() = 0;
@@ -74,10 +75,11 @@ namespace tbml
 		template<class TGenome, class TAgent> // TGenome: Genome<TGenome>, TAgent: Agent<TGenome>
 		class Genepool : public IGenepool
 		{
-		protected:
+		public:
 			using GenomeCPtr = std::shared_ptr<const TGenome>;
 			using AgentPtr = std::unique_ptr<TAgent>;
 
+		protected:
 			bool enableMultithreadedStepEvaluation = false;
 			bool enableMultithreadedFullEvaluation = false;
 			bool syncMultithreadedSteps = false;
@@ -87,9 +89,9 @@ namespace tbml
 			float mutationRate = 0.0f;
 
 			ThreadPool threadPool;
-			int generationNumber = 0;
-			int generationStepNumber = 0;
-			std::vector<AgentPtr> currentGeneration;
+			int currentGeneration = 0;
+			int currentStep = 0;
+			std::vector<AgentPtr> currentAgents;
 			bool isGenerationEvaluated = false;
 			GenomeCPtr bestData = nullptr;
 			float bestFitness = 0.0f;
@@ -99,13 +101,13 @@ namespace tbml
 			virtual AgentPtr createAgent(GenomeCPtr&& data) const { return std::make_unique<TAgent>(std::move(data)); }
 
 		public:
-			Genepool(bool enableMultithreadedStepEvaluation = false, bool enableMultithreadedFullEvaluation = false, bool syncMultithreadedSteps = false)
+			void setThreading(bool enableMultithreadedStepEvaluation = false, bool enableMultithreadedFullEvaluation = false, bool syncMultithreadedSteps = false)
 			{
-				std::cout << "Threading Settings (Step: " << enableMultithreadedStepEvaluation << ", Full: " << enableMultithreadedFullEvaluation << ", Sync: " << syncMultithreadedSteps << ")" << std::endl;
 				if (enableMultithreadedFullEvaluation && enableMultithreadedStepEvaluation)
 					throw std::runtime_error("tbml::GenepoolSimulation: Cannot have both enableMultithreadedFullEvaluation and enableMultithreadedStepEvaluation.");
 				if (syncMultithreadedSteps && !enableMultithreadedFullEvaluation)
 					throw std::runtime_error("tbml::GenepoolSimulation: Cannot have syncMultithreadedSteps without enableMultithreadedFullEvaluation.");
+
 				this->enableMultithreadedStepEvaluation = enableMultithreadedStepEvaluation;
 				this->enableMultithreadedFullEvaluation = enableMultithreadedFullEvaluation;
 				this->syncMultithreadedSteps = syncMultithreadedSteps;
@@ -115,26 +117,26 @@ namespace tbml
 			{
 				if (!this->isInitialized) throw std::runtime_error("tbml::GenepoolSimulation: Cannot render because uninitialized.");
 
-				for (const auto& inst : currentGeneration) inst->render(window);
+				for (const auto& inst : currentAgents) inst->render(window);
 			};
 
 			void resetGenepool(int populationSize, float mutationRate)
 			{
 				// [INITIALIZATION] Initialize new instances
-				this->currentGeneration.clear();
+				this->currentAgents.clear();
 				for (int i = 0; i < populationSize; i++)
 				{
 					GenomeCPtr genome = createGenome();
 					AgentPtr agent = createAgent(std::move(genome));
-					this->currentGeneration.push_back(std::move(agent));
+					this->currentAgents.push_back(std::move(agent));
 				}
 
 				this->isInitialized = true;
 				this->populationSize = populationSize;
 				this->mutationRate = mutationRate;
 
-				this->generationNumber = 1;
-				this->generationStepNumber = 0;
+				this->currentGeneration = 1;
+				this->currentStep = 0;
 				this->isGenerationEvaluated = false;
 
 				initGeneration();
@@ -154,7 +156,7 @@ namespace tbml
 					do
 					{
 						allFinished = true;
-						for (int i = start; i < end; i++) allFinished &= this->currentGeneration[i]->step();
+						for (int i = start; i < end; i++) allFinished &= this->currentAgents[i]->step();
 					} while (!step && !allFinished);
 					return allFinished;
 				};
@@ -178,22 +180,22 @@ namespace tbml
 						}
 
 						for (auto&& result : threadResults) allFinished &= result.get();
-						this->generationStepNumber++;
+						this->currentStep++;
 					} while (!step && !allFinished);
 				}
 
 				// Process generation (single-threaded)
 				else
 				{
-					allFinished = evaluateSubset(step, 0, this->currentGeneration.size());
-					this->generationStepNumber++;
+					allFinished = evaluateSubset(step, 0, this->currentAgents.size());
+					this->currentStep++;
 				}
 
 				std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 				auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0);
 				std::cout << "Processed Generation Step: " << us.count() / 1000.0f << "ms" << std::endl;
 
-				this->generationStepNumber++;
+				this->currentStep++;
 				if (allFinished) this->isGenerationEvaluated = true;
 			}
 
@@ -203,32 +205,32 @@ namespace tbml
 				if (!this->isGenerationEvaluated) return;
 
 				// Sort generation and get best data
-				std::sort(this->currentGeneration.begin(), this->currentGeneration.end(), [this](const auto& a, const auto& b) { return a->getFitness() > b->getFitness(); });
-				const AgentPtr& bestInstance = this->currentGeneration[0];
+				std::sort(this->currentAgents.begin(), this->currentAgents.end(), [this](const auto& a, const auto& b) { return a->getFitness() > b->getFitness(); });
+				const AgentPtr& bestInstance = this->currentAgents[0];
 				this->bestData = GenomeCPtr(bestInstance->getGenome());
 				this->bestFitness = bestInstance->getFitness();
 
-				std::cout << "Generation: " << this->generationNumber << ", best fitness: " << this->bestFitness << std::endl;
+				std::cout << "Generation: " << this->currentGeneration << ", best fitness: " << this->bestFitness << std::endl;
 
 				// Initialize next generation with new instance of best data
 				std::vector<AgentPtr> nextGeneration;
 				nextGeneration.push_back(std::move(createAgent(std::move(GenomeCPtr(this->bestData)))));
 
 				// Selection helper function to pick parents
-				int selectAmount = static_cast<int>(ceil(this->currentGeneration.size() / 2.0f));
+				int selectAmount = static_cast<int>(ceil(this->currentAgents.size() / 2.0f));
 				auto transformFitness = [](float f) { return f * f; };
 				float totalFitness = 0.0f;
-				for (int i = 0; i < selectAmount; i++) totalFitness += transformFitness(this->currentGeneration[i]->getFitness());
+				for (int i = 0; i < selectAmount; i++) totalFitness += transformFitness(this->currentAgents[i]->getFitness());
 				const auto& pickWeightedParent = [&]()
 				{
 					float r = fn::getRandomFloat() * totalFitness;
 					float cumSum = 0.0f;
 					for (int i = 0; i < selectAmount; i++)
 					{
-						cumSum += transformFitness(this->currentGeneration[i]->getFitness());
-						if (r <= cumSum) return this->currentGeneration[i]->getGenome();
+						cumSum += transformFitness(this->currentAgents[i]->getFitness());
+						if (r <= cumSum) return this->currentAgents[i]->getGenome();
 					}
-					return this->currentGeneration[selectAmount - 1]->getGenome();
+					return this->currentAgents[selectAmount - 1]->getGenome();
 				};
 
 				for (int i = 0; i < this->populationSize - 1; i++)
@@ -243,13 +245,15 @@ namespace tbml
 				}
 
 				// Set to new generation and update variables
-				this->currentGeneration = std::move(nextGeneration);
-				this->generationNumber++;
+				this->currentAgents = std::move(nextGeneration);
+				this->currentGeneration++;
 				this->isGenerationEvaluated = false;
 				initGeneration();
 			};
 
-			int getGenerationNumber() const { return this->generationNumber; }
+			int getGenerationNumber() const { return this->currentGeneration; }
+
+			GenomeCPtr getBestData() const { return this->bestData; }
 
 			float getBestFitness() const { return this->bestFitness; }
 
@@ -262,7 +266,6 @@ namespace tbml
 		{
 		protected:
 			IGenepoolPtr genepool = nullptr;
-
 			bool isRunning = false;
 			bool autoStepEvaluate = false;
 			bool autoFullEvaluate = false;
