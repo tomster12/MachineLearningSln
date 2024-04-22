@@ -9,8 +9,8 @@ class NNTargetAgent : public tbml::ga::Agent<NNGenome>
 public:
 	NNTargetAgent(NNTargetAgent::GenomeCPtr&& genome) : Agent(std::move(genome)) {};
 	NNTargetAgent(
-		sf::Vector2f startPos, float radius, float moveAcc, int maxIterations,
-		const NNTargetGenepool* genepool, NNTargetAgent::GenomeCPtr&& genome);
+		NNTargetAgent::GenomeCPtr&& genome, const NNTargetGenepool* genepool,
+		sf::Vector2f startPos, float radius, float moveAcc, float moveDrag, int maxIterations);
 
 	void initVisual();
 	bool step() override;
@@ -21,45 +21,33 @@ public:
 private:
 	const NNTargetGenepool* genepool = nullptr;
 	sf::CircleShape shape;
-
 	sf::Vector2f startPos;
 	float radius = 0;
 	float moveAcc = 0;
+	float moveDrag = 0;
 	int maxIterations = 0;
-
 	tbml::Tensor netInput;
-	tbml::nn::NeuralNetwork network;
 	sf::Vector2f pos;
+	sf::Vector2f vel;
 	int currentIteration = 0;
+	int currentTarget = 0;
+	float anger = 0.0f;
 };
 
 class NNTargetGenepool : public tbml::ga::Genepool<NNGenome, NNTargetAgent>
 {
 public:
 	NNTargetGenepool() {};
-	NNTargetGenepool(
-		sf::Vector2f instanceStartPos, float instanceRadius, float instancemoveAcc, int instancemaxIterations,
-		float targetRadius, sf::Vector2f targetRandomCentre, float targetRandomRadius,
-		std::function<GenomeCPtr(void)> createGenomeFn);
+	NNTargetGenepool(std::vector<sf::Vector2f> targets, float targetRadius);
 
-	void initializeGeneration() override;
+	void initVisual();
 	void render(sf::RenderWindow* window) override;
-	sf::Vector2f getTargetPos() const;
+	const sf::Vector2f& getTarget(int index) const;
+	size_t getTargetCount() const;
 	float getTargetRadius() const;
 
 protected:
-	sf::CircleShape target;
-	sf::Vector2f instanceStartPos;
-	float instanceRadius = 0.0f;
-	float instancemoveAcc = 0.0f;
-	int instancemaxIterations = 0;
+	std::vector<sf::CircleShape> targetShapes;
+	std::vector<sf::Vector2f> targetPos;
 	float targetRadius = 0.0f;
-	sf::Vector2f targetRandomCentre;
-	float targetRandomRadius = 0.0f;
-	sf::Vector2f targetPos;
-	std::function<GenomeCPtr(void)> createGenomeFn;
-
-	GenomeCPtr createGenome() const override;
-	AgentPtr createAgent(GenomeCPtr&& genome) const override;
-	sf::Vector2f getRandomTargetPos() const;
 };

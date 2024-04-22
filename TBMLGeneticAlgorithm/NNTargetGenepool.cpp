@@ -1,158 +1,130 @@
 #include "stdafx.h"
 #include "global.h"
 #include "NNTargetGenepool.h"
-#include "Utility.h"
 #include "CommonImpl.h"
+#include "Utility.h"
 #include "Tensor.h"
 
-#pragma region - NNTargetAgent
-
 NNTargetAgent::NNTargetAgent(
-	sf::Vector2f startPos, float radius, float moveAcc, int maxIterations,
-	const NNTargetGenepool* genepool, NNTargetAgent::GenomeCPtr&& genome)
+	NNTargetAgent::GenomeCPtr&& genome, const NNTargetGenepool* genepool,
+	sf::Vector2f startPos, float radius, float moveAcc, float moveDrag, int maxIterations)
 	: Agent(std::move(genome)), genepool(genepool),
-	pos(startPos), radius(radius), moveAcc(moveAcc), maxIterations(maxIterations),
-	netInput({ 1, 2 }, 0.0f), network(this->genome->getNetwork()), currentIteration(0)
+	pos(startPos), radius(radius), moveAcc(moveAcc), moveDrag(moveDrag), maxIterations(maxIterations),
+	currentIteration(0), currentTarget(0), vel(), anger(0.0f), netInput({ 1, 6 }, 0.0f)
 {
 	if (global::showVisuals) initVisual();
 }
 
 void NNTargetAgent::initVisual()
 {
-	// Initialize all visual variables
-	this->shape.setRadius(this->radius);
-	this->shape.setOrigin(this->radius, this->radius);
-	this->shape.setFillColor(sf::Color::Transparent);
-	this->shape.setOutlineColor(sf::Color::White);
-	this->shape.setOutlineThickness(1.0f);
+	shape.setRadius(radius);
+	shape.setOrigin(radius, radius);
+	shape.setFillColor(sf::Color::Transparent);
+	shape.setOutlineColor(sf::Color::White);
+	shape.setOutlineThickness(1.0f);
 }
 
 bool NNTargetAgent::step()
 {
-	if (this->isFinished) return true;
+	if (isFinished) return true;
 
-	// Move position by current vector
-	sf::Vector2f targetPos = this->genepool->getTargetPos();
+	// Calculate with brain
+	const sf::Vector2f& targetPos1 = genepool->getTarget(currentTarget);
+	const sf::Vector2f& targetPos2 = genepool->getTarget(currentTarget + 1);
 	netInput.setData({ 1, 2 }, {
-		this->pos.x - targetPos.x,
-		this->pos.y - targetPos.y });
-	this->network.propogateMut(netInput);
-	this->pos.x += netInput(0, 0) * this->moveAcc;
-	this->pos.y += netInput(0, 1) * this->moveAcc;
-	this->currentIteration++;
+		targetPos1.x - pos.x,
+		targetPos1.y - pos.y,
+		vel.x,
+		vel.y });
+	genome->getNetwork().propogateMut(netInput);
+
+	// Update position, velocity, drag
+	vel.x += netInput(0, 0) * moveAcc * (1.0f / 60.0f);
+	vel.y += netInput(0, 1) * moveAcc * (1.0f / 60.0f);
+	pos.x += vel.x * (1.0f / 60.0f);
+	pos.y += vel.y * (1.0f / 60.0f);
+	vel.x *= moveDrag;
+	vel.y *= moveDrag;
+	currentIteration++;
 
 	// Check finish conditions
 	float dist = calculateDist();
-	if (this->currentIteration == this->maxIterations || dist < 0.0f)
+	anger += dist;
+	if (dist <= 0.0f) currentTarget++;
+	if (currentIteration == maxIterations)
 	{
+		isFinished = true;
 		this->calculateFitness();
-		this->isFinished = true;
 	}
-	return this->isFinished;
+	return isFinished;
 };
 
 void NNTargetAgent::render(sf::RenderWindow* window)
 {
-	// Update shape position and colour
-	this->shape.setPosition(this->pos.x, this->pos.y);
+	shape.setPosition(pos.x, pos.y);
 
-	// Draw shape to window
-	window->draw(this->shape);
+	this->calculateFitness();
+	int v = static_cast<int>(255.0f * (0.3f + 0.7f * (fitness / 30.0f)));
+	shape.setOutlineColor(sf::Color(v, v, v));
+
+	window->draw(shape);
 };
 
 float NNTargetAgent::calculateDist()
 {
 	// Calculate distance to target
-	float dx = this->genepool->getTargetPos().x - pos.x;
-	float dy = this->genepool->getTargetPos().y - pos.y;
+	sf::Vector2f targetPos = genepool->getTarget(currentTarget);
+	float dx = targetPos.x - pos.x;
+	float dy = targetPos.y - pos.y;
 	float fullDistSq = sqrt(dx * dx + dy * dy);
-	float radii = this->radius + this->genepool->getTargetRadius();
-	return fullDistSq - radii;
+	float radii = genepool->getTargetRadius();
+	return fullDistSq - radii - radius;
 }
 
 float NNTargetAgent::calculateFitness()
 {
-	// Dont calculate once finished
-	if (this->isFinished) return this->fitness;
+	// Calculate fitness (anger)
+	/*fitness = std::min(1000000.0f / anger, 15.0f);
+	fitness -= currentTarget * 2.0f;
+	fitness = fitness > 0.0f ? fitness : 0.0f;*/
 
-	// Calculate fitness
-	float dist = calculateDist();
-	float fitness = 0.0f;
+	// Calculate fitness (speed)
+	fitness = currentTarget + 1.0f - 1.0f / calculateDist();
 
-	if (dist > 0.0f)
-	{
-		fitness = 0.5f * (1.0f - dist / 500.0f);
-		fitness = fitness < 0.0f ? 0.0f : fitness;
-	}
-	else
-	{
-		float dataPct = static_cast<float>(this->currentIteration) / static_cast<float>(this->maxIterations);
-		fitness = 1.0f - 0.5f * dataPct;
-	}
-
-	// Update and return
-	this->fitness = fitness;
-	return this->fitness;
+	return fitness;
 };
 
-#pragma endregion
+NNTargetGenepool::NNTargetGenepool(std::vector<sf::Vector2f> targets, float targetRadius)
+	: targetPos(targets), targetRadius(targetRadius)
+{
+	if (global::showVisuals) initVisual();
+};
 
-#pragma region - NNTargetGenepool
-
-NNTargetGenepool::NNTargetGenepool(
-	sf::Vector2f instanceStartPos, float instanceRadius, float instancemoveAcc, int instancemaxIterations,
-	float targetRadius, sf::Vector2f targetRandomCentre, float targetRandomRadius,
-	std::function<GenomeCPtr(void)> createGenomeFn)
-	: instanceStartPos(instanceStartPos), instanceRadius(instanceRadius), instancemoveAcc(instancemoveAcc), instancemaxIterations(instancemaxIterations),
-	targetRadius(targetRadius), targetRandomCentre(targetRandomCentre), targetRandomRadius(targetRandomRadius),
-	createGenomeFn(createGenomeFn)
+void NNTargetGenepool::initVisual()
 {
 	// Initialize variables
-	this->targetPos = this->getRandomTargetPos();
-	this->target.setRadius(this->targetRadius);
-	this->target.setOrigin(this->targetRadius, this->targetRadius);
-	this->target.setFillColor(sf::Color::Transparent);
-	this->target.setOutlineColor(sf::Color::White);
-	this->target.setOutlineThickness(1.0f);
-	this->target.setPosition(this->targetPos);
-}
-
-NNTargetGenepool::GenomeCPtr NNTargetGenepool::createGenome() const
-{
-	return createGenomeFn();
-}
-
-NNTargetGenepool::AgentPtr NNTargetGenepool::createAgent(NNTargetGenepool::GenomeCPtr&& genome) const
-{
-	return std::make_unique<NNTargetAgent>(
-		this->instanceStartPos, this->instanceRadius, this->instancemoveAcc, this->instancemaxIterations,
-		this, std::move(genome));
-}
-
-void NNTargetGenepool::initializeGeneration()
-{
-	// Randomize target location
-	this->targetPos = this->getRandomTargetPos();
-	this->target.setPosition(this->targetPos);
-}
+	targetShapes = std::vector<sf::CircleShape>();
+	for (auto& target : targetPos)
+	{
+		sf::CircleShape shape = sf::CircleShape();
+		shape.setRadius(targetRadius);
+		shape.setOrigin(targetRadius, targetRadius);
+		shape.setFillColor(sf::Color::Transparent);
+		shape.setOutlineColor(sf::Color::White);
+		shape.setOutlineThickness(1.0f);
+		shape.setPosition(target);
+		targetShapes.push_back(shape);
+	}
+};
 
 void NNTargetGenepool::render(sf::RenderWindow* window)
 {
 	Genepool::render(window);
-	window->draw(this->target);
+	for (auto& shape : targetShapes) window->draw(shape);
 }
 
-sf::Vector2f NNTargetGenepool::getTargetPos() const { return this->targetPos; }
+const sf::Vector2f& NNTargetGenepool::getTarget(int index) const { return targetPos[index % targetPos.size()]; }
 
-float NNTargetGenepool::getTargetRadius() const { return this->targetRadius; }
+size_t NNTargetGenepool::getTargetCount() const { return targetPos.size(); }
 
-sf::Vector2f NNTargetGenepool::getRandomTargetPos() const
-{
-	// Return a random position within random target area
-	return {
-		this->targetRandomCentre.x + (tbml::fn::getRandomFloat() * 2 - 1) * this->targetRandomRadius,
-		this->targetRandomCentre.y
-	};
-}
-
-#pragma endregion
+float NNTargetGenepool::getTargetRadius() const { return targetRadius; }

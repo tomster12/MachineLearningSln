@@ -212,14 +212,11 @@ namespace tbml
 				const AgentPtr& bestInstance = this->currentAgents[0];
 				this->bestData = GenomeCPtr(bestInstance->getGenome());
 				this->bestFitness = bestInstance->getFitness();
-
 				std::cout << "Generation: " << this->currentGeneration << ", best fitness: " << this->bestFitness << std::endl;
 
-				// Initialize next generation with new instance of best data
+				// Initialize next generation with best generation, setup selection method
 				std::vector<AgentPtr> nextGeneration;
 				nextGeneration.push_back(std::move(createAgent(std::move(GenomeCPtr(this->bestData)))));
-
-				// Selection helper function to pick parents
 				int selectAmount = static_cast<int>(ceil(this->currentAgents.size() / 2.0f));
 				auto transformFitness = [](float f) { return f * f; };
 				float totalFitness = 0.0f;
@@ -244,7 +241,7 @@ namespace tbml
 
 					// [CROSSOVER], [MUTATION] Crossover and mutate new child data
 					GenomeCPtr childData = parentDataA->crossover(parentDataB, this->mutationRate);
-					nextGeneration.push_back(std::move(createAgent(std::move(childData))));
+					nextGeneration.push_back(createAgent(std::move(childData)));
 				}
 
 				// Set to new generation and update variables

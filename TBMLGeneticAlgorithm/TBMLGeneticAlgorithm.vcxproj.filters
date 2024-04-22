@@ -10,9 +10,6 @@
     <Filter Include="Implementation\Vector List Target">
       <UniqueIdentifier>{a9a08ced-686f-4a7f-998c-df780b399c98}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Implementation\NN Target Genepool">
-      <UniqueIdentifier>{0bafb34a-0707-4080-924b-2de6851cc49c}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Implementation\NN Pole Balancer">
       <UniqueIdentifier>{75f633c6-2ceb-4f36-bc16-35298ee2e0e6}</UniqueIdentifier>
     </Filter>
@@ -39,13 +36,10 @@
     <ClCompile Include="VectorListTargetGenepool.cpp">
       <Filter>Implementation\Vector List Target</Filter>
     </ClCompile>
-    <ClCompile Include="NNTargetGenepool.cpp">
-      <Filter>Implementation\NN Target Genepool</Filter>
-    </ClCompile>
     <ClCompile Include="global.cpp">
       <Filter>Main</Filter>
     </ClCompile>
-    <ClCompile Include="NNIceTargetsGenepool.cpp">
+    <ClCompile Include="NNTargetGenepool.cpp">
       <Filter>Implementation\NN Ice Targets</Filter>
     </ClCompile>
     <ClCompile Include="CommonImpl.cpp">
@@ -68,13 +62,10 @@
     <ClInclude Include="VectorListTargetGenepool.h">
       <Filter>Implementation\Vector List Target</Filter>
     </ClInclude>
-    <ClInclude Include="NNTargetGenepool.h">
-      <Filter>Implementation\NN Target Genepool</Filter>
-    </ClInclude>
     <ClInclude Include="global.h">
       <Filter>Main</Filter>
     </ClInclude>
-    <ClInclude Include="NNIceTargetsGenepool.h">
+    <ClInclude Include="NNTargetGenepool.h">
       <Filter>Implementation\NN Ice Targets</Filter>
     </ClInclude>
     <ClInclude Include="CommonImpl.h">

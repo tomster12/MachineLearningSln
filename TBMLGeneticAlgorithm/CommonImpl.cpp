@@ -2,8 +2,6 @@
 #include "CommonImpl.h"
 #include "Tensor.h"
 
-#pragma region - VectorListGenome
-
 VectorListGenome::VectorListGenome(int dataSize)
 {
 	this->dataSize = dataSize;
@@ -20,12 +18,6 @@ VectorListGenome::VectorListGenome(std::vector<sf::Vector2f>&& values)
 	this->dataSize = values.size();
 	this->values = std::move(values);
 }
-
-const std::vector<sf::Vector2f>& VectorListGenome::getValues() const { return values; };
-
-const sf::Vector2f VectorListGenome::getValue(int index) const { return this->values[index]; }
-
-const size_t VectorListGenome::getSize() const { return this->dataSize; }
 
 VectorListGenome::GenomeCPtr VectorListGenome::crossover(const VectorListGenome::GenomeCPtr& otherData, float mutateChance) const
 {
@@ -48,9 +40,11 @@ VectorListGenome::GenomeCPtr VectorListGenome::crossover(const VectorListGenome:
 	return std::make_shared<VectorListGenome>(std::move(newValues));
 }
 
-#pragma endregion
+const std::vector<sf::Vector2f>& VectorListGenome::getValues() const { return values; };
 
-#pragma region - NNGenome
+const sf::Vector2f VectorListGenome::getValue(int index) const { return this->values[index]; }
+
+const size_t VectorListGenome::getSize() const { return this->dataSize; }
 
 NNGenome::NNGenome(tbml::fn::LossFunctionPtr&& lossFn)
 	: network(std::move(lossFn))
@@ -59,8 +53,6 @@ NNGenome::NNGenome(tbml::fn::LossFunctionPtr&& lossFn)
 NNGenome::NNGenome(tbml::fn::LossFunctionPtr&& lossFn, std::vector<std::shared_ptr<tbml::nn::Layer>>&& layers)
 	: network(std::move(lossFn), std::move(layers))
 {}
-
-void NNGenome::print() const { this->network.print(); }
 
 NNGenome::GenomeCPtr NNGenome::crossover(const NNGenome::GenomeCPtr& otherData, float mutateChance) const
 {
@@ -106,4 +98,4 @@ NNGenome::GenomeCPtr NNGenome::crossover(const NNGenome::GenomeCPtr& otherData, 
 	return std::make_shared<NNGenome>(std::move(lossFunction), std::move(newLayers));
 }
 
-#pragma endregion
+void NNGenome::print() const { this->network.print(); }

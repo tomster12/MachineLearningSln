@@ -4,10 +4,9 @@
 #include "GenepoolSimulation.h"
 #include "VectorListTargetGenepool.h"
 #include "NNTargetGenepool.h"
-#include "NNIceTargetsGenepool.h"
 #include "NNPoleBalancerGenepool.h"
 
-#define GENEPOOL_TYPE 3
+#define GENEPOOL_TYPE 2
 
 Game::Game()
 	: window(NULL), dt(0)
@@ -32,46 +31,40 @@ void Game::initialize()
 	bool fullscreen = false;
 	unsigned framerateLimit = 60;
 	bool verticalSyncEnabled = false;
-
 	if (fullscreen) this->window = new sf::RenderWindow(windowMode, title, sf::Style::Fullscreen);
 	else this->window = new sf::RenderWindow(windowMode, title, sf::Style::Titlebar | sf::Style::Close);
 	this->window->setFramerateLimit(framerateLimit);
 	this->window->setVerticalSyncEnabled(verticalSyncEnabled);
 
 	#if GENEPOOL_TYPE == 0
-	tbml::ga::IGenepoolPtr genepool(new VectorListTargetGenepool(
-		{ 700.0f, 600.0f }, 4.0f, 4.0f,
-		{ 700.0f, 100.0f }, 20.0f,
-		500
-	));
-	#elif GENEPOOL_TYPE == 1
-	tbml::ga::IGenepoolPtr genepool(new NNTargetGenepool(
-		{ 700.0f, 850.0f }, 2.0f, 2.0f, 1000,
-		20.0f, { 700.0f, 150.0f }, 500.0f,
-		[]()
+	auto genepool = new VectorListTargetGenepool(sf::Vector2f{ 700.0f, 100.0f }, 20.0f);
+	genepool->setCreateGenomeFn([]()
 	{
-		return std::make_shared<NNGenome>(std::make_shared<tbml::fn::SquareError>(),
-		std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::DenseLayer>(2, 2, std::make_shared<tbml::fn::TanH>()) });
-	}));
-	#elif GENEPOOL_TYPE == 2
-	tbml::ga::IGenepoolPtr genepool(new NNIceTargetsGenepool(
-		{ 700.0f, 850.0f }, 2.0f, 400.0f, 0.99f, 3000,
-		{ { 300.0f, 150.0f }, { 1100.0f, 400.0f }, { 450.0f, 850.0f }, { 700.0f, 320.0f } }, 4.0f,
-		[]()
-	{
-		return std::make_shared<NNGenome>(std::make_shared<tbml::fn::SquareError>(),
-		std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::DenseLayer>(6, 4, std::make_shared<tbml::fn::TanH>()), std::make_shared<tbml::nn::DenseLayer>(6, 2, std::make_shared<tbml::fn::TanH>())
+		return std::make_shared<VectorListGenome>(500);
 	});
-	}));
-	#elif GENEPOOL_TYPE == 3
+	genepool->setCreateAgentFn([=](VectorListTargetGenepool::GenomeCPtr data)
+	{
+		return std::make_unique<VectorListTargetAgent>(std::move(data), genepool, sf::Vector2f{ 700.0f, 600.0f }, 4.0f, 4.0f);
+	});
+	#elif GENEPOOL_TYPE == 1
+	auto genepool = new NNTargetGenepool({ { 300.0f, 150.0f }, { 1100.0f, 400.0f }, { 450.0f, 850.0f }, { 700.0f, 320.0f } }, 4.0f);
+	genepool->setCreateGenomeFn([]()
+	{
+		return std::make_shared<NNGenome>(nullptr, std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::DenseLayer>(4, 2, std::make_shared<tbml::fn::TanH>()) });
+	});
+	genepool->setCreateAgentFn([=](NNTargetGenepool::GenomeCPtr data)
+	{
+		return std::make_unique<NNTargetAgent>(std::move(data), genepool, sf::Vector2f{ 700.0f, 850.0f }, 2.0f, 400.0f, 0.99f, 3000);
+	});
+	#elif GENEPOOL_TYPE == 2
 	auto genepool = new NNPoleBalancerGenepool();
 	genepool->setCreateGenomeFn([]()
 	{
-		return std::make_shared<NNGenome>(std::make_shared<tbml::fn::SquareError>(), std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::DenseLayer>(4, 1, std::make_shared<tbml::fn::TanH>()) });
+		return std::make_shared<NNGenome>(nullptr, std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::DenseLayer>(4, 1, std::make_shared<tbml::fn::TanH>()) });
 	});
 	genepool->setCreateAgentFn([](NNPoleBalancerGenepool::GenomeCPtr data)
 	{
-		return std::make_unique<NNPoleBalancerAgent>(1.0f, 0.1f, 0.5f, 2.0f, 0.6f, 0.25f, 20.0f, std::move(data));
+		return std::make_unique<NNPoleBalancerAgent>(std::move(data), 1.0f, 0.1f, 0.5f, 2.0f, 0.3f, 0.25f, 15.0f);
 	});
 	#endif
 
