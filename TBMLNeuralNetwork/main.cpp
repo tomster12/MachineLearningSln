@@ -120,9 +120,6 @@ void testMNIST()
 	tbml::Tensor testPredicted = network.propogate(testInput);
 	float accuracy = tbml::fn::classificationAccuracy(testPredicted, testExpected);
 	std::cout << "t10k Accuracy = " << (accuracy * 100) << "%" << std::endl;
-
-	// Save network to file
-	network.saveToFile("MNIST.nn");
 }
 
 void testMNISTSerialization()
@@ -147,4 +144,7 @@ void testMNISTSerialization()
 	tbml::Tensor testPredicted = network.propogate(testInput);
 	float accuracy = tbml::fn::classificationAccuracy(testPredicted, testExpected);
 	std::cout << "t10k Accuracy = " << (accuracy * 100) << "%" << std::endl;
+
+	// Save network to file
+	network.saveToFile("MNIST.nn");
 }

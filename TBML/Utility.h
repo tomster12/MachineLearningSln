@@ -20,8 +20,8 @@ namespace tbml
 		class ActivationFunction
 		{
 		public:
-			virtual void activate(Tensor& x) const = 0;
-			virtual Tensor chainDerivative(const Tensor& z, const Tensor& pdToOut) const = 0;
+			virtual void activate(Tensor& input) const = 0;
+			virtual Tensor chainDerivative(const Tensor& output, const Tensor& gradOutput) const = 0;
 
 			virtual void serialize(std::ostream& os) const = 0;
 			static std::shared_ptr<ActivationFunction> deserialize(std::istream& is);
@@ -33,8 +33,8 @@ namespace tbml
 		class LossFunction
 		{
 		public:
-			virtual float activate(const Tensor& output, const Tensor& expected) const = 0;
-			virtual Tensor derive(const Tensor& output, const Tensor& expected) const = 0;
+			virtual float calculate(const Tensor& output, const Tensor& expected) const = 0;
+			virtual Tensor derivative(const Tensor& output, const Tensor& expected) const = 0;
 
 			virtual void serialize(std::ostream& os) const = 0;
 			static std::shared_ptr<LossFunction> deserialize(std::istream& is);
@@ -43,19 +43,21 @@ namespace tbml
 		using ActivationFunctionPtr = std::shared_ptr<fn::ActivationFunction>;
 		using LossFunctionPtr = std::shared_ptr<fn::LossFunction>;
 
+		// -----------------------------------------
+
 		// Output range [0, inf]
 		class ReLU : public ActivationFunction
 		{
 		public:
-			void activate(Tensor& x) const override
+			void activate(Tensor& input) const override
 			{
-				x.map([](float x) { return std::max(0.0f, x); });
+				input.map([](float input) { return std::max(0.0f, input); });
 			};
 
-			Tensor chainDerivative(const Tensor& z, const Tensor& pdToOut) const override
+			Tensor chainDerivative(const Tensor& output, const Tensor& gradOutput) const override
 			{
-				Tensor pdOutToIn = z.mapped([](float v) { return v > 0 ? 1.0f : 0.0f; });
-				return pdOutToIn * pdToOut;
+				Tensor gradOutputToInput = output.mapped([](float v) { return v > 0 ? 1.0f : 0.0f; });
+				return gradOutputToInput * gradOutput;
 			};
 
 			void serialize(std::ostream& os) const override
@@ -68,20 +70,20 @@ namespace tbml
 		class Sigmoid : public ActivationFunction
 		{
 		public:
-			void activate(Tensor& x) const override
+			void activate(Tensor& input) const override
 			{
-				x.map([this](float x) { return sigmoid(x); });
+				input.map([this](float input) { return sigmoid(input); });
 			};
 
-			Tensor chainDerivative(const Tensor& z, const Tensor& pdToOut) const override
+			Tensor chainDerivative(const Tensor& output, const Tensor& gradOutput) const override
 			{
-				Tensor pdOutToIn = z.mapped([this](float v)
+				Tensor gradOutputToInput = output.mapped([this](float v)
 				{
 					float sv = sigmoid(v);
 					return sv * (1.0f - sv);
 				});
 
-				return pdOutToIn * pdToOut;
+				return gradOutputToInput * gradOutput;
 			};
 
 			void serialize(std::ostream& os) const override
@@ -97,20 +99,20 @@ namespace tbml
 		class TanH : public ActivationFunction
 		{
 		public:
-			void activate(Tensor& x) const override
+			void activate(Tensor& input) const override
 			{
-				x.map([](float x) { return tanhf(x); });
+				input.map([](float x) { return tanhf(x); });
 			};
 
-			Tensor chainDerivative(const Tensor& z, const Tensor& pdToOut) const override
+			Tensor chainDerivative(const Tensor& output, const Tensor& gradOutput) const override
 			{
-				Tensor pdOutToIn = z.mapped([](float v)
+				Tensor gradOutputToInput = output.mapped([](float v)
 				{
 					float th = tanhf(v);
 					return 1 - th * th;
 				});
 
-				return pdOutToIn * pdToOut;
+				return gradOutputToInput * gradOutput;
 			};
 
 			void serialize(std::ostream& os) const override
@@ -123,34 +125,34 @@ namespace tbml
 		class SoftMax : public ActivationFunction
 		{
 		public:
-			void activate(Tensor& x) const override
+			void activate(Tensor& input) const override
 			{
-				auto shape = x.getShape();
+				auto shape = input.getShape();
 				assert(shape.size() == 2);
 
 				// Independent per row
 				for (size_t row = 0; row < shape[0]; row++)
 				{
 					// Calculate max of row for stability
-					float max = x(row, 0);
-					for (size_t i = 1; i < shape[1]; i++) max = std::max(max, x(row, i));
+					float max = input(row, 0);
+					for (size_t i = 1; i < shape[1]; i++) max = std::max(max, input(row, i));
 
 					// SoftMax of each element in row = e^(X(i) - max) / Σ e^(X(i) - max)
 					float sum = 0.0;
 					for (size_t i = 0; i < shape[1]; i++)
 					{
-						x(row, i) = std::exp(x(row, i) - max);
-						sum += x(row, i);
+						input(row, i) = std::exp(input(row, i) - max);
+						sum += input(row, i);
 					}
-					for (size_t i = 0; i < shape[1]; i++) x(row, i) /= sum;
+					for (size_t i = 0; i < shape[1]; i++) input(row, i) /= sum;
 				}
 			};
 
-			Tensor chainDerivative(const Tensor& z, const Tensor& pdToOut) const override
+			Tensor chainDerivative(const Tensor& output, const Tensor& gradOutput) const override
 			{
-				auto shape = z.getShape();
+				auto shape = output.getShape();
 				assert(shape.size() == 2);
-				Tensor result(shape, 0);
+				Tensor gradInput(shape, 0);
 
 				// Independent per row
 				for (size_t row = 0; row < shape[0]; row++)
@@ -158,20 +160,20 @@ namespace tbml
 					// For each neuron i
 					for (size_t i = 0; i < shape[1]; i++)
 					{
-						float Zi = z(row, i);
+						float Zi = output(row, i);
 
 						// Sum partial derivatives Zj / Xi
 						for (size_t j = 0; j < shape[1]; j++)
 						{
-							float Zj = z(row, j);
+							float Zj = output(row, j);
 							int kronekerDelta = (i == j) ? 1 : 0;
 							float dSij = (Zj * (kronekerDelta - Zi));
-							result(row, i) += dSij * pdToOut(row, j);
+							gradInput(row, i) += dSij * gradOutput(row, j);
 						}
 					}
 				}
 
-				return result;
+				return gradInput;
 			};
 
 			void serialize(std::ostream& os) const override
@@ -183,7 +185,7 @@ namespace tbml
 		class SquareError : public LossFunction
 		{
 		public:
-			float activate(const Tensor& output, const Tensor& expected) const override
+			float calculate(const Tensor& output, const Tensor& expected) const override
 			{
 				const auto& predicteddata = output.getData();
 				const auto& expecteddata = expected.getData();
@@ -198,7 +200,7 @@ namespace tbml
 				return error;
 			};
 
-			Tensor derive(const Tensor& output, const Tensor& expected) const override
+			Tensor derivative(const Tensor& output, const Tensor& expected) const override
 			{
 				assert(output.getShape() == expected.getShape());
 
@@ -215,7 +217,7 @@ namespace tbml
 		class CrossEntropy : public LossFunction
 		{
 		public:
-			float activate(const Tensor& output, const Tensor& expected) const override
+			float calculate(const Tensor& output, const Tensor& expected) const override
 			{
 				const auto& predictedData = output.getData();
 				const auto& expectedData = expected.getData();
@@ -230,7 +232,7 @@ namespace tbml
 				return error / output.getShape()[0];
 			};
 
-			Tensor derive(const Tensor& output, const Tensor& expected) const override
+			Tensor derivative(const Tensor& output, const Tensor& expected) const override
 			{
 				assert(output.getShape() == expected.getShape());
 

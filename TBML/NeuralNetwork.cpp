@@ -34,7 +34,8 @@ namespace tbml
 		{
 			if (layers.size() == 0) return Tensor::ZERO;
 
-			// Copy to local, propogate layers mutably
+			// Copy to local, propogate layers mutably, using references
+			// Used to retain values for backpropogation
 			layers[0]->propogateRef(input);
 			for (size_t i = 1; i < layers.size(); i++) layers[i]->propogateRef(layers[i - 1]->getOutput());
 			return layers[layers.size() - 1]->getOutput();
@@ -45,7 +46,7 @@ namespace tbml
 			// Batch data if needed
 			size_t batchCount;
 			std::vector<Tensor> inputBatches, expectedBatches;
-			if (config.batchSize == -1)
+			if (config.batchSize <= 1)
 			{
 				// Do not batch data
 				inputBatches = std::vector<Tensor>({ input });
@@ -81,15 +82,15 @@ namespace tbml
 				{
 					// Propogate input then calculate loss
 					const Tensor& predicted = propogateRef(inputBatches[batch]);
-					float batchLoss = lossFn->activate(predicted, expectedBatches[batch]);
+					float batchLoss = lossFn->calculate(predicted, expectedBatches[batch]);
 					epochLoss += batchLoss / batchCount;
 
 					// Backpropogate loss and then each layer
-					Tensor pdLossToOut = lossFn->derive(predicted, expectedBatches[batch]);
+					Tensor pdLossToOut = lossFn->derivative(predicted, expectedBatches[batch]);
 					layers[layers.size() - 1]->backpropogate(pdLossToOut);
 					for (int i = (int)layers.size() - 2; i >= 0; i--)
 					{
-						layers[i]->backpropogate(layers[i + 1]->getPdToIn());
+						layers[i]->backpropogate(layers[i + 1]->getGradInput());
 					}
 
 					// Apply gradient descent
@@ -214,12 +215,12 @@ namespace tbml
 			activationFn = fn::ActivationFunctionPtr(other.activationFn);
 		}
 
-		DenseLayer::DenseLayer(size_t inputSize, size_t outputSize, fn::ActivationFunctionPtr&& activationFn, _DenseInitType initType, bool useBias)
+		DenseLayer::DenseLayer(size_t inputSize, size_t outputSize, fn::ActivationFunctionPtr&& activationFn, DenseInitType initType, bool useBias)
 			: activationFn(activationFn)
 		{
 			weights = Tensor({ inputSize, outputSize }, 0);
 
-			if (initType == _DenseInitType::RANDOM)
+			if (initType == DenseInitType::RANDOM)
 			{
 				weights.map([](float _) { return fn::getRandomFloat() * 2 - 1; });
 			}
@@ -228,7 +229,7 @@ namespace tbml
 			{
 				bias = Tensor({ 1, outputSize }, 0);
 
-				if (initType == _DenseInitType::RANDOM)
+				if (initType == DenseInitType::RANDOM)
 				{
 					bias.map([](float _) { return fn::getRandomFloat() * 2 - 1; });
 				}
@@ -260,21 +261,21 @@ namespace tbml
 			return output;
 		}
 
-		void DenseLayer::backpropogate(const Tensor& pdToOut)
+		void DenseLayer::backpropogate(const Tensor& gradOutput)
 		{
-			assert(pdToOut.getDims() == 2 && pdToOut.getShape(1) == weights.getShape(1) && "pdToOut shape does not match weights shape");
+			assert(gradOutput.getDims() == 2 && gradOutput.getShape(1) == weights.getShape(1) && "gradOutput shape does not match weights shape");
 			assert(this->retainValues && "Cannot backpropogate when not retaining values");
 
 			// Calculate pd to neuron in and layer in
-			Tensor pdToNet = activationFn->chainDerivative(output, pdToOut);
-			pdToIn = pdToNet.matmulled(weights.transposed());
+			Tensor gradNet = activationFn->chainDerivative(output, gradOutput);
+			gradInput = gradNet.matmulled(weights.transposed());
 
 			// Setup variables for derivatives
 			int batchSize = (int)propogateInput->getShape(0);
 			int m = (int)weights.getShape(0);
 			int n = (int)weights.getShape(1);
-			pdToWeights = Tensor(weights.getShape(), 0);
-			pdToBias = Tensor(bias.getShape(), 0);
+			gradWeights = Tensor(weights.getShape(), 0);
+			gradBias = Tensor(bias.getShape(), 0);
 
 			// Calculate pd to weights and bias as average of batch
 			#pragma omp parallel for num_threads(12)
@@ -284,13 +285,13 @@ namespace tbml
 				{
 					for (int j = 0; j < n; j++)
 					{
-						pdToWeights(i, j) += ((*propogateInput)(batchRow, i) * pdToNet(batchRow, j)) / batchSize;
+						gradWeights(i, j) += ((*propogateInput)(batchRow, i) * gradNet(batchRow, j)) / batchSize;
 					}
 				}
 
 				for (int j = 0; j < n; j++)
 				{
-					pdToBias(0, j) += pdToNet(batchRow, j) / batchSize;
+					gradBias(0, j) += gradNet(batchRow, j) / batchSize;
 				}
 			}
 		}
@@ -298,8 +299,8 @@ namespace tbml
 		void DenseLayer::gradientDescent(float learningRate, float momentumRate)
 		{
 			// Apply gradient descent with momentum
-			momentumWeights = (momentumWeights * momentumRate) - (pdToWeights * learningRate);
-			momentumBias = (momentumBias * momentumRate) - (pdToBias * learningRate);
+			momentumWeights = (momentumWeights * momentumRate) - (gradWeights * learningRate);
+			momentumBias = (momentumBias * momentumRate) - (gradBias * learningRate);
 			weights += momentumWeights;
 			bias += momentumBias;
 		}
@@ -341,10 +342,10 @@ namespace tbml
 			return Tensor::ZERO;
 		}
 
-		void ConvLayer::backpropogate(const Tensor& pdToOut)
+		void ConvLayer::backpropogate(const Tensor& gradOutput)
 		{
 			// TODO: Implement
-			pdToIn = pdToOut;
+			gradInput = gradOutput;
 		}
 
 		void ConvLayer::gradientDescent(float learningRate, float momentumRate)
@@ -374,10 +375,10 @@ namespace tbml
 			return Tensor::ZERO;
 		}
 
-		void FlattenLayer::backpropogate(const Tensor& pdToOut)
+		void FlattenLayer::backpropogate(const Tensor& gradOutput)
 		{
 			// TODO: Implement
-			pdToIn = pdToOut;
+			gradInput = gradOutput;
 		}
 
 		LayerPtr FlattenLayer::clone() const
@@ -402,10 +403,10 @@ namespace tbml
 			return Tensor::ZERO;
 		}
 
-		void MaxPoolLayer::backpropogate(const Tensor& pdToOut)
+		void MaxPoolLayer::backpropogate(const Tensor& gradOutput)
 		{
 			// TODO: Implement
-			pdToIn = pdToOut;
+			gradInput = gradOutput;
 		}
 
 		LayerPtr MaxPoolLayer::clone() const
