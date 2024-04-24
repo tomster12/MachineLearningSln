@@ -67,8 +67,8 @@ NNGenome::GenomeCPtr NNGenome::crossover(const NNGenome::GenomeCPtr& otherData, 
 		// Pull out dense layers
 		const tbml::nn::Layer& layer = *layers[i];
 		const tbml::nn::Layer& oLayer = *oLayers[i];
-		const tbml::nn::DenseLayer& dLayer = dynamic_cast<const tbml::nn::DenseLayer&>(layer);
-		const tbml::nn::DenseLayer& oDLayer = dynamic_cast<const tbml::nn::DenseLayer&>(oLayer);
+		const tbml::nn::Dense& dLayer = dynamic_cast<const tbml::nn::Dense&>(layer);
+		const tbml::nn::Dense& oDLayer = dynamic_cast<const tbml::nn::Dense&>(oLayer);
 
 		// Perform crossover
 		const tbml::Tensor& weights = dLayer.getWeights();
@@ -92,7 +92,7 @@ NNGenome::GenomeCPtr NNGenome::crossover(const NNGenome::GenomeCPtr& otherData, 
 
 		tbml::fn::ActivationFunctionPtr activationFn = dLayer.getActivationFunction();
 
-		newLayers[i] = std::make_shared<tbml::nn::DenseLayer>(std::move(newWeights), std::move(newBiases), std::move(activationFn));
+		newLayers[i] = std::make_shared<tbml::nn::Dense>(std::move(newWeights), std::move(newBiases), std::move(activationFn));
 	}
 
 	return std::make_shared<NNGenome>(std::move(lossFunction), std::move(newLayers));

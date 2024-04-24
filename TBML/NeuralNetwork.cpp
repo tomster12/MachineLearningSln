@@ -7,7 +7,141 @@ namespace tbml
 {
 	namespace nn
 	{
-		void NeuralNetwork::addLayer(LayerPtr&& layer)
+		namespace Layer
+		{
+			BasePtr deserialize(std::istream& is)
+			{
+				std::string type;
+				is >> type;
+
+				if (type == "Dense")
+				{
+					fn::ActivationFunctionPtr activationFn = fn::ActivationFunction::deserialize(is);
+					Tensor weights = Tensor::deserialize(is);
+					Tensor bias = Tensor::deserialize(is);
+					return std::make_shared<Dense>(std::move(weights), std::move(bias), std::move(activationFn));
+				}
+
+				throw std::runtime_error("Unknown layer type");
+			}
+
+			Dense::Dense(const Dense& other)
+			{
+				weights = other.weights;
+				bias = other.bias;
+				activationFn = fn::ActivationFunctionPtr(other.activationFn);
+			}
+
+			Dense::Dense(size_t inputSize, size_t outputSize, fn::ActivationFunctionPtr&& activationFn, DenseInitType initType, bool useBias)
+				: activationFn(activationFn)
+			{
+				weights = Tensor({ inputSize, outputSize }, 0);
+
+				if (initType == DenseInitType::RANDOM)
+				{
+					weights.map([](float _) { return fn::getRandomFloat() * 2 - 1; });
+				}
+
+				if (useBias)
+				{
+					bias = Tensor({ 1, outputSize }, 0);
+
+					if (initType == DenseInitType::RANDOM)
+					{
+						bias.map([](float _) { return fn::getRandomFloat() * 2 - 1; });
+					}
+				}
+			}
+
+			Dense::Dense(Tensor&& weights, Tensor&& bias, fn::ActivationFunctionPtr&& activationFn)
+				: weights(std::move(weights)), bias(std::move(bias)), activationFn(std::move(activationFn))
+			{}
+
+			void Dense::propogateMut(Tensor& input) const
+			{
+				assert(input.getDims() == 2 && input.getShape(1) == weights.getShape(0) && "Input shape does not match weights shape");
+
+				// Mutably propogate input with weights and bias
+				input.matmul(weights).add(bias, 0);
+				activationFn->activate(input);
+			}
+
+			const Tensor& Dense::propogateRef(const Tensor& input)
+			{
+				assert(input.getDims() == 2 && input.getShape(1) == weights.getShape(0) && "Input shape does not match weights shape");
+
+				// Propogate input with weights and bias
+				// Retain input and output for backprop
+				propogateInput = &input;
+				output = input.matmulled(weights).add(bias, 0);
+				activationFn->activate(output);
+				return output;
+			}
+
+			void Dense::backpropogate(const Tensor& gradOutput)
+			{
+				assert(gradOutput.getDims() == 2 && gradOutput.getShape(1) == weights.getShape(1) && "gradOutput shape does not match weights shape");
+				assert(this->retainValues && "Cannot backpropogate when not retaining values");
+
+				// Calculate pd to neuron in and layer in
+				Tensor gradNet = activationFn->chainDerivative(output, gradOutput);
+				gradInput = gradNet.matmulled(weights.transposed());
+
+				// Calculate pd to weights and bias as average of batches
+				int batchSize = (int)propogateInput->getShape(0);
+				int m = (int)weights.getShape(0);
+				int n = (int)weights.getShape(1);
+				gradWeights = Tensor(weights.getShape(), 0);
+				gradBias = Tensor(bias.getShape(), 0);
+
+				#pragma omp parallel for num_threads(12)
+				for (int batchRow = 0; batchRow < batchSize; batchRow++)
+				{
+					for (int i = 0; i < m; i++)
+					{
+						for (int j = 0; j < n; j++)
+						{
+							gradWeights(i, j) += ((*propogateInput)(batchRow, i) * gradNet(batchRow, j)) / batchSize;
+						}
+					}
+
+					for (int j = 0; j < n; j++)
+					{
+						gradBias(0, j) += gradNet(batchRow, j) / batchSize;
+					}
+				}
+			}
+
+			void Dense::gradientDescent(float learningRate, float momentumRate)
+			{
+				// Apply gradient descent with momentum
+				momentumWeights = (momentumWeights * momentumRate) - (gradWeights * learningRate);
+				momentumBias = (momentumBias * momentumRate) - (gradBias * learningRate);
+				weights += momentumWeights;
+				bias += momentumBias;
+			}
+
+			void Dense::print() const
+			{
+				weights.print("Weights:");
+				bias.print("Bias:");
+			}
+
+			BasePtr Dense::clone() const
+			{
+				return std::make_shared<Dense>(*this);
+			}
+
+			void Dense::serialize(std::ostream& os) const
+			{
+				os << "Dense\n";
+				activationFn->serialize(os);
+				weights.serialize(os);
+				bias.serialize(os);
+			}
+		}
+
+		void NeuralNetwork::addLayer(Layer::BasePtr&& layer)
 		{
 			layers.push_back(std::move(layer));
 		}
@@ -44,6 +178,7 @@ namespace tbml
 		void NeuralNetwork::train(const Tensor& input, const Tensor& expected, const TrainingConfig& config)
 		{
 			// Batch data if needed
+			// TODO: Batch randomly each epoch
 			size_t batchCount;
 			std::vector<Tensor> inputBatches, expectedBatches;
 			if (config.batchSize <= 1)
@@ -104,7 +239,7 @@ namespace tbml
 						std::chrono::steady_clock::time_point tBatchEnd = std::chrono::steady_clock::now();
 						float accuracy = fn::classificationAccuracy(predicted, expectedBatches[batch]);
 						auto us = std::chrono::duration_cast<std::chrono::microseconds>(tBatchEnd - tBatchStart);
-						printf("Epoch %d, Batch %d: Loss: %f, Accuracy: %f, Time: %fms\n", epoch, (int)batch, batchLoss, accuracy * 100, us.count() / 1000.0f);
+						printf("Epoch %d, Batch %d: Loss: %.3f, Accuracy: %.1f%%, Time: %.3fms\n", epoch, (int)batch, batchLoss, accuracy * 100, us.count() / 1000.0f);
 						tBatchStart = tBatchEnd;
 					}
 				}
@@ -115,7 +250,7 @@ namespace tbml
 					const Tensor& predicted = propogateRef(input);
 					float accuracy = fn::classificationAccuracy(predicted, expected);
 					auto us = std::chrono::duration_cast<std::chrono::microseconds>(tEpochEnd - tEpochStart);
-					printf("Epoch %d: Loss: %f, Accuracy: %f, Time: %fms\n", epoch, epochLoss, accuracy, us.count() / 1000.0f);
+					printf("Epoch %d: Loss: %.3f, Accuracy: %.1f%%, Time: %.3fms\n", epoch, epochLoss, accuracy * 100, us.count() / 1000.0f);
 					tEpochStart = tEpochEnd;
 				}
 
@@ -127,7 +262,7 @@ namespace tbml
 			{
 				std::chrono::steady_clock::time_point tTrainEnd = std::chrono::steady_clock::now();
 				auto us = std::chrono::duration_cast<std::chrono::microseconds>(tTrainEnd - tTrainStart);
-				printf("Training complete for %d epochs, Time taken: %fms\n\n", epoch, us.count() / 1000.0f);
+				printf("Training complete for %d epochs, Time taken: %.3fms\n\n", epoch, us.count() / 1000.0f);
 			}
 
 			// Reset layers to not retain values
@@ -183,7 +318,7 @@ namespace tbml
 			file >> layerCount;
 
 			// Read each layer
-			std::vector<LayerPtr> layers;
+			std::vector<Layer::BasePtr> layers;
 			for (size_t i = 0; i < layerCount; i++)
 			{
 				layers.push_back(Layer::deserialize(file));
@@ -191,229 +326,5 @@ namespace tbml
 
 			return NeuralNetwork(std::move(lossFn), std::move(layers));
 		}
-
-		std::shared_ptr<Layer> Layer::deserialize(std::istream& is)
-		{
-			std::string type;
-			is >> type;
-
-			if (type == "Dense")
-			{
-				fn::ActivationFunctionPtr activationFn = fn::ActivationFunction::deserialize(is);
-				Tensor weights = Tensor::deserialize(is);
-				Tensor bias = Tensor::deserialize(is);
-				return std::make_shared<DenseLayer>(std::move(weights), std::move(bias), std::move(activationFn));
-			}
-
-			throw std::runtime_error("Unknown layer type");
-		}
-
-		DenseLayer::DenseLayer(const DenseLayer& other)
-		{
-			weights = other.weights;
-			bias = other.bias;
-			activationFn = fn::ActivationFunctionPtr(other.activationFn);
-		}
-
-		DenseLayer::DenseLayer(size_t inputSize, size_t outputSize, fn::ActivationFunctionPtr&& activationFn, DenseInitType initType, bool useBias)
-			: activationFn(activationFn)
-		{
-			weights = Tensor({ inputSize, outputSize }, 0);
-
-			if (initType == DenseInitType::RANDOM)
-			{
-				weights.map([](float _) { return fn::getRandomFloat() * 2 - 1; });
-			}
-
-			if (useBias)
-			{
-				bias = Tensor({ 1, outputSize }, 0);
-
-				if (initType == DenseInitType::RANDOM)
-				{
-					bias.map([](float _) { return fn::getRandomFloat() * 2 - 1; });
-				}
-			}
-		}
-
-		DenseLayer::DenseLayer(Tensor&& weights, Tensor&& bias, fn::ActivationFunctionPtr&& activationFn)
-			: weights(std::move(weights)), bias(std::move(bias)), activationFn(std::move(activationFn))
-		{}
-
-		void DenseLayer::propogateMut(Tensor& input) const
-		{
-			assert(input.getDims() == 2 && input.getShape(1) == weights.getShape(0) && "Input shape does not match weights shape");
-
-			// Mutably propogate input with weights and bias
-			input.matmul(weights).add(bias, 0);
-			activationFn->activate(input);
-		}
-
-		const Tensor& DenseLayer::propogateRef(const Tensor& input)
-		{
-			assert(input.getDims() == 2 && input.getShape(1) == weights.getShape(0) && "Input shape does not match weights shape");
-
-			// Propogate input with weights and bias
-			// Retain3 input and output for backprop
-			propogateInput = &input;
-			output = input.matmulled(weights).add(bias, 0);
-			activationFn->activate(output);
-			return output;
-		}
-
-		void DenseLayer::backpropogate(const Tensor& gradOutput)
-		{
-			assert(gradOutput.getDims() == 2 && gradOutput.getShape(1) == weights.getShape(1) && "gradOutput shape does not match weights shape");
-			assert(this->retainValues && "Cannot backpropogate when not retaining values");
-
-			// Calculate pd to neuron in and layer in
-			Tensor gradNet = activationFn->chainDerivative(output, gradOutput);
-			gradInput = gradNet.matmulled(weights.transposed());
-
-			// Setup variables for derivatives
-			int batchSize = (int)propogateInput->getShape(0);
-			int m = (int)weights.getShape(0);
-			int n = (int)weights.getShape(1);
-			gradWeights = Tensor(weights.getShape(), 0);
-			gradBias = Tensor(bias.getShape(), 0);
-
-			// Calculate pd to weights and bias as average of batch
-			#pragma omp parallel for num_threads(12)
-			for (int batchRow = 0; batchRow < batchSize; batchRow++)
-			{
-				for (int i = 0; i < m; i++)
-				{
-					for (int j = 0; j < n; j++)
-					{
-						gradWeights(i, j) += ((*propogateInput)(batchRow, i) * gradNet(batchRow, j)) / batchSize;
-					}
-				}
-
-				for (int j = 0; j < n; j++)
-				{
-					gradBias(0, j) += gradNet(batchRow, j) / batchSize;
-				}
-			}
-		}
-
-		void DenseLayer::gradientDescent(float learningRate, float momentumRate)
-		{
-			// Apply gradient descent with momentum
-			momentumWeights = (momentumWeights * momentumRate) - (gradWeights * learningRate);
-			momentumBias = (momentumBias * momentumRate) - (gradBias * learningRate);
-			weights += momentumWeights;
-			bias += momentumBias;
-		}
-
-		void DenseLayer::print() const
-		{
-			weights.print("Weights:");
-			bias.print("Bias:");
-		}
-
-		LayerPtr DenseLayer::clone() const
-		{
-			return std::make_shared<DenseLayer>(*this);
-		}
-
-		void DenseLayer::serialize(std::ostream& os) const
-		{
-			os << "Dense\n";
-			activationFn->serialize(os);
-			weights.serialize(os);
-			bias.serialize(os);
-		}
-
-		/*
-		ConvLayer::ConvLayer(std::vector<size_t> kernel, std::vector<size_t> stride, fn::ActivationFunction&& activationFn)
-			: activationFn(activationFn)
-		{}
-
-		const Tensor& ConvLayer::propogate(const Tensor& input)
-		{
-			// TODO: Implement
-			output = Tensor::ZERO;
-			return output;
-		}
-
-		Tensor ConvLayer::propogate(const Tensor& input) const
-		{
-			// TODO: Implement
-			return Tensor::ZERO;
-		}
-
-		void ConvLayer::backpropogate(const Tensor& gradOutput)
-		{
-			// TODO: Implement
-			gradInput = gradOutput;
-		}
-
-		void ConvLayer::gradientDescent(float learningRate, float momentumRate)
-		{
-			// TODO: Implement
-		}
-
-		LayerPtr ConvLayer::clone() const
-		{
-			// TODO: Implement
-			return std::shared_ptr<ConvLayer>();
-		}
-
-		FlattenLayer::FlattenLayer()
-		{}
-
-		const Tensor& FlattenLayer::propogate(const Tensor& input)
-		{
-			// TODO: Implement
-			output = Tensor::ZERO;
-			return output;
-		}
-
-		Tensor FlattenLayer::propogate(const Tensor& input) const
-		{
-			// TODO: Implement
-			return Tensor::ZERO;
-		}
-
-		void FlattenLayer::backpropogate(const Tensor& gradOutput)
-		{
-			// TODO: Implement
-			gradInput = gradOutput;
-		}
-
-		LayerPtr FlattenLayer::clone() const
-		{
-			// TODO: Implement
-			return std::shared_ptr<FlattenLayer>();
-		}
-
-		MaxPoolLayer::MaxPoolLayer()
-		{}
-
-		const Tensor& MaxPoolLayer::propogate(const Tensor& input)
-		{
-			// TODO: Implement
-			output = Tensor::ZERO;
-			return output;
-		}
-
-		Tensor MaxPoolLayer::propogate(const Tensor& input) const
-		{
-			// TODO: Implement
-			return Tensor::ZERO;
-		}
-
-		void MaxPoolLayer::backpropogate(const Tensor& gradOutput)
-		{
-			// TODO: Implement
-			gradInput = gradOutput;
-		}
-
-		LayerPtr MaxPoolLayer::clone() const
-		{
-			// TODO: Implement
-			return std::shared_ptr<MaxPoolLayer>();
-		}
-		*/
 	}
 }

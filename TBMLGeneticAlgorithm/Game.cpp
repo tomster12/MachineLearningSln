@@ -60,7 +60,7 @@ void Game::initialize()
 	auto genepool = new NNPoleBalancerGenepool();
 	genepool->setCreateGenomeFn([]()
 	{
-		return std::make_shared<NNGenome>(nullptr, std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::DenseLayer>(4, 1, std::make_shared<tbml::fn::TanH>()) });
+		return std::make_shared<NNGenome>(nullptr, std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::Dense>(4, 1, std::make_shared<tbml::fn::TanH>()) });
 	});
 	genepool->setCreateAgentFn([](NNPoleBalancerGenepool::GenomeCPtr data)
 	{

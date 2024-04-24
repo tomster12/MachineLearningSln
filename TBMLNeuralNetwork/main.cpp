@@ -10,7 +10,7 @@
 #include "NeuralNetwork.h"
 
 void testTime();
-void testBackprop();
+void testTraining();
 void testSerialization();
 void testMNIST();
 void testMNISTSerialization();
@@ -24,10 +24,10 @@ int main()
 void testTime()
 {
 	// Create networks
-	tbml::nn::NeuralNetwork network(std::make_shared<tbml::fn::SquareError>(), {
-		std::make_shared<tbml::nn::DenseLayer>(8, 8, std::make_shared<tbml::fn::Sigmoid>()),
-		std::make_shared<tbml::nn::DenseLayer>(8, 8, std::make_shared<tbml::fn::Sigmoid>()),
-		std::make_shared<tbml::nn::DenseLayer>(8, 8, std::make_shared<tbml::fn::Sigmoid>()) });
+	tbml::nn::NeuralNetwork network(nullptr, {
+		std::make_shared<tbml::nn::Layer::Dense>(8, 8, std::make_shared<tbml::fn::Sigmoid>()),
+		std::make_shared<tbml::nn::Layer::Dense>(8, 8, std::make_shared<tbml::fn::Sigmoid>()),
+		std::make_shared<tbml::nn::Layer::Dense>(8, 8, std::make_shared<tbml::fn::Sigmoid>()) });
 
 	// Setup and print input
 	tbml::Tensor input = tbml::Tensor({ { 1, 0, -1, 0.2f, 0.7f, -0.3f, -1, -1 } });
@@ -55,7 +55,7 @@ void testTime()
 	std::cout << "Prop Ref: " << t2 << "ms" << std::endl;
 }
 
-void testBackprop()
+void testTraining()
 {
 	// Create network and input
 	const float L = -1.0f, H = 1.0f;
@@ -63,22 +63,22 @@ void testBackprop()
 	tbml::Tensor expected{ std::vector<std::vector<float>>{ { L }, { H }, { H }, { L } } };
 
 	tbml::nn::NeuralNetwork network(std::make_shared<tbml::fn::SquareError>(), {
-		std::make_shared<tbml::nn::DenseLayer>(2, 2, std::make_shared<tbml::fn::TanH>()),
-		std::make_shared<tbml::nn::DenseLayer>(2, 1, std::make_shared<tbml::fn::TanH>()) });
+		std::make_shared<tbml::nn::Layer::Dense>(2, 2, std::make_shared<tbml::fn::TanH>()),
+		std::make_shared<tbml::nn::Layer::Dense>(2, 1, std::make_shared<tbml::fn::TanH>()) });
 
 	// Print values and train
 	input.print("Input:");
 	expected.print("Expected:");
 	network.propogate(input).print("Net Initial: ");
-	network.train(input, expected, { -1, -1, 0.2f, 0.85f, 0.01f, 2 });
+	network.train(input, expected, tbml::nn::TrainingConfig{ -1, -1, 0.2f, 0.85f, 0.01f, 2 }); // { epochs, batchSize, learningRate, momentumRate, errorThreshold, logLevel }
 	network.propogate(input).print("Net Trained: ");
 }
 
 void testSerialization()
 {
 	tbml::nn::NeuralNetwork network(std::make_shared<tbml::fn::SquareError>(), {
-		std::make_shared<tbml::nn::DenseLayer>(2, 2, std::make_shared<tbml::fn::ReLU>()),
-		std::make_shared<tbml::nn::DenseLayer>(2, 1, std::make_shared<tbml::fn::Sigmoid>()) });
+		std::make_shared<tbml::nn::Layer::Dense>(2, 2, std::make_shared<tbml::fn::ReLU>()),
+		std::make_shared<tbml::nn::Layer::Dense>(2, 1, std::make_shared<tbml::fn::Sigmoid>()) });
 
 	network.print();
 
@@ -109,17 +109,20 @@ void testMNIST()
 	testExpected.print("Test Expected: ");
 
 	// Create network and train
-	// Timing: (Batch: ~6.7ms, Epoch: ~10100ms) @ 12 matmul threads, Fitness: (15 epochs = 95.22%, 50 epochs = 96.34%)
+	// Timing: (Batch: ~6.7ms, Epoch: ~10100ms, 50 Epochs: ~506000ms) @ 12 matmul threads, Fitness: (50 epochs = 96.31%)
 	tbml::nn::NeuralNetwork network(std::make_shared<tbml::fn::CrossEntropy>(), {
-		std::make_shared<tbml::nn::DenseLayer>(784, 100, std::make_shared<tbml::fn::ReLU>()),
-		std::make_shared<tbml::nn::DenseLayer>(100, 10, std::make_shared<tbml::fn::SoftMax>()) });
+		std::make_shared<tbml::nn::Layer::Dense>(784, 100, std::make_shared<tbml::fn::ReLU>()),
+		std::make_shared<tbml::nn::Layer::Dense>(100, 10, std::make_shared<tbml::fn::SoftMax>()) });
 	std::cout << "Parameters: " << network.getParameterCount() << std::endl;
-	network.train(trainInput, trainExpected, { 50, 50, 0.02f, 0.8f, 0.01f, 3 });
+	network.train(trainInput, trainExpected, { 50, 50, 0.02f, 0.8f, 0.01f, 3 }); // { epochs, batchSize, learningRate, momentumRate, errorThreshold, logLevel }
 
 	// Test network against test data
 	tbml::Tensor testPredicted = network.propogate(testInput);
 	float accuracy = tbml::fn::classificationAccuracy(testPredicted, testExpected);
 	std::cout << "t10k Accuracy = " << (accuracy * 100) << "%" << std::endl;
+
+	// Save network to file
+	network.saveToFile("MNIST.nn");
 }
 
 void testMNISTSerialization()
