@@ -28,7 +28,7 @@ void NNPoleBalancerAgent::initVisual()
 	poleShape.setOutlineThickness(1.0f);
 }
 
-bool NNPoleBalancerAgent::step()
+bool NNPoleBalancerAgent::evaluate()
 {
 	if (isFinished) return true;
 

@@ -21,7 +21,7 @@ void VectorListTargetAgent::initVisual()
 	shape.setOutlineThickness(1.0f);
 }
 
-bool VectorListTargetAgent::step()
+bool VectorListTargetAgent::evaluate()
 {
 	if (isFinished) return true;
 

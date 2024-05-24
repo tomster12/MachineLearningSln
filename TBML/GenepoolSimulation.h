@@ -21,16 +21,15 @@ namespace tbml
 		public:
 			using GenomeCPtr = std::shared_ptr<const TGenome>;
 
-		protected:
-			Genome() = default;
-			~Genome() = default;
-
-		public:
 			Genome(const Genome&) = delete;
 			Genome& operator=(const Genome&) = delete;
 			Genome(const Genome&&) = delete;
 			Genome& operator=(const Genome&&) = delete;
 			virtual GenomeCPtr crossover(const GenomeCPtr& otherGenome, float mutateChance = 0.0f) const = 0;
+
+		protected:
+			Genome() = default;
+			~Genome() = default;
 		};
 
 		// TGenome: Genome<TGenome>
@@ -40,23 +39,22 @@ namespace tbml
 		public:
 			using GenomeCPtr = std::shared_ptr<const TGenome>;
 
-		protected:
-			const GenomeCPtr genome;
-			bool isFinished = false;
-			float fitness = 0;
-
-		public:
 			Agent(GenomeCPtr&& genome) : genome(std::move(genome)), isFinished(false), fitness(0.0f) {};
 			~Agent() = default;
 			Agent(const Agent&) = delete;
 			Agent& operator=(const Agent&) = delete;
 			Agent(const Agent&&) = delete;
 			Agent& operator=(const Agent&&) = delete;
-			virtual bool step() = 0;
+			virtual bool evaluate() = 0;
 			virtual void render(sf::RenderWindow* window) = 0;
 			const GenomeCPtr& getGenome() const { return this->genome; };
 			bool getFinished() const { return this->isFinished; };
 			float getFitness() const { return this->fitness; };
+
+		protected:
+			const GenomeCPtr genome;
+			bool isFinished = false;
+			float fitness = 0;
 		};
 
 		class IGenepool
@@ -66,7 +64,7 @@ namespace tbml
 			virtual void resetGenepool(int populationSize, float mutationRate) = 0;
 			virtual void render(sf::RenderWindow* window) = 0;
 			virtual void initializeGeneration() = 0;
-			virtual void stepGeneration(bool step = false) = 0;
+			virtual void evaluateGeneration(bool step = false) = 0;
 			virtual void iterateGeneration() = 0;
 			virtual int getGenerationNumber() const = 0;
 			virtual float getBestFitness() const = 0;
@@ -84,29 +82,6 @@ namespace tbml
 			using GenomeCPtr = std::shared_ptr<const TGenome>;
 			using AgentPtr = std::unique_ptr<TAgent>;
 
-		protected:
-			std::function<GenomeCPtr(void)> createGenomeFn;
-			std::function<AgentPtr(GenomeCPtr&&)> createAgentFn;
-			bool useThreadedStep = false;
-			bool useThreadedFullStep = false;
-			bool syncThreadedFullSteps = false;
-			int populationSize = 0;
-			float mutationRate = 0.0f;
-
-			bool isGenepoolInitialized = false;
-			bool isGenerationEvaluated = false;
-			int currentGeneration = 0;
-			int currentStep = 0;
-			GenomeCPtr bestData = nullptr;
-			float bestFitness = 0.0f;
-			ThreadPool stepThreadPool;
-			std::vector<AgentPtr> currentAgents;
-
-			virtual GenomeCPtr createGenome() const { return createGenomeFn(); }
-
-			virtual AgentPtr createAgent(GenomeCPtr&& data) const { return createAgentFn(std::move(data)); }
-
-		public:
 			void setCreateGenomeFn(std::function<GenomeCPtr(void)> createGenomeFn) { this->createGenomeFn = createGenomeFn; }
 
 			void setCreateAgentFn(std::function<AgentPtr(GenomeCPtr&&)> createAgentFn) { this->createAgentFn = createAgentFn; }
@@ -126,12 +101,12 @@ namespace tbml
 			void resetGenepool(int populationSize, float mutationRate)
 			{
 				// [INITIALIZATION] Initialize new instances
-				this->currentAgents.clear();
+				this->agentPopulation.clear();
 				for (int i = 0; i < populationSize; i++)
 				{
 					GenomeCPtr genome = createGenome();
 					AgentPtr agent = createAgent(std::move(genome));
-					this->currentAgents.push_back(std::move(agent));
+					this->agentPopulation.push_back(std::move(agent));
 				}
 
 				this->isGenepoolInitialized = true;
@@ -147,59 +122,59 @@ namespace tbml
 
 			void initializeGeneration() {}
 
-			void stepGeneration(bool step)
+			void evaluateGeneration(bool singleStep)
 			{
 				if (!this->isGenepoolInitialized) throw std::runtime_error("tbml::GenepoolSimulation: Cannot evaluateGeneration because uninitialized.");
 				if (this->isGenerationEvaluated) return;
 
-				// Helper function captures generation
-				auto evaluateSubset = [&](bool step, int start, int end)
-				{
-					bool allFinished;
-					do
-					{
-						allFinished = true;
-						for (int i = start; i < end; i++) allFinished &= this->currentAgents[i]->step();
-					} while (!step && !allFinished);
-					return allFinished;
-				};
-
-				std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
-				bool allFinished = true;
-
 				// Process generation (multi-threaded)
-				if ((this->useThreadedStep && step) || (this->useThreadedFullStep && !step))
+				if ((this->useThreadedStep && singleStep) || (this->useThreadedFullStep && !singleStep))
 				{
-					size_t threadCount = static_cast<size_t>(std::min(static_cast<int>(stepThreadPool.size()), this->populationSize));
+					// Helper function to evaluate a subset (captures generation)
+					auto evaluateSubset = [&](bool singleStep, int start, int end)
+					{
+						bool subsetEvaluated = false;
+						while (!subsetEvaluated)
+						{
+							subsetEvaluated = true;
+							for (int i = start; i < end; i++) subsetEvaluated &= this->agentPopulation[i]->evaluate();
+							if (singleStep) break;
+						}
+						return subsetEvaluated;
+					};
+
+					bool allFinished = true;
+					size_t threadCount = static_cast<size_t>(std::min(static_cast<int>(evaluateThreadPool.size()), this->populationSize));
 					std::vector<std::future<bool>> threadResults(threadCount);
 					int subsetSize = static_cast<int>(ceil((float)this->populationSize / threadCount));
-					do
+
+					while (!this->isGenerationEvaluated)
 					{
 						for (size_t i = 0; i < threadCount; i++)
 						{
 							int startIndex = i * subsetSize;
 							int endIndex = static_cast<int>(std::min(startIndex + subsetSize, this->populationSize));
-							threadResults[i] = this->stepThreadPool.enqueue([=] { return evaluateSubset(step || syncThreadedFullSteps, startIndex, endIndex); });
+							threadResults[i] = this->evaluateThreadPool.enqueue([=] { return evaluateSubset(singleStep || syncThreadedFullSteps, startIndex, endIndex); });
 						}
 
-						for (auto&& result : threadResults) allFinished &= result.get();
+						this->isGenerationEvaluated = true;
+						for (auto&& result : threadResults) this->isGenerationEvaluated &= result.get();
 						this->currentStep++;
-					} while (!step && !allFinished);
+						if (singleStep) break;
+					}
 				}
 
 				// Process generation (single-threaded)
 				else
 				{
-					allFinished = evaluateSubset(step, 0, this->currentAgents.size());
-					this->currentStep++;
+					while (!this->isGenerationEvaluated)
+					{
+						this->isGenerationEvaluated = true;
+						for (auto& inst : this->agentPopulation) this->isGenerationEvaluated &= inst->evaluate();
+						this->currentStep++;
+						if (singleStep) break;
+					}
 				}
-
-				std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-				auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0);
-				// std::cout << "Processed Generation Step: " << us.count() / 1000.0f << "ms" << std::endl;
-
-				this->currentStep++;
-				if (allFinished) this->isGenerationEvaluated = true;
 			}
 
 			void iterateGeneration()
@@ -207,30 +182,32 @@ namespace tbml
 				if (!this->isGenepoolInitialized) throw std::runtime_error("tbml::GenepoolSimulation: Cannot iterateGeneration because uninitialized.");
 				if (!this->isGenerationEvaluated) return;
 
-				// Sort generation and get best data
-				std::sort(this->currentAgents.begin(), this->currentAgents.end(), [this](const auto& a, const auto& b) { return a->getFitness() > b->getFitness(); });
-				const AgentPtr& bestInstance = this->currentAgents[0];
+				// Sort generation and extract best agent
+				std::sort(this->agentPopulation.begin(), this->agentPopulation.end(), [this](const auto& a, const auto& b) { return a->getFitness() > b->getFitness(); });
+				const AgentPtr& bestInstance = this->agentPopulation[0];
 				this->bestData = GenomeCPtr(bestInstance->getGenome());
 				this->bestFitness = bestInstance->getFitness();
 				std::cout << "Generation: " << this->currentGeneration << ", best fitness: " << this->bestFitness << std::endl;
 
-				// Initialize next generation with best generation, setup selection method
+				// Initialize next generation with previous best
 				std::vector<AgentPtr> nextGeneration;
 				nextGeneration.push_back(std::move(createAgent(std::move(GenomeCPtr(this->bestData)))));
-				int selectAmount = static_cast<int>(ceil(this->currentAgents.size() / 2.0f));
+
+				// Setup selection for fitness proportional roulette selection
+				int selectAmount = static_cast<int>(ceil(this->agentPopulation.size() / 2.0f));
 				auto transformFitness = [](float f) { return f * f; };
 				float totalFitness = 0.0f;
-				for (int i = 0; i < selectAmount; i++) totalFitness += transformFitness(this->currentAgents[i]->getFitness());
+				for (int i = 0; i < selectAmount; i++) totalFitness += transformFitness(this->agentPopulation[i]->getFitness());
 				const auto& pickWeightedParent = [&]()
 				{
 					float r = fn::getRandomFloat() * totalFitness;
 					float cumSum = 0.0f;
 					for (int i = 0; i < selectAmount; i++)
 					{
-						cumSum += transformFitness(this->currentAgents[i]->getFitness());
-						if (r <= cumSum) return this->currentAgents[i]->getGenome();
+						cumSum += transformFitness(this->agentPopulation[i]->getFitness());
+						if (r <= cumSum) return this->agentPopulation[i]->getGenome();
 					}
-					return this->currentAgents[selectAmount - 1]->getGenome();
+					return this->agentPopulation[selectAmount - 1]->getGenome();
 				};
 
 				for (int i = 0; i < this->populationSize - 1; i++)
@@ -245,7 +222,7 @@ namespace tbml
 				}
 
 				// Set to new generation and update variables
-				this->currentAgents = std::move(nextGeneration);
+				this->agentPopulation = std::move(nextGeneration);
 				this->currentGeneration++;
 				this->isGenerationEvaluated = false;
 				initializeGeneration();
@@ -254,8 +231,7 @@ namespace tbml
 			void render(sf::RenderWindow* window)
 			{
 				if (!this->isGenepoolInitialized) throw std::runtime_error("tbml::GenepoolSimulation: Cannot render because uninitialized.");
-
-				for (const auto& inst : currentAgents) inst->render(window);
+				for (const auto& inst : agentPopulation) inst->render(window);
 			};
 
 			int getGenerationNumber() const { return this->currentGeneration; }
@@ -267,17 +243,32 @@ namespace tbml
 			bool getGenepoolInitialized() const { return this->isGenepoolInitialized; }
 
 			bool getGenerationEvaluated() const { return this->isGenerationEvaluated; }
+
+		protected:
+			std::function<GenomeCPtr(void)> createGenomeFn;
+			std::function<AgentPtr(GenomeCPtr&&)> createAgentFn;
+			bool useThreadedStep = false;
+			bool useThreadedFullStep = false;
+			bool syncThreadedFullSteps = false;
+			int populationSize = 0;
+			float mutationRate = 0.0f;
+
+			bool isGenepoolInitialized = false;
+			bool isGenerationEvaluated = false;
+			int currentGeneration = 0;
+			int currentStep = 0;
+			GenomeCPtr bestData = nullptr;
+			float bestFitness = 0.0f;
+			ThreadPool evaluateThreadPool;
+			std::vector<AgentPtr> agentPopulation;
+
+			virtual GenomeCPtr createGenome() const { return createGenomeFn(); }
+
+			virtual AgentPtr createAgent(GenomeCPtr&& data) const { return createAgentFn(std::move(data)); }
 		};
 
 		class GenepoolController
 		{
-		protected:
-			IGenepoolPtr genepool = nullptr;
-			bool isRunning = false;
-			bool autoStepEvaluate = false;
-			bool autoFullEvaluate = false;
-			bool autoIterate = false;
-
 		public:
 			GenepoolController() {}
 
@@ -305,7 +296,7 @@ namespace tbml
 				if (!this->genepool->getGenepoolInitialized()) throw std::runtime_error("tbml::GenepoolSimulationController: Cannot evaluateGeneration because uninitialized.");
 				if (this->genepool->getGenerationEvaluated()) return;
 
-				this->genepool->stepGeneration(step);
+				this->genepool->evaluateGeneration(step);
 				if (this->autoIterate && this->genepool->getGenerationEvaluated()) this->iterateGeneration();
 			}
 
@@ -347,6 +338,13 @@ namespace tbml
 				this->autoIterate = autoIterate;
 				if (this->autoIterate && this->genepool->getGenerationEvaluated()) this->iterateGeneration();
 			}
+
+		protected:
+			IGenepoolPtr genepool = nullptr;
+			bool isRunning = false;
+			bool autoStepEvaluate = false;
+			bool autoFullEvaluate = false;
+			bool autoIterate = false;
 		};
 	}
 }

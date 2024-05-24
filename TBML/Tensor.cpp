@@ -240,7 +240,7 @@ namespace tbml
 			const std::vector<float>& b = t.data;
 			std::vector<float> result(shape[0] * t.shape[1]);
 
-			#pragma omp parallel for num_threads(12)
+			#pragma omp parallel for num_threads(1)
 			for (int row = 0; row < (int)shape[0]; row++)
 			{
 				for (int ocol = 0; ocol < (int)t.shape[1]; ocol++)

@@ -24,7 +24,7 @@ void NNTargetAgent::initVisual()
 	shape.setOutlineThickness(1.0f);
 }
 
-bool NNTargetAgent::step()
+bool NNTargetAgent::evaluate()
 {
 	if (isFinished) return true;
 

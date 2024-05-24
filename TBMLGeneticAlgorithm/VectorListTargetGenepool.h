@@ -11,7 +11,7 @@ public:
 	VectorListTargetAgent(VectorListTargetAgent::GenomeCPtr&& genome, const VectorListTargetGenepool* genepool, sf::Vector2f startPos, float radius, float moveAcc);
 
 	void initVisual();
-	bool step() override;
+	bool evaluate() override;
 	void render(sf::RenderWindow* window) override;
 	float calculateDist();
 	float calculateFitness();

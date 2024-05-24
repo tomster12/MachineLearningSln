@@ -13,7 +13,7 @@ public:
 		sf::Vector2f startPos, float radius, float moveAcc, float moveDrag, int maxIterations);
 
 	void initVisual();
-	bool step() override;
+	bool evaluate() override;
 	void render(sf::RenderWindow* window) override;
 	float calculateDist();
 	float calculateFitness();

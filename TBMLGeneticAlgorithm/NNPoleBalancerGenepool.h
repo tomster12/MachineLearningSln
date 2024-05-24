@@ -15,7 +15,7 @@ public:
 		float trackLimit, float angleLimit, float timeLimit);
 
 	void initVisual();
-	bool step() override;
+	bool evaluate() override;
 	void render(sf::RenderWindow* window) override;
 	float calculateFitness();
 
