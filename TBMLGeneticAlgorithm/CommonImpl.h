@@ -25,8 +25,7 @@ class NNGenome : public tbml::ga::Genome<NNGenome>
 {
 public:
 	NNGenome() {};
-	NNGenome(tbml::fn::LossFunctionPtr&& lossFn);
-	NNGenome(tbml::fn::LossFunctionPtr&& lossFn, std::vector<std::shared_ptr<tbml::nn::Layer>>&& layers);
+	NNGenome(tbml::nn::NeuralNetwork&& network);
 
 	NNGenome::GenomeCPtr crossover(const NNGenome::GenomeCPtr& otherData, float mutateChance) const override;
 	const tbml::nn::NeuralNetwork& getNetwork() const { return this->network; }

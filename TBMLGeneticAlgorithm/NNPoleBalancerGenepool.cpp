@@ -39,7 +39,7 @@ bool NNPoleBalancerAgent::step()
 		poleAngle,
 		poleAcceleration });
 	genome->getNetwork().propogateMut(netInput);
-	float ft = netInput(0, 0) > 0.5f ? force : -force;
+	float ft = netInput(0, 0) * force;
 
 	// Calculate acceleration
 	cartAcceleration = (ft + poleMass * poleLength * (poleVelocity * poleVelocity * sin(poleAngle) - poleAcceleration * cos(poleAngle))) / (cartMass + poleMass);

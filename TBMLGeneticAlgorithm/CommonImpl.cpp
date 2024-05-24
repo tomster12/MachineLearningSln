@@ -46,56 +46,51 @@ const sf::Vector2f VectorListGenome::getValue(int index) const { return this->va
 
 const size_t VectorListGenome::getSize() const { return this->dataSize; }
 
-NNGenome::NNGenome(tbml::fn::LossFunctionPtr&& lossFn)
-	: network(std::move(lossFn))
-{}
-
-NNGenome::NNGenome(tbml::fn::LossFunctionPtr&& lossFn, std::vector<std::shared_ptr<tbml::nn::Layer>>&& layers)
-	: network(std::move(lossFn), std::move(layers))
+NNGenome::NNGenome(tbml::nn::NeuralNetwork&& network)
+	: network(std::move(network))
 {}
 
 NNGenome::GenomeCPtr NNGenome::crossover(const NNGenome::GenomeCPtr& otherData, float mutateChance) const
 {
-	const std::vector<std::shared_ptr<tbml::nn::Layer>>& layers = this->network.getLayers();
-	const std::vector<std::shared_ptr<tbml::nn::Layer>>& oLayers = otherData->network.getLayers();
-
-	tbml::fn::LossFunctionPtr lossFunction = this->network.getLossFunction();
-	std::vector<std::shared_ptr<tbml::nn::Layer>> newLayers(layers.size());
-
+	const std::vector<tbml::nn::Layer::BasePtr>& layers = this->network.getLayers();
+	const std::vector<tbml::nn::Layer::BasePtr>& otherLayers = otherData->network.getLayers();
+	std::vector<tbml::nn::Layer::BasePtr> newLayers(layers.size());
 	for (size_t i = 0; i < layers.size(); i++)
 	{
+		// Check if layers are Dense
+		if (typeid(*layers[i]) != typeid(tbml::nn::Layer::Dense) || typeid(*otherLayers[i]) != typeid(tbml::nn::Layer::Dense))
+		{
+			newLayers[i] = layers[i]->clone();
+			continue;
+		}
+
 		// Pull out dense layers
-		const tbml::nn::Layer& layer = *layers[i];
-		const tbml::nn::Layer& oLayer = *oLayers[i];
-		const tbml::nn::Dense& dLayer = dynamic_cast<const tbml::nn::Dense&>(layer);
-		const tbml::nn::Dense& oDLayer = dynamic_cast<const tbml::nn::Dense&>(oLayer);
+		const tbml::nn::Layer::Dense& denseLayer = dynamic_cast<const tbml::nn::Layer::Dense&>(*layers[i]);
+		const tbml::nn::Layer::Dense& otherDenseLayer = dynamic_cast<const tbml::nn::Layer::Dense&>(*otherLayers[i]);
 
 		// Perform crossover
-		const tbml::Tensor& weights = dLayer.getWeights();
-		const tbml::Tensor& oWeights = oDLayer.getWeights();
-		const tbml::Tensor& biases = dLayer.getBias();
-		const tbml::Tensor& oBiases = oDLayer.getBias();
-
-		tbml::Tensor newWeights = weights.ewised(oWeights, [&](float a, float b) -> float
+		const tbml::Tensor& weights = denseLayer.getWeights();
+		const tbml::Tensor& otherWeights = otherDenseLayer.getWeights();
+		const tbml::Tensor& biases = denseLayer.getBias();
+		const tbml::Tensor& otherBiases = otherDenseLayer.getBias();
+		tbml::Tensor newWeights = weights.ewised(otherWeights, [&](float a, float b) -> float
+		{
+			if (tbml::fn::getRandomFloat() < mutateChance) return tbml::fn::getRandomFloat() * 2 - 1;
+			if (tbml::fn::getRandomFloat() < 0.5f) return a;
+			return b;
+		});
+		tbml::Tensor newBiases = biases.ewised(otherBiases, [&](float a, float b) -> float
 		{
 			if (tbml::fn::getRandomFloat() < mutateChance) return tbml::fn::getRandomFloat() * 2 - 1;
 			if (tbml::fn::getRandomFloat() < 0.5f) return a;
 			return b;
 		});
 
-		tbml::Tensor newBiases = biases.ewised(oBiases, [&](float a, float b) -> float
-		{
-			if (tbml::fn::getRandomFloat() < mutateChance) return tbml::fn::getRandomFloat() * 2 - 1;
-			if (tbml::fn::getRandomFloat() < 0.5f) return a;
-			return b;
-		});
-
-		tbml::fn::ActivationFunctionPtr activationFn = dLayer.getActivationFunction();
-
-		newLayers[i] = std::make_shared<tbml::nn::Dense>(std::move(newWeights), std::move(newBiases), std::move(activationFn));
+		// Create new dense layer
+		newLayers[i] = std::make_shared<tbml::nn::Layer::Dense>(std::move(newWeights), std::move(newBiases));
 	}
 
-	return std::make_shared<NNGenome>(std::move(lossFunction), std::move(newLayers));
+	return std::make_shared<NNGenome>(tbml::nn::NeuralNetwork(std::move(newLayers)));
 }
 
 void NNGenome::print() const { this->network.print(); }

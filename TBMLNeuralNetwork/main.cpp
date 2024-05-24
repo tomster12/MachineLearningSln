@@ -5,9 +5,9 @@
 
 #include "MNIST.h"
 #include "ThreadPool.h"
+#include "NeuralNetwork.h"
 #include "Utility.h"
 #include "Tensor.h"
-#include "NeuralNetwork.h"
 
 void testTime();
 void testTraining();
@@ -18,16 +18,19 @@ void testMNISTSerialization();
 int main()
 {
 	srand(0);
-	testMNIST();
+	testMNISTSerialization();
 }
 
 void testTime()
 {
 	// Create networks
-	tbml::nn::NeuralNetwork network(nullptr, {
-		std::make_shared<tbml::nn::Layer::Dense>(8, 8, std::make_shared<tbml::fn::Sigmoid>()),
-		std::make_shared<tbml::nn::Layer::Dense>(8, 8, std::make_shared<tbml::fn::Sigmoid>()),
-		std::make_shared<tbml::nn::Layer::Dense>(8, 8, std::make_shared<tbml::fn::Sigmoid>()) });
+	tbml::nn::NeuralNetwork network({
+		std::make_shared<tbml::nn::Layer::Dense>(8, 8),
+		std::make_shared<tbml::nn::Layer::Sigmoid>(),
+		std::make_shared<tbml::nn::Layer::Dense>(8, 8),
+		std::make_shared<tbml::nn::Layer::Sigmoid>(),
+		std::make_shared<tbml::nn::Layer::Dense>(8, 8),
+		std::make_shared<tbml::nn::Layer::Sigmoid>() });
 
 	// Setup and print input
 	tbml::Tensor input = tbml::Tensor({ { 1, 0, -1, 0.2f, 0.7f, -0.3f, -1, -1 } });
@@ -42,7 +45,7 @@ void testTime()
 	for (size_t i = 0; i < epoch; i++) network.propogateMut(input);
 	std::chrono::steady_clock::time_point t11 = std::chrono::steady_clock::now();
 	std::chrono::steady_clock::time_point t20 = std::chrono::steady_clock::now();
-	for (size_t i = 0; i < epoch; i++) network.propogateRef(input);
+	for (size_t i = 0; i < epoch; i++) network.propogatePtr(&input);
 	std::chrono::steady_clock::time_point t21 = std::chrono::steady_clock::now();
 
 	// Print output
@@ -62,29 +65,32 @@ void testTraining()
 	tbml::Tensor input{ std::vector<std::vector<float>>{ { L, L }, { L, H }, { H, L }, { H, H } } };
 	tbml::Tensor expected{ std::vector<std::vector<float>>{ { L }, { H }, { H }, { L } } };
 
-	tbml::nn::NeuralNetwork network(std::make_shared<tbml::fn::SquareError>(), {
-		std::make_shared<tbml::nn::Layer::Dense>(2, 2, std::make_shared<tbml::fn::TanH>()),
-		std::make_shared<tbml::nn::Layer::Dense>(2, 1, std::make_shared<tbml::fn::TanH>()) });
+	tbml::nn::NeuralNetwork network({
+		std::make_shared<tbml::nn::Layer::Dense>(2, 2),
+		std::make_shared<tbml::nn::Layer::TanH>(),
+		std::make_shared<tbml::nn::Layer::Dense>(2, 1),
+		std::make_shared<tbml::nn::Layer::TanH>() });
 
 	// Print values and train
 	input.print("Input:");
 	expected.print("Expected:");
 	network.propogate(input).print("Net Initial: ");
-	network.train(input, expected, tbml::nn::TrainingConfig{ -1, -1, 0.2f, 0.85f, 0.01f, 2 }); // { epochs, batchSize, learningRate, momentumRate, errorThreshold, logLevel }
+	network.train(input, expected, std::make_shared<tbml::fn::SquareError>(), { -1, -1, 0.2f, 0.85f, 0.01f, 2 });
 	network.propogate(input).print("Net Trained: ");
 }
 
 void testSerialization()
 {
-	tbml::nn::NeuralNetwork network(std::make_shared<tbml::fn::SquareError>(), {
-		std::make_shared<tbml::nn::Layer::Dense>(2, 2, std::make_shared<tbml::fn::ReLU>()),
-		std::make_shared<tbml::nn::Layer::Dense>(2, 1, std::make_shared<tbml::fn::Sigmoid>()) });
+	tbml::nn::NeuralNetwork network({
+		std::make_shared<tbml::nn::Layer::Dense>(2, 2),
+		std::make_shared<tbml::nn::Layer::ReLU>(),
+		std::make_shared<tbml::nn::Layer::Dense>(2, 1),
+		std::make_shared<tbml::nn::Layer::Sigmoid>() });
 
 	network.print();
 
 	network.saveToFile("test.nn");
-
-	tbml::nn::NeuralNetwork network2 = tbml::nn::NeuralNetwork::loadFromFile("test.nn");
+	tbml::nn::NeuralNetwork network2 = tbml::nn::loadFromFile("test.nn");
 
 	network2.print();
 }
@@ -109,12 +115,14 @@ void testMNIST()
 	testExpected.print("Test Expected: ");
 
 	// Create network and train
-	// Timing: (Batch: ~6.7ms, Epoch: ~10100ms, 50 Epochs: ~506000ms) @ 12 matmul threads, Fitness: (50 epochs = 96.31%)
-	tbml::nn::NeuralNetwork network(std::make_shared<tbml::fn::CrossEntropy>(), {
-		std::make_shared<tbml::nn::Layer::Dense>(784, 100, std::make_shared<tbml::fn::ReLU>()),
-		std::make_shared<tbml::nn::Layer::Dense>(100, 10, std::make_shared<tbml::fn::SoftMax>()) });
+	// Timing: (Batch: ~12ms, Epoch: ~9200ms) @ 12 matmul threads, Fitness: (15 epochs = 89.32%)
+	tbml::nn::NeuralNetwork network({
+		std::make_unique<tbml::nn::Layer::Dense>(784, 100),
+		std::make_unique<tbml::nn::Layer::ReLU>(),
+		std::make_unique<tbml::nn::Layer::Dense>(100, 10),
+		std::make_unique<tbml::nn::Layer::Softmax>() });
 	std::cout << "Parameters: " << network.getParameterCount() << std::endl;
-	network.train(trainInput, trainExpected, { 50, 50, 0.02f, 0.8f, 0.01f, 3 }); // { epochs, batchSize, learningRate, momentumRate, errorThreshold, logLevel }
+	network.train(trainInput, trainExpected, std::make_shared<tbml::fn::CrossEntropy>(), { 15, 100, 0.02f, 0.8f, 0.01f, 3 });
 
 	// Test network against test data
 	tbml::Tensor testPredicted = network.propogate(testInput);
@@ -137,7 +145,7 @@ void testMNISTSerialization()
 	assert(trainImageSize == 784 && testImageSize == 784);
 
 	// Read network from file
-	tbml::nn::NeuralNetwork network = tbml::nn::NeuralNetwork::loadFromFile("MNIST.nn");
+	tbml::nn::NeuralNetwork network = tbml::nn::loadFromFile("MNIST.nn");
 
 	// Print network information
 	network.print();
@@ -147,7 +155,4 @@ void testMNISTSerialization()
 	tbml::Tensor testPredicted = network.propogate(testInput);
 	float accuracy = tbml::fn::classificationAccuracy(testPredicted, testExpected);
 	std::cout << "t10k Accuracy = " << (accuracy * 100) << "%" << std::endl;
-
-	// Save network to file
-	network.saveToFile("MNIST.nn");
 }

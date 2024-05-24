@@ -106,6 +106,8 @@ namespace tbml
 
 	Tensor& Tensor::add(const Tensor& t, size_t moddim)
 	{
+		// Add function with broadcasting along moddim
+
 		// TODO: Figure out the more generic way to do this
 		assert(moddim < 2);
 		for (size_t i = 0; i < getDims(); i++)
@@ -125,7 +127,6 @@ namespace tbml
 			// [ 0, 1, 2, 3 ] .. [ 4, 5, 6, 7 ]
 			// [ 0, 1, 2, 3 ] .. [ 4, 5, 6, 7 ]
 			// ni = i // 3
-
 			for (size_t i = 0; i < data.size(); i++)
 			{
 				int ni = (int)(i / shape[0]);
@@ -139,7 +140,6 @@ namespace tbml
 			// [ 0, 0, 0, 0 ] .. [ 3, 3, 3, 3 ]
 			// [ 1, 1, 1, 1 ] .. [ 4, 4, 4, 4 ]
 			// [ 2, 2, 2, 2 ] .. [ 5, 5, 5, 5 ]
-
 			for (size_t i = 0; i < data.size(); i++)
 			{
 				size_t ni = (i / (shape[0] * shape[1])) + (i % shape[0]);
@@ -240,7 +240,7 @@ namespace tbml
 			const std::vector<float>& b = t.data;
 			std::vector<float> result(shape[0] * t.shape[1]);
 
-			#pragma omp parallel for num_threads(12)
+			#pragma omp parallel for num_threads(1)
 			for (int row = 0; row < (int)shape[0]; row++)
 			{
 				for (int ocol = 0; ocol < (int)t.shape[1]; ocol++)

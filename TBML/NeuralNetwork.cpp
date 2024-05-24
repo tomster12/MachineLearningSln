@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "NeuralNetwork.h"
 #include "Utility.h"
 #include "omp.h"
@@ -16,28 +16,44 @@ namespace tbml
 
 				if (type == "Dense")
 				{
-					fn::ActivationFunctionPtr activationFn = fn::ActivationFunction::deserialize(is);
 					Tensor weights = Tensor::deserialize(is);
 					Tensor bias = Tensor::deserialize(is);
-					return std::make_shared<Dense>(std::move(weights), std::move(bias), std::move(activationFn));
+					return std::make_shared<Dense>(std::move(weights), std::move(bias));
+				}
+				else if (type == "ReLU")
+				{
+					return std::make_shared<ReLU>();
+				}
+				else if (type == "Sigmoid")
+				{
+					return std::make_shared<Sigmoid>();
+				}
+				else if (type == "TanH")
+				{
+					return std::make_shared<TanH>();
+				}
+				else if (type == "Softmax")
+				{
+					return std::make_shared<Softmax>();
 				}
 
 				throw std::runtime_error("Unknown layer type");
 			}
+		}
 
+		namespace Layer
+		{
 			Dense::Dense(const Dense& other)
 			{
 				weights = other.weights;
 				bias = other.bias;
-				activationFn = fn::ActivationFunctionPtr(other.activationFn);
 			}
 
-			Dense::Dense(size_t inputSize, size_t outputSize, fn::ActivationFunctionPtr&& activationFn, DenseInitType initType, bool useBias)
-				: activationFn(activationFn)
+			Dense::Dense(size_t inputSize, size_t outputSize, InitType initType, bool useBias)
 			{
 				weights = Tensor({ inputSize, outputSize }, 0);
 
-				if (initType == DenseInitType::RANDOM)
+				if (initType == InitType::RANDOM)
 				{
 					weights.map([](float _) { return fn::getRandomFloat() * 2 - 1; });
 				}
@@ -46,15 +62,15 @@ namespace tbml
 				{
 					bias = Tensor({ 1, outputSize }, 0);
 
-					if (initType == DenseInitType::RANDOM)
+					if (initType == InitType::RANDOM)
 					{
 						bias.map([](float _) { return fn::getRandomFloat() * 2 - 1; });
 					}
 				}
 			}
 
-			Dense::Dense(Tensor&& weights, Tensor&& bias, fn::ActivationFunctionPtr&& activationFn)
-				: weights(std::move(weights)), bias(std::move(bias)), activationFn(std::move(activationFn))
+			Dense::Dense(Tensor&& weights, Tensor&& bias)
+				: weights(std::move(weights)), bias(std::move(bias))
 			{}
 
 			void Dense::propogateMut(Tensor& input) const
@@ -63,37 +79,32 @@ namespace tbml
 
 				// Mutably propogate input with weights and bias
 				input.matmul(weights).add(bias, 0);
-				activationFn->activate(input);
 			}
 
-			const Tensor& Dense::propogateRef(const Tensor& input)
+			const Tensor* Dense::propogatePtr(const Tensor* input)
 			{
 				assert(input.getDims() == 2 && input.getShape(1) == weights.getShape(0) && "Input shape does not match weights shape");
 
 				// Propogate input with weights and bias
 				// Retain input and output for backprop
-				propogateInput = &input;
-				output = input.matmulled(weights).add(bias, 0);
-				activationFn->activate(output);
-				return output;
+				this->input = input;
+				output = input->matmulled(weights).add(bias, 0);
+				return &output;
 			}
 
-			void Dense::backpropogate(const Tensor& gradOutput)
+			void Dense::backpropogate(const Tensor* gradOutput)
 			{
 				assert(gradOutput.getDims() == 2 && gradOutput.getShape(1) == weights.getShape(1) && "gradOutput shape does not match weights shape");
-				assert(this->retainValues && "Cannot backpropogate when not retaining values");
 
 				// Calculate pd to neuron in and layer in
-				Tensor gradNet = activationFn->chainDerivative(output, gradOutput);
-				gradInput = gradNet.matmulled(weights.transposed());
+				gradInput = gradOutput->matmulled(weights.transposed());
 
 				// Calculate pd to weights and bias as average of batches
-				int batchSize = (int)propogateInput->getShape(0);
+				int batchSize = (int)input->getShape(0);
 				int m = (int)weights.getShape(0);
 				int n = (int)weights.getShape(1);
 				gradWeights = Tensor(weights.getShape(), 0);
 				gradBias = Tensor(bias.getShape(), 0);
-
 				#pragma omp parallel for num_threads(12)
 				for (int batchRow = 0; batchRow < batchSize; batchRow++)
 				{
@@ -101,13 +112,13 @@ namespace tbml
 					{
 						for (int j = 0; j < n; j++)
 						{
-							gradWeights(i, j) += ((*propogateInput)(batchRow, i) * gradNet(batchRow, j)) / batchSize;
+							gradWeights(i, j) += ((*input)(batchRow, i) * gradOutput->at(batchRow, j)) / batchSize;
 						}
 					}
 
 					for (int j = 0; j < n; j++)
 					{
-						gradBias(0, j) += gradNet(batchRow, j) / batchSize;
+						gradBias(0, j) += gradOutput->at(batchRow, j) / batchSize;
 					}
 				}
 			}
@@ -135,9 +146,216 @@ namespace tbml
 			void Dense::serialize(std::ostream& os) const
 			{
 				os << "Dense\n";
-				activationFn->serialize(os);
 				weights.serialize(os);
 				bias.serialize(os);
+			}
+		}
+
+		namespace Layer
+		{
+			void ReLU::propogateMut(Tensor& input) const
+			{
+				// Mutably propogate input with ReLU activation
+				input.map([](float x) { return std::max(0.0f, x); });
+			}
+
+			const Tensor* ReLU::propogatePtr(const Tensor* input)
+			{
+				// Propogate input with ReLU activation
+				// Retain input and output for backprop
+				this->input = input;
+				output = input->mapped([](float x) { return std::max(0.0f, x); });
+				return &output;
+			}
+
+			void ReLU::backpropogate(const Tensor* gradOutput)
+			{
+				// Calculate grad output to input * grad output
+				gradInput = input->mapped([](float x) { return x > 0 ? 1.0f : 0.0f; }) * (*gradOutput);
+			}
+
+			BasePtr ReLU::clone() const
+			{
+				return std::make_shared<ReLU>();
+			}
+
+			void ReLU::serialize(std::ostream& os) const
+			{
+				os << "ReLU\n";
+			}
+		}
+
+		namespace Layer
+		{
+			void Sigmoid::propogateMut(Tensor& input) const
+			{
+				// Mutably propogate input with Sigmoid activation
+				input.map([this](float x) { return sigmoid(x); });
+			}
+
+			const Tensor* Sigmoid::propogatePtr(const Tensor* input)
+			{
+				// Propogate input with Sigmoid activation
+				// Retain input and output for backprop
+				this->input = input;
+				output = input->mapped([this](float x) { return sigmoid(x); });
+				return &output;
+			}
+
+			void Sigmoid::backpropogate(const Tensor* gradOutput)
+			{
+				// Calculate grad output to input * grad output
+				gradInput = input->mapped([this](float x)
+				{
+					float sv = sigmoid(x);
+					return sv * (1.0f - sv);
+				}) * (*gradOutput);
+			}
+
+			BasePtr Sigmoid::clone() const
+			{
+				return std::make_shared<Sigmoid>();
+			}
+
+			void Sigmoid::serialize(std::ostream& os) const
+			{
+				os << "Sigmoid\n";
+			}
+		}
+
+		namespace Layer
+		{
+			void TanH::propogateMut(Tensor& input) const
+			{
+				// Mutably propogate input with TanH activation
+				input.map([](float x) { return tanhf(x); });
+			}
+
+			const Tensor* TanH::propogatePtr(const Tensor* input)
+			{
+				// Propogate input with TanH activation
+				// Retain input and output for backprop
+				this->input = input;
+				output = input->mapped([](float x) { return tanhf(x); });
+				return &output;
+			}
+
+			void TanH::backpropogate(const Tensor* gradOutput)
+			{
+				// Calculate grad output to input * grad output
+				gradInput = input->mapped([](float x)
+				{
+					float th = tanhf(x);
+					return 1.0f - (th * th);
+				}) * (*gradOutput);
+			}
+
+			BasePtr TanH::clone() const
+			{
+				return std::make_shared<TanH>();
+			}
+
+			void TanH::serialize(std::ostream& os) const
+			{
+				os << "TanH\n";
+			}
+		}
+
+		namespace Layer
+		{
+			void Softmax::propogateMut(Tensor& input) const
+			{
+				auto shape = input.getShape();
+				assert(shape.size() == 2);
+
+				// Independent per batch
+				for (size_t row = 0; row < shape[0]; row++)
+				{
+					// Calculate max of batch for stability
+					float max = input(row, 0);
+					for (size_t i = 1; i < shape[1]; i++) max = std::max(max, input(row, i));
+
+					// SoftMax of each element in batch = e^(X(i) - max) / Σ e^(X(i) - max)
+					float sum = 0.0;
+					for (size_t i = 0; i < shape[1]; i++)
+					{
+						input(row, i) = std::exp(input(row, i) - max);
+						sum += input(row, i);
+					}
+					for (size_t i = 0; i < shape[1]; i++)
+					{
+						input(row, i) /= sum;
+					}
+				}
+			}
+
+			const Tensor* Softmax::propogatePtr(const Tensor* input)
+			{
+				auto shape = input->getShape();
+				assert(shape.size() == 2);
+
+				// Propogate input with SoftMax activation
+				// Retain input and output for backprop
+				this->input = input;
+
+				// Independent per batch
+				output = Tensor(shape, 0);
+				for (size_t row = 0; row < shape[0]; row++)
+				{
+					// Calculate max of batch for stability
+					float max = input->at(row, 0);
+					for (size_t i = 1; i < shape[1]; i++) max = std::max(max, input->at(row, i));
+
+					// SoftMax of each element in batch = e^(X(i) - max) / Σ e^(X(i) - max)
+					float sum = 0.0;
+					for (size_t i = 0; i < shape[1]; i++)
+					{
+						output(row, i) = std::exp(input->at(row, i) - max);
+						sum += output.at(row, i);
+					}
+					for (size_t i = 0; i < shape[1]; i++)
+					{
+						output(row, i) /= sum;
+					}
+				}
+				return &output;
+			}
+
+			void Softmax::backpropogate(const Tensor* gradOutput)
+			{
+				auto shape = output.getShape();
+				assert(shape.size() == 2);
+
+				// Calculate grad output to input * grad output
+				gradInput = Tensor(input->getShape(), 0);
+
+				// Independent per row
+				for (size_t row = 0; row < shape[0]; row++)
+				{
+					// For each neuron i
+					for (size_t i = 0; i < shape[1]; i++)
+					{
+						float Zi = output(row, i);
+						float sum = 0.0;
+						for (size_t j = 0; j < shape[1]; j++)
+						{
+							float Zj = output(row, j);
+							int kronekerDelta = (i == j) ? 1 : 0;
+							float dSij = (Zj * (kronekerDelta - Zi));
+							gradInput(row, i) += dSij * gradOutput->at(row, j);
+						}
+					}
+				}
+			}
+
+			BasePtr Softmax::clone() const
+			{
+				return std::make_shared<Softmax>();
+			}
+
+			void Softmax::serialize(std::ostream& os) const
+			{
+				os << "Softmax\n";
 			}
 		}
 
@@ -160,22 +378,22 @@ namespace tbml
 		{
 			if (layers.size() == 0) return;
 
-			// Propogate layers with mutable input
+			// Directly propogate layers with mutable input
 			for (size_t i = 0; i < layers.size(); i++) layers[i]->propogateMut(input);
 		}
 
-		const Tensor& NeuralNetwork::propogateRef(const Tensor& input)
+		const Tensor* NeuralNetwork::propogatePtr(const Tensor* input)
 		{
-			if (layers.size() == 0) return Tensor::ZERO;
+			if (layers.size() == 0) return nullptr;
 
-			// Copy to local, propogate layers mutably, using references
-			// Used to retain values for backpropogation
-			layers[0]->propogateRef(input);
-			for (size_t i = 1; i < layers.size(); i++) layers[i]->propogateRef(layers[i - 1]->getOutput());
-			return layers[layers.size() - 1]->getOutput();
+			// Propogate layers with referencable tensor
+			// Used to track values for backpropogation
+			layers[0]->propogatePtr(input);
+			for (size_t i = 1; i < layers.size(); i++) layers[i]->propogatePtr(layers[i - 1]->getOutputPtr());
+			return layers[layers.size() - 1]->getOutputPtr();
 		}
 
-		void NeuralNetwork::train(const Tensor& input, const Tensor& expected, const TrainingConfig& config)
+		void NeuralNetwork::train(const Tensor& input, const Tensor& expected, const tbml::fn::LossFunctionPtr lossFn, const TrainingConfig& config)
 		{
 			// Batch data if needed
 			// TODO: Batch randomly each epoch
@@ -197,9 +415,6 @@ namespace tbml
 				batchCount = inputBatches.size();
 			}
 
-			// Set layers to retain values
-			for (const auto& layer : layers) layer->setRetainValues(true);
-
 			std::chrono::steady_clock::time_point tTrainStart = std::chrono::steady_clock::now();
 			std::chrono::steady_clock::time_point tEpochStart = tTrainStart;
 			std::chrono::steady_clock::time_point tBatchStart = tTrainStart;
@@ -215,17 +430,19 @@ namespace tbml
 				// Train each batch
 				for (size_t batch = 0; batch < batchCount; batch++)
 				{
+					tbml::fn::LossFunctionPtr lossFn = std::make_shared<tbml::fn::SquareError>();
+
 					// Propogate input then calculate loss
-					const Tensor& predicted = propogateRef(inputBatches[batch]);
-					float batchLoss = lossFn->calculate(predicted, expectedBatches[batch]);
+					const Tensor* predicted = propogatePtr(&inputBatches[batch]);
+					float batchLoss = lossFn->calculate(*predicted, expectedBatches[batch]);
 					epochLoss += batchLoss / batchCount;
 
-					// Backpropogate loss and then each layer
-					Tensor pdLossToOut = lossFn->derivative(predicted, expectedBatches[batch]);
-					layers[layers.size() - 1]->backpropogate(pdLossToOut);
+					// Backpropogate loss then through each layer
+					const Tensor gradLossToOut = lossFn->derivative(*predicted, expectedBatches[batch]);
+					layers[layers.size() - 1]->backpropogate(&gradLossToOut);
 					for (int i = (int)layers.size() - 2; i >= 0; i--)
 					{
-						layers[i]->backpropogate(layers[i + 1]->getGradInput());
+						layers[i]->backpropogate(layers[i + 1]->getGradInputPtr());
 					}
 
 					// Apply gradient descent
@@ -237,9 +454,8 @@ namespace tbml
 					if (config.logLevel >= 3)
 					{
 						std::chrono::steady_clock::time_point tBatchEnd = std::chrono::steady_clock::now();
-						float accuracy = fn::classificationAccuracy(predicted, expectedBatches[batch]);
 						auto us = std::chrono::duration_cast<std::chrono::microseconds>(tBatchEnd - tBatchStart);
-						printf("Epoch %d, Batch %d: Loss: %.3f, Accuracy: %.1f%%, Time: %.3fms\n", epoch, (int)batch, batchLoss, accuracy * 100, us.count() / 1000.0f);
+						printf("Epoch %d, Batch %d: Loss: %.3f, Time: %.3fms\n", epoch, (int)batch, batchLoss, us.count() / 1000.0f);
 						tBatchStart = tBatchEnd;
 					}
 				}
@@ -247,10 +463,9 @@ namespace tbml
 				if (config.logLevel >= 2)
 				{
 					std::chrono::steady_clock::time_point tEpochEnd = std::chrono::steady_clock::now();
-					const Tensor& predicted = propogateRef(input);
-					float accuracy = fn::classificationAccuracy(predicted, expected);
+					const Tensor* predicted = propogatePtr(&input);
 					auto us = std::chrono::duration_cast<std::chrono::microseconds>(tEpochEnd - tEpochStart);
-					printf("Epoch %d: Loss: %.3f, Accuracy: %.1f%%, Time: %.3fms\n", epoch, epochLoss, accuracy * 100, us.count() / 1000.0f);
+					printf("Epoch %d: Loss: %.3f, Time: %.3fms\n", epoch, epochLoss, us.count() / 1000.0f);
 					tEpochStart = tEpochEnd;
 				}
 
@@ -264,9 +479,6 @@ namespace tbml
 				auto us = std::chrono::duration_cast<std::chrono::microseconds>(tTrainEnd - tTrainStart);
 				printf("Training complete for %d epochs, Time taken: %.3fms\n\n", epoch, us.count() / 1000.0f);
 			}
-
-			// Reset layers to not retain values
-			for (const auto& layer : layers) layer->setRetainValues(false);
 		}
 
 		int NeuralNetwork::getParameterCount() const
@@ -289,9 +501,6 @@ namespace tbml
 				throw std::runtime_error("Failed to open file for writing");
 			}
 
-			// Write loss function
-			lossFn->serialize(file);
-
 			// Write number of layers
 			file << layers.size() << "\n";
 
@@ -302,16 +511,13 @@ namespace tbml
 			}
 		}
 
-		NeuralNetwork NeuralNetwork::loadFromFile(const std::string& filename)
+		NeuralNetwork loadFromFile(const std::string& filename)
 		{
 			std::ifstream file(filename, std::ios::binary);
 			if (!file.is_open())
 			{
 				throw std::runtime_error("Failed to open file for reading");
 			}
-
-			// Read the loss function
-			fn::LossFunctionPtr lossFn = fn::LossFunction::deserialize(file);
 
 			// Read the number of layers
 			size_t layerCount;
@@ -324,7 +530,7 @@ namespace tbml
 				layers.push_back(Layer::deserialize(file));
 			}
 
-			return NeuralNetwork(std::move(lossFn), std::move(layers));
+			return NeuralNetwork(std::move(layers));
 		}
 	}
 }

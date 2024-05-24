@@ -20,67 +20,106 @@ namespace tbml
 				Base& operator=(Base&&) = delete;
 
 				virtual void propogateMut(Tensor& input) const = 0;
-				virtual const Tensor& propogateRef(const Tensor& input) = 0;
-				virtual void backpropogate(const Tensor& gradOutput) = 0;
+				virtual const Tensor* propogatePtr(const Tensor* input) = 0;
+				virtual void backpropogate(const Tensor* gradOutput) = 0;
 				virtual void gradientDescent(float learningRate, float momentumRate) {};
-				virtual void print() const {};
 				virtual std::shared_ptr<Base> clone() const = 0;
-
-				void setRetainValues(bool retainValues) { this->retainValues = retainValues; }
+				virtual void print() const {}
+				virtual void serialize(std::ostream& os) const = 0;
 				virtual std::vector<size_t> getInputShape() const = 0;
 				virtual std::vector<size_t> getOutputShape() const = 0;
-				const Tensor& getOutput() const { return output; };
-				const Tensor& getGradInput() const { return gradInput; };
 				virtual int getParameterCount() const { return 0; };
-
-				virtual void serialize(std::ostream& os) const = 0;
+				const Tensor* getOutputPtr() const { return &output; };
+				const Tensor* getGradInputPtr() const { return &gradInput; };
 
 			protected:
 				Tensor output;
 				Tensor gradInput;
-				bool retainValues = false;
+				const Tensor* input = nullptr;
 			};
 
 			using BasePtr = std::shared_ptr<Base>;
 
-			static BasePtr deserialize(std::istream& is);
-
-			enum class DenseInitType { ZERO, RANDOM };
-
 			class Dense : public Base
 			{
 			public:
+				enum class InitType { ZERO, RANDOM };
 
 				Dense(const Dense& other);
-				Dense(size_t inputSize, size_t outputSize, fn::ActivationFunctionPtr&& activationFn, DenseInitType initType = DenseInitType::RANDOM, bool useBias = true);
-				Dense(Tensor&& weights, Tensor&& bias, fn::ActivationFunctionPtr&& activationFn);
+				Dense(size_t inputSize, size_t outputSize, InitType initType = InitType::RANDOM, bool useBias = true);
+				Dense(Tensor&& weights, Tensor&& bias);
 
 				virtual void propogateMut(Tensor& input) const override;
-				virtual const Tensor& propogateRef(const Tensor& input) override;
-				void backpropogate(const Tensor& gradOutput) override;
+				virtual const Tensor* propogatePtr(const Tensor* input) override;
+				void backpropogate(const Tensor* gradOutput) override;
 				void gradientDescent(float learningRate, float momentumRate) override;
 				virtual void print() const override;
 				virtual BasePtr clone() const override;
-
 				std::vector<size_t> getInputShape() const override { return { weights.getShape(0) }; }
 				std::vector<size_t> getOutputShape() const override { return { weights.getShape(1) }; }
 				int getParameterCount() const override { return weights.getSize() + bias.getSize(); }
 				const Tensor& getWeights() const { return weights; }
 				const Tensor& getBias() const { return bias; }
-				const fn::ActivationFunctionPtr& getActivationFunction() const { return activationFn; }
-
 				virtual void serialize(std::ostream& os) const override;
 
 			private:
 				Tensor weights;
 				Tensor bias;
-				fn::ActivationFunctionPtr activationFn;
-
-				Tensor const* propogateInput = nullptr;
 				Tensor gradWeights;
 				Tensor gradBias;
 				Tensor momentumWeights;
 				Tensor momentumBias;
+			};
+
+			class ReLU : public Base
+			{
+			public:
+				virtual void propogateMut(Tensor& input) const override;
+				virtual const Tensor* propogatePtr(const Tensor* input) override;
+				void backpropogate(const Tensor* gradOutput) override;
+				virtual BasePtr clone() const override;
+				std::vector<size_t> getInputShape() const override { return { 1 }; }
+				std::vector<size_t> getOutputShape() const override { return { 1 }; }
+				virtual void serialize(std::ostream& os) const override;
+			};
+
+			class Sigmoid : public Base
+			{
+			public:
+				virtual void propogateMut(Tensor& input) const override;
+				virtual const Tensor* propogatePtr(const Tensor* input) override;
+				void backpropogate(const Tensor* gradOutput) override;
+				virtual BasePtr clone() const override;
+				std::vector<size_t> getInputShape() const override { return { 1 }; }
+				std::vector<size_t> getOutputShape() const override { return { 1 }; }
+				virtual void serialize(std::ostream& os) const override;
+
+			private:
+				float sigmoid(float x) const { return 1.0f / (1.0f + std::exp(-x)); }
+			};
+
+			class TanH : public Base
+			{
+			public:
+				virtual void propogateMut(Tensor& input) const override;
+				virtual const Tensor* propogatePtr(const Tensor* input) override;
+				void backpropogate(const Tensor* gradOutput) override;
+				virtual BasePtr clone() const override;
+				std::vector<size_t> getInputShape() const override { return { 1 }; }
+				std::vector<size_t> getOutputShape() const override { return { 1 }; }
+				virtual void serialize(std::ostream& os) const override;
+			};
+
+			class Softmax : public Base
+			{
+			public:
+				virtual void propogateMut(Tensor& input) const override;
+				virtual const Tensor* propogatePtr(const Tensor* input) override;
+				void backpropogate(const Tensor* gradOutput) override;
+				virtual BasePtr clone() const override;
+				std::vector<size_t> getInputShape() const override { return { 1 }; }
+				std::vector<size_t> getOutputShape() const override { return { 1 }; }
+				virtual void serialize(std::ostream& os) const override;
 			};
 
 			/*
@@ -121,6 +160,8 @@ namespace tbml
 				virtual LayerPtr clone() const override;
 			};
 			*/
+
+			static BasePtr deserialize(std::istream& is);
 		}
 
 		struct TrainingConfig
@@ -139,28 +180,24 @@ namespace tbml
 			static const int MAX_EPOCHS = 1'000;
 
 			NeuralNetwork() {}
-			NeuralNetwork(fn::LossFunctionPtr&& lossFn) : lossFn(std::move(lossFn)) {}
-			NeuralNetwork(fn::LossFunctionPtr&& lossFn, std::vector<Layer::BasePtr>&& layers) : lossFn(std::move(lossFn)), layers(std::move(layers)) {}
+			NeuralNetwork(std::vector<Layer::BasePtr>&& layers) : layers(std::move(layers)) {}
 
 			void addLayer(Layer::BasePtr&& layer);
 			virtual Tensor propogate(const Tensor& input) const;
 			virtual void propogateMut(Tensor& input) const;
-			virtual const Tensor& propogateRef(const Tensor& input);
-			void train(const Tensor& input, const Tensor& expected, const TrainingConfig& config);
+			virtual const Tensor* propogatePtr(const Tensor* input);
+			void train(const Tensor& input, const Tensor& expected, const tbml::fn::LossFunctionPtr lossFn, const TrainingConfig& config);
 			void print() const;
-
+			void saveToFile(const std::string& filename) const;
 			std::vector<size_t> getInputShape() const { return layers[0]->getInputShape(); }
 			std::vector<size_t> getOutputShape() const { return layers[layers.size() - 1]->getOutputShape(); }
 			const std::vector<Layer::BasePtr>& getLayers() const { return layers; }
-			fn::LossFunctionPtr getLossFunction() const { return lossFn; }
 			int getParameterCount() const;
 
-			void saveToFile(const std::string& filename) const;
-			static NeuralNetwork loadFromFile(const std::string& filename);
-
 		private:
-			fn::LossFunctionPtr lossFn;
 			std::vector<Layer::BasePtr> layers;
 		};
+
+		NeuralNetwork loadFromFile(const std::string& filename);
 	}
 };

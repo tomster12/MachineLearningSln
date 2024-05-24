@@ -196,7 +196,7 @@ namespace tbml
 
 				std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 				auto us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0);
-				std::cout << "Processed Generation Step: " << us.count() / 1000.0f << "ms" << std::endl;
+				// std::cout << "Processed Generation Step: " << us.count() / 1000.0f << "ms" << std::endl;
 
 				this->currentStep++;
 				if (allFinished) this->isGenerationEvaluated = true;

@@ -1,7 +1,5 @@
-SquareError
-2
+4
 Dense
-ReLU
 Tensor
 2
 2 2 
@@ -10,8 +8,8 @@ Tensor
 2
 1 2 
 -0.459517 -0.279946 
+ReLU
 Dense
-Sigmoid
 Tensor
 2
 2 1 
@@ -20,3 +18,4 @@ Tensor
 2
 1 1 
 -0.362163 
+Sigmoid

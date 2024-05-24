@@ -1,3 +1,4 @@
+#include "Tensor.h"
 #include "stdafx.h"
 #include "Game.h"
 #include "Utility.h"
@@ -6,7 +7,7 @@
 #include "NNTargetGenepool.h"
 #include "NNPoleBalancerGenepool.h"
 
-#define GENEPOOL_TYPE 2
+#define GENEPOOL_TYPE 1
 
 Game::Game()
 	: window(NULL), dt(0)
@@ -50,7 +51,7 @@ void Game::initialize()
 	auto genepool = new NNTargetGenepool({ { 300.0f, 150.0f }, { 1100.0f, 400.0f }, { 450.0f, 850.0f }, { 700.0f, 320.0f } }, 4.0f);
 	genepool->setCreateGenomeFn([]()
 	{
-		return std::make_shared<NNGenome>(nullptr, std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::DenseLayer>(4, 2, std::make_shared<tbml::fn::TanH>()) });
+		return std::make_shared<NNGenome>(tbml::nn::NeuralNetwork({ std::make_shared<tbml::nn::Layer::Dense>(4, 2), std::make_shared<tbml::nn::Layer::TanH>() }));
 	});
 	genepool->setCreateAgentFn([=](NNTargetGenepool::GenomeCPtr data)
 	{
@@ -60,7 +61,7 @@ void Game::initialize()
 	auto genepool = new NNPoleBalancerGenepool();
 	genepool->setCreateGenomeFn([]()
 	{
-		return std::make_shared<NNGenome>(nullptr, std::vector<std::shared_ptr<tbml::nn::Layer>>{ std::make_shared<tbml::nn::Dense>(4, 1, std::make_shared<tbml::fn::TanH>()) });
+		return std::make_shared<NNGenome>(tbml::nn::NeuralNetwork({ std::make_shared<tbml::nn::Layer::Dense>(4, 1), std::make_shared<tbml::nn::Layer::TanH>() }));
 	});
 	genepool->setCreateAgentFn([](NNPoleBalancerGenepool::GenomeCPtr data)
 	{
