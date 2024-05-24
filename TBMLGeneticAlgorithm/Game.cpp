@@ -3,11 +3,12 @@
 #include "Game.h"
 #include "Utility.h"
 #include "GenepoolSimulation.h"
-#include "VectorListTargetGenepool.h"
-#include "NNTargetGenepool.h"
-#include "NNPoleBalancerGenepool.h"
+#include "VectorListTarget.h"
+#include "NNTarget.h"
+#include "NNPoleBalancer.h"
+#include "NNDriver.h"
 
-#define GENEPOOL_TYPE 1
+#define GENEPOOL_TYPE 3
 
 Game::Game()
 	: window(NULL), dt(0)
@@ -38,41 +39,72 @@ void Game::initialize()
 	this->window->setVerticalSyncEnabled(verticalSyncEnabled);
 
 	#if GENEPOOL_TYPE == 0
-	auto genepool = new VectorListTargetGenepool(sf::Vector2f{ 700.0f, 100.0f }, 20.0f);
-	genepool->setCreateGenomeFn([]()
-	{
-		return std::make_shared<VectorListGenome>(500);
-	});
-	genepool->setCreateAgentFn([=](VectorListTargetGenepool::GenomeCPtr data)
-	{
-		return std::make_unique<VectorListTargetAgent>(std::move(data), genepool, sf::Vector2f{ 700.0f, 600.0f }, 4.0f, 4.0f);
-	});
+
+	VectorListTargetGenepool* genepool = new VectorListTargetGenepool(
+		[]() { return std::make_shared<VectorListGenome>(500); },
+		nullptr, sf::Vector2f{ 700.0f, 100.0f }, 20.0f);
+
+	genepool->setCreateAgentFn(
+		[=](VectorListTargetGenepool::GenomeCnPtr data) { return std::make_unique<VectorListTargetAgent>(std::move(data), genepool, sf::Vector2f{ 700.0f, 600.0f }, 4.0f, 4.0f); });
+
 	#elif GENEPOOL_TYPE == 1
-	NNTargetGenepool* genepool = new NNTargetGenepool({ { 300.0f, 150.0f }, { 1100.0f, 400.0f }, { 450.0f, 850.0f }, { 700.0f, 320.0f } }, 4.0f);
-	genepool->setCreateGenomeFn([]()
-	{
-		return std::make_shared<NNGenome>(tbml::nn::NeuralNetwork({ std::make_shared<tbml::nn::Layer::Dense>(4, 2), std::make_shared<tbml::nn::Layer::TanH>() }));
-	});
-	genepool->setCreateAgentFn([=](NNTargetGenepool::GenomeCnPtr data)
-	{
-		return std::make_unique<NNTargetAgent>(std::move(data), genepool, sf::Vector2f{ 700.0f, 850.0f }, 2.0f, 400.0f, 0.99f, 3000);
-	});
+
+	NNTargetGenepool* genepool = new NNTargetGenepool(
+		[]() { return std::make_shared<NNGenome>(tbml::nn::NeuralNetwork({ std::make_shared<tbml::nn::Layer::Dense>(4, 2), std::make_shared<tbml::nn::Layer::TanH>() })); },
+		nullptr, { { 300.0f, 150.0f }, { 1100.0f, 400.0f }, { 450.0f, 850.0f }, { 700.0f, 320.0f } }, 4.0f);
+
+	genepool->setCreateAgentFn(
+		[=](NNTargetGenepool::GenomeCnPtr data) { return std::make_unique<NNTargetAgent>(std::move(data), genepool, sf::Vector2f{ 700.0f, 850.0f }, 2.0f, 400.0f, 0.99f, 3000); });
+
 	#elif GENEPOOL_TYPE == 2
-	auto genepool = new NNPoleBalancerGenepool();
-	genepool->setCreateGenomeFn([]()
+
+	auto genepool = new tbml::ga::Genepool<NNGenome, NNPoleBalancerAgent>(
+		[]() { return std::make_shared<NNGenome>(tbml::nn::NeuralNetwork({ std::make_shared<tbml::nn::Layer::Dense>(4, 1), std::make_shared<tbml::nn::Layer::TanH>() })); },
+		[](std::shared_ptr<const NNGenome> genome) { return std::make_unique<NNPoleBalancerAgent>(std::move(genome), 1.0f, 0.1f, 0.5f, 2.0f, 0.3f, 0.25f, 15.0f); });
+
+	#elif GENEPOOL_TYPE == 3
+
+	auto createWorldShape = [](sf::Vector2f pos, sf::Vector2f size) -> sf::RectangleShape
 	{
-		return std::make_shared<NNGenome>(tbml::nn::NeuralNetwork({ std::make_shared<tbml::nn::Layer::Dense>(4, 1), std::make_shared<tbml::nn::Layer::TanH>() }));
-	});
-	genepool->setCreateAgentFn([](NNPoleBalancerGenepool::GenomeCPtr data)
+		sf::RectangleShape shape(size);
+		shape.setOrigin(size.x / 2.0f, size.y / 2.0f);
+		shape.setPosition(pos);
+		shape.setOutlineColor(sf::Color::Red);
+		shape.setOutlineThickness(1.0f);
+		shape.setFillColor(sf::Color::Transparent);
+		return shape;
+	};
+
+	std::vector<sf::RectangleShape> worldShapes;
+	worldShapes.push_back(createWorldShape({ 600.0f, 500.0f }, { 50.0f, 400.0f }));
+	worldShapes.push_back(createWorldShape({ 800.0f, 500.0f }, { 50.0f, 400.0f }));
+	worldShapes.push_back(createWorldShape({ 750.0f, 150.0f }, { 400.0f, 50.0f }));
+
+	auto genepool = new NNDriverGenepool(
+		[]()
 	{
-		return std::make_unique<NNPoleBalancerAgent>(std::move(data), 1.0f, 0.1f, 0.5f, 2.0f, 0.3f, 0.25f, 15.0f);
+		return std::make_shared<NNGenome>(tbml::nn::NeuralNetwork({
+			std::make_shared<tbml::nn::Layer::Dense>(8, 5),
+			std::make_shared<tbml::nn::Layer::TanH>(),
+			std::make_shared<tbml::nn::Layer::Dense>(5, 2),
+			std::make_shared <tbml::nn::Layer::TanH>() }));
+	},
+		nullptr, { 920.0f, 250.0f }, 20.0f, worldShapes);
+
+	genepool->setCreateAgentFn(
+		[=](NNDriverGenepool::GenomeCnPtr data)
+	{
+		return std::make_unique<NNDriverAgent>(
+			std::move(data), genepool,
+			sf::Vector2f{ 700.0f, 600.0f }, 200.0f, 20.0f, 0.1f, 0.99f, 50.0f, 3000);
 	});
+
 	#endif
 
 	// Reset genepool generation, initialize controller
 	genepool->configThreading(false, true, false);
 	genepool->resetGenepool(2000, 0.05f);
-	this->genepoolController = std::make_unique<tbml::ga::GenepoolController>(tbml::ga::IGenepoolPtr(genepool));
+	this->genepoolController = std::make_unique<GenepoolController>(tbml::ga::IGenepoolPtr(genepool));
 
 	// Initialize UI using spacing constants
 	this->uiManager = std::make_unique<UIManager>();

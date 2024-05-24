@@ -8,7 +8,9 @@ class VectorListTargetAgent : public tbml::ga::Agent<VectorListGenome>
 {
 public:
 	VectorListTargetAgent(VectorListTargetAgent::GenomeCPtr&& genome) : Agent(std::move(genome)) {};
-	VectorListTargetAgent(VectorListTargetAgent::GenomeCPtr&& genome, const VectorListTargetGenepool* genepool, sf::Vector2f startPos, float radius, float moveAcc);
+	VectorListTargetAgent(
+		VectorListTargetAgent::GenomeCPtr&& genome, const VectorListTargetGenepool* genepool,
+		sf::Vector2f startPos, float radius, float moveAcc);
 
 	void initVisual();
 	bool evaluate() override;
@@ -30,8 +32,9 @@ private:
 class VectorListTargetGenepool : public tbml::ga::Genepool<VectorListGenome, VectorListTargetAgent>
 {
 public:
-	VectorListTargetGenepool() {};
-	VectorListTargetGenepool(sf::Vector2f targetPos, float targetRadius);
+	VectorListTargetGenepool(
+		std::function<GenomeCnPtr(void)> createGenomeFn, std::function<AgentPtr(GenomeCnPtr)> createAgentFn,
+		sf::Vector2f targetPos, float targetRadius);
 
 	void initVisual();
 	void render(sf::RenderWindow* window) override;

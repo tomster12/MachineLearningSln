@@ -38,8 +38,9 @@ private:
 class NNTargetGenepool : public tbml::ga::Genepool<NNGenome, NNTargetAgent>
 {
 public:
-	NNTargetGenepool() {};
-	NNTargetGenepool(std::vector<sf::Vector2f> targets, float targetRadius);
+	NNTargetGenepool(
+		std::function<GenomeCnPtr(void)> createGenomeFn, std::function<AgentPtr(GenomeCnPtr)> createAgentFn,
+		std::vector<sf::Vector2f> targets, float targetRadius);
 
 	void initVisual();
 	void render(sf::RenderWindow* window) override;

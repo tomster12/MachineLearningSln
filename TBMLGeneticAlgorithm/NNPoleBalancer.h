@@ -42,5 +42,3 @@ private:
 	float cartAcceleration = 0.0f;
 	float time = 0.0f;
 };
-
-class NNPoleBalancerGenepool : public tbml::ga::Genepool<NNGenome, NNPoleBalancerAgent> {};

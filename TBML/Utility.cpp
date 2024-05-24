@@ -6,7 +6,7 @@ float tbml::fn::getRandomFloat()
 	return (float)rand() / (float)RAND_MAX;
 }
 
-size_t tbml::fn::argmax(const tbml::Tensor& tensor, float row)
+size_t tbml::fn::argmax(const tbml::Tensor& tensor, size_t row)
 {
 	assert(tensor.getDims() == 2);
 	assert(row < tensor.getShape(0));

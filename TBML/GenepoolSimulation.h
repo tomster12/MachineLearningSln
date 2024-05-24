@@ -85,6 +85,10 @@ namespace tbml
 			using GenomeCnPtr = std::shared_ptr<const TGenome>;
 			using AgentPtr = std::unique_ptr<TAgent>;
 
+			Genepool(std::function<GenomeCnPtr(void)> createGenomeFn, std::function<AgentPtr(GenomeCnPtr)> createAgentFn)
+				: createGenomeFn(createGenomeFn), createAgentFn(createAgentFn)
+			{}
+
 			void resetGenepool(int populationSize, float mutationRate)
 			{
 				// [INITIALIZATION] Initialize new instances
@@ -221,10 +225,6 @@ namespace tbml
 				for (const auto& inst : agentPopulation) inst->render(window);
 			};
 
-			void setCreateGenomeFn(std::function<GenomeCnPtr(void)> createGenomeFn) { this->createGenomeFn = createGenomeFn; }
-
-			void setCreateAgentFn(std::function<AgentPtr(GenomeCnPtr)> createAgentFn) { this->createAgentFn = createAgentFn; }
-
 			void setShowVisuals(bool showVisuals) { this->showVisuals = showVisuals; }
 
 			void configThreading(bool enableMultithreadedStepEvaluation = false, bool enableMultithreadedFullEvaluation = false, bool syncMultithreadedSteps = false)
@@ -251,6 +251,10 @@ namespace tbml
 
 			bool getShowVisuals() const { return this->showVisuals; }
 
+			void setCreateGenomeFn(std::function<GenomeCnPtr(void)> createGenomeFn) { this->createGenomeFn = createGenomeFn; }
+
+			void setCreateAgentFn(std::function<AgentPtr(GenomeCnPtr)> createAgentFn) { this->createAgentFn = createAgentFn; }
+
 		protected:
 			std::function<GenomeCnPtr(void)> createGenomeFn;
 			std::function<AgentPtr(GenomeCnPtr)> createAgentFn;
@@ -269,59 +273,6 @@ namespace tbml
 			float bestFitness = 0.0f;
 			ThreadPool evaluateThreadPool;
 			std::vector<AgentPtr> agentPopulation;
-		};
-
-		class GenepoolController
-		{
-		public:
-			GenepoolController() {}
-
-			GenepoolController(IGenepoolPtr&& genepool)
-				: genepool(std::move(genepool))
-			{}
-
-			void update()
-			{
-				if (!this->genepool->getGenepoolInitialized()) throw std::runtime_error("tbml::GenepoolSimulationController: Cannot update because uninitialized.");
-
-				if (!this->genepool->getGenerationEvaluated())
-				{
-					if (this->toEvaluate) this->genepool->evaluateGeneration(!this->toFullEvaluate);
-				}
-				if (this->genepool->getGenerationEvaluated())
-				{
-					if (this->toAutoIterate) this->genepool->iterateGeneration();
-				}
-			};
-
-			void render(sf::RenderWindow* window)
-			{
-				if (!this->genepool->getGenepoolInitialized()) throw std::runtime_error("tbml::GenepoolSimulation: Cannot render because uninitialized.");
-				this->genepool->render(window);
-			};
-
-			void iterateGeneration()
-			{
-				if (!this->genepool->getGenepoolInitialized()) throw std::runtime_error("tbml::GenepoolSimulationController: Cannot iterateGeneration because uninitialized.");
-				if (!this->genepool->getGenerationEvaluated()) return;
-				this->genepool->iterateGeneration();
-			}
-
-			void setEvaluate(bool toEvaluate) { this->toEvaluate = toEvaluate; }
-
-			void setFullEvaluate(bool toFullEvaluate) { this->toFullEvaluate = toFullEvaluate; }
-
-			void setAutoIterate(bool toAutoIterate) { this->toAutoIterate = toAutoIterate; }
-
-			void setShowVisuals(bool showVisuals) { this->genepool->setShowVisuals(showVisuals); }
-
-			IGenepoolPtr getGenepool() const { return this->genepool; }
-
-		protected:
-			IGenepoolPtr genepool = nullptr;
-			bool toEvaluate = false;
-			bool toFullEvaluate = false;
-			bool toAutoIterate = false;
 		};
 	}
 }

@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "NNPoleBalancerGenepool.h"
+#include "NNPoleBalancer.h"
 #include "Utility.h"
 
 NNPoleBalancerAgent::NNPoleBalancerAgent(

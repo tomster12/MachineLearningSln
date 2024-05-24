@@ -19,7 +19,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="GenepoolSimulation.cpp" />
     <ClCompile Include="NeuralNetwork.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="Tensor.cpp" />

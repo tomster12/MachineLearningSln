@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "VectorListTargetGenepool.h"
+#include "VectorListTarget.h"
 #include "CommonImpl.h"
 #include "Utility.h"
 
@@ -84,8 +84,10 @@ float VectorListTargetAgent::calculateFitness()
 	return fitness;
 };
 
-VectorListTargetGenepool::VectorListTargetGenepool(sf::Vector2f targetPos, float targetRadius)
-	: targetPos(targetPos), targetRadius(targetRadius)
+VectorListTargetGenepool::VectorListTargetGenepool(
+	std::function<GenomeCnPtr(void)> createGenomeFn, std::function<AgentPtr(GenomeCnPtr)> createAgentFn,
+	sf::Vector2f targetPos, float targetRadius)
+	: Genepool(createGenomeFn, createAgentFn), targetPos(targetPos), targetRadius(targetRadius)
 {
 	initVisual();
 }

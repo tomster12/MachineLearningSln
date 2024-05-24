@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "global.h"
-#include "NNTargetGenepool.h"
+#include "NNTarget.h"
 #include "CommonImpl.h"
 #include "Utility.h"
 #include "Tensor.h"
@@ -10,7 +10,7 @@ NNTargetAgent::NNTargetAgent(
 	sf::Vector2f startPos, float radius, float moveAcc, float moveDrag, int maxIterations)
 	: Agent(std::move(genome)), genepool(genepool),
 	pos(startPos), radius(radius), moveAcc(moveAcc), moveDrag(moveDrag), maxIterations(maxIterations),
-	currentIteration(0), currentTarget(0), vel(), anger(0.0f), netInput({ 1, 6 }, 0.0f)
+	currentIteration(0), currentTarget(0), vel(), anger(0.0f)
 {}
 
 void NNTargetAgent::initVisual()
@@ -103,8 +103,10 @@ float NNTargetAgent::calculateFitness()
 	return fitness;
 };
 
-NNTargetGenepool::NNTargetGenepool(std::vector<sf::Vector2f> targets, float targetRadius)
-	: targetPos(targets), targetRadius(targetRadius)
+NNTargetGenepool::NNTargetGenepool(
+	std::function<GenomeCnPtr(void)> createGenomeFn, std::function<AgentPtr(GenomeCnPtr)> createAgentFn,
+	std::vector<sf::Vector2f> targets, float targetRadius)
+	: Genepool(createGenomeFn, createAgentFn), targetPos(targets), targetRadius(targetRadius)
 {
 	this->initVisual();
 };
