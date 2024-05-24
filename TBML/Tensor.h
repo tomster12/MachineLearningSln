@@ -51,6 +51,7 @@ namespace tbml
 		Tensor ewised(const Tensor& t, std::function<float(float, float)> fn) const { return Tensor(*this).ewise(t, fn); }
 		Tensor matmulled(const Tensor& t) const { return Tensor(*this).matmul(t); }
 		Tensor transposed() const { return Tensor(*this).transpose(); }
+		Tensor sample(size_t dim, std::vector<size_t> indices) const;
 
 		Tensor& operator+=(const Tensor& t) { return add(t); }
 		Tensor& operator+=(float v) { return add(v); }

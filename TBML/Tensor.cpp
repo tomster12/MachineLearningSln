@@ -240,7 +240,7 @@ namespace tbml
 			const std::vector<float>& b = t.data;
 			std::vector<float> result(shape[0] * t.shape[1]);
 
-			#pragma omp parallel for num_threads(1)
+			#pragma omp parallel for num_threads(12)
 			for (int row = 0; row < (int)shape[0]; row++)
 			{
 				for (int ocol = 0; ocol < (int)t.shape[1]; ocol++)
@@ -287,6 +287,24 @@ namespace tbml
 		}
 
 		throw std::runtime_error("Transpose not defined for dim > 2");
+	}
+
+	Tensor Tensor::sample(size_t dim, std::vector<size_t> indices) const
+	{
+		assert(getDims() == 2);
+		assert(dim == 0);
+
+		// Only implemented for dim 0 of 2D tensor
+		std::vector<float> result(indices.size() * shape[1]);
+		for (size_t i = 0; i < indices.size(); i++)
+		{
+			for (size_t j = 0; j < shape[1]; j++)
+			{
+				result[i + indices.size() * j] = data[indices[i] + shape[0] * j];
+			}
+		}
+
+		return Tensor({ indices.size(), shape[1] }, result);
 	}
 
 	void Tensor::print(std::string tag) const

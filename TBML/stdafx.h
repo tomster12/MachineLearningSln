@@ -12,3 +12,4 @@
 #include <functional>
 #include <cassert>
 #include <fstream>
+#include <numeric>

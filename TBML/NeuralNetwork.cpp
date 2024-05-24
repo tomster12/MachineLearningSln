@@ -83,7 +83,7 @@ namespace tbml
 
 			const Tensor* Dense::propogatePtr(const Tensor* input)
 			{
-				assert(input.getDims() == 2 && input.getShape(1) == weights.getShape(0) && "Input shape does not match weights shape");
+				assert(input->getDims() == 2 && input->getShape(1) == weights.getShape(0) && "Input shape does not match weights shape");
 
 				// Propogate input with weights and bias
 				// Retain input and output for backprop
@@ -94,7 +94,7 @@ namespace tbml
 
 			void Dense::backpropogate(const Tensor* gradOutput)
 			{
-				assert(gradOutput.getDims() == 2 && gradOutput.getShape(1) == weights.getShape(1) && "gradOutput shape does not match weights shape");
+				assert(gradOutput->getDims() == 2 && gradOutput->getShape(1) == weights.getShape(1) && "gradOutput shape does not match weights shape");
 
 				// Calculate pd to neuron in and layer in
 				gradInput = gradOutput->matmulled(weights.transposed());
@@ -359,6 +359,43 @@ namespace tbml
 			}
 		}
 
+		TensorBatcher::TensorBatcher(const Tensor& input, const Tensor& expected, int batchSize, bool shuffle, bool preload)
+			: input(input), expected(expected)
+		{
+			assert(input.getShape(0) == expected.getShape(0) && "Input and expected shape mismatch");
+
+			// Setup batch size and count
+			this->batchSize = batchSize == -1 ? input.getShape(0) : batchSize;
+			batchCount = (int)std::ceil(input.getShape(0) / (float)this->batchSize);
+
+			// Setup indices
+			indices.resize(input.getShape(0));
+			std::iota(indices.begin(), indices.end(), 0);
+			if (shuffle) std::random_shuffle(indices.begin(), indices.end());
+			if (preload) loadBatches();
+		}
+
+		void TensorBatcher::shuffleAndLoad()
+		{
+			std::random_shuffle(indices.begin(), indices.end());
+			loadBatches();
+		}
+
+		void TensorBatcher::loadBatches()
+		{
+			// Setup all batches
+			inputBatches.clear();
+			expectedBatches.clear();
+			for (size_t i = 0; i < batchCount; i++)
+			{
+				size_t start = i * this->batchSize;
+				size_t end = std::min(start + this->batchSize, input.getShape(0));
+				std::vector<size_t> batchIndices(indices.begin() + start, indices.begin() + end);
+				inputBatches.push_back(input.sample(0, batchIndices));
+				expectedBatches.push_back(expected.sample(0, batchIndices));
+			}
+		}
+
 		void NeuralNetwork::addLayer(Layer::BasePtr&& layer)
 		{
 			layers.push_back(std::move(layer));
@@ -395,50 +432,35 @@ namespace tbml
 
 		void NeuralNetwork::train(const Tensor& input, const Tensor& expected, const tbml::fn::LossFunctionPtr lossFn, const TrainingConfig& config)
 		{
-			// Batch data if needed
-			// TODO: Batch randomly each epoch
-			size_t batchCount;
-			std::vector<Tensor> inputBatches, expectedBatches;
-			if (config.batchSize <= 1)
-			{
-				// Do not batch data
-				inputBatches = std::vector<Tensor>({ input });
-				expectedBatches = std::vector<Tensor>({ expected });
-				batchCount = 1;
-			}
-			else
-			{
-				// Split into batches
-				inputBatches = input.groupRows(config.batchSize);
-				expectedBatches = expected.groupRows(config.batchSize);
-				assert(inputBatches.size() == expectedBatches.size() && "Input and expected batch count mismatch");
-				batchCount = inputBatches.size();
-			}
+			// Setup data batchers
+			TensorBatcher batcher(input, expected, config.batchSize, false, false);
+			size_t maxBatch = batcher.getBatchCount();
 
+			// Train for each batch for each epoch
+			int maxEpoch = config.maxEpoch == -1 ? MAX_EPOCHS : config.maxEpoch;
+			if (config.logLevel > 0) printf("Training started for %d epochs\n", maxEpoch);
 			std::chrono::steady_clock::time_point tTrainStart = std::chrono::steady_clock::now();
 			std::chrono::steady_clock::time_point tEpochStart = tTrainStart;
 			std::chrono::steady_clock::time_point tBatchStart = tTrainStart;
 
-			// Train until max epochs or error threshold
 			int epoch = 0;
-			int maxEpochs = config.epochs == -1 ? MAX_EPOCHS : config.epochs;
-			if (config.logLevel > 0) printf("Training started for %d epochs\n", maxEpochs);
-			for (; epoch < maxEpochs; epoch++)
+			for (; epoch < maxEpoch; epoch++)
 			{
+				batcher.shuffleAndLoad();
 				float epochLoss = 0.0f;
-
-				// Train each batch
-				for (size_t batch = 0; batch < batchCount; batch++)
+				for (size_t batch = 0; batch < maxBatch; batch++)
 				{
-					tbml::fn::LossFunctionPtr lossFn = std::make_shared<tbml::fn::SquareError>();
+					// Get input and expected batch
+					const Tensor& inputBatch = batcher.getBatchInput(batch);
+					const Tensor& expectedBatch = batcher.getBatchExpected(batch);
 
 					// Propogate input then calculate loss
-					const Tensor* predicted = propogatePtr(&inputBatches[batch]);
-					float batchLoss = lossFn->calculate(*predicted, expectedBatches[batch]);
-					epochLoss += batchLoss / batchCount;
+					const Tensor* predicted = propogatePtr(&inputBatch);
+					float batchLoss = lossFn->calculate(*predicted, expectedBatch);
+					epochLoss += batchLoss / maxBatch;
 
 					// Backpropogate loss then through each layer
-					const Tensor gradLossToOut = lossFn->derivative(*predicted, expectedBatches[batch]);
+					const Tensor gradLossToOut = lossFn->derivative(*predicted, expectedBatch);
 					layers[layers.size() - 1]->backpropogate(&gradLossToOut);
 					for (int i = (int)layers.size() - 2; i >= 0; i--)
 					{
@@ -453,20 +475,23 @@ namespace tbml
 
 					if (config.logLevel >= 3)
 					{
-						std::chrono::steady_clock::time_point tBatchEnd = std::chrono::steady_clock::now();
-						auto us = std::chrono::duration_cast<std::chrono::microseconds>(tBatchEnd - tBatchStart);
-						printf("Epoch %d, Batch %d: Loss: %.3f, Time: %.3fms\n", epoch, (int)batch, batchLoss, us.count() / 1000.0f);
-						tBatchStart = tBatchEnd;
+						if ((batch + 1) % config.logFrequency == 0)
+						{
+							std::chrono::steady_clock::time_point tBatchEnd = std::chrono::steady_clock::now();
+							auto us = std::chrono::duration_cast<std::chrono::microseconds>(tBatchEnd - tBatchStart);
+							printf("Epoch [%d / %d], Batch [%d / %d]: Loss: %.3f, Time: %.3fms\n", (epoch + 1), maxEpoch, (int)(batch + 1), maxBatch, batchLoss, us.count() / 1000.0f);
+							tBatchStart = tBatchEnd;
+						}
 					}
 				}
 
 				if (config.logLevel >= 2)
 				{
 					std::chrono::steady_clock::time_point tEpochEnd = std::chrono::steady_clock::now();
-					const Tensor* predicted = propogatePtr(&input);
 					auto us = std::chrono::duration_cast<std::chrono::microseconds>(tEpochEnd - tEpochStart);
-					printf("Epoch %d: Loss: %.3f, Time: %.3fms\n", epoch, epochLoss, us.count() / 1000.0f);
+					printf("Epoch [%d / %d]: Average Loss: %.3f, Total Time: %.3fms\n", (epoch + 1), maxEpoch, epochLoss, us.count() / 1000.0f);
 					tEpochStart = tEpochEnd;
+					tBatchStart = tEpochEnd;
 				}
 
 				// Exit if error threshold is met

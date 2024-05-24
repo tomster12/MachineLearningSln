@@ -166,12 +166,33 @@ namespace tbml
 
 		struct TrainingConfig
 		{
-			int epochs = 20;
+			int maxEpoch = 20;
 			int batchSize = -1;
 			float learningRate = 0.1f;
 			float momentumRate = 0.1f;
 			float errorThreshold = 0.0f;
 			size_t logLevel = 0;
+			size_t logFrequency = 1;
+		};
+
+		class TensorBatcher
+		{
+		public:
+			TensorBatcher(const Tensor& input, const Tensor& expected, int batchSize, bool shuffle, bool preload);
+			void shuffleAndLoad();
+			void loadBatches();
+			const Tensor& getBatchInput(size_t batchIndex) const { return inputBatches[batchIndex]; }
+			const Tensor& getBatchExpected(size_t batchIndex) const { return expectedBatches[batchIndex]; }
+			size_t getBatchCount() const { return batchCount; }
+
+		private:
+			const Tensor& input;
+			const Tensor& expected;
+			size_t batchSize;
+			size_t batchCount;
+			std::vector<int> indices;
+			std::vector<Tensor> inputBatches;
+			std::vector<Tensor> expectedBatches;
 		};
 
 		class NeuralNetwork

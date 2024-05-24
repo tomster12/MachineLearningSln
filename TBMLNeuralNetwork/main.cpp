@@ -10,6 +10,7 @@
 #include "Tensor.h"
 
 void testTime();
+void testBatch();
 void testTraining();
 void testSerialization();
 void testMNIST();
@@ -18,7 +19,7 @@ void testMNISTSerialization();
 int main()
 {
 	srand(0);
-	testMNISTSerialization();
+	testMNIST();
 }
 
 void testTime()
@@ -56,6 +57,23 @@ void testTime()
 	std::cout << "Prop: " << t0 << "ms" << std::endl;
 	std::cout << "Prop Mut: " << t1 << "ms" << std::endl;
 	std::cout << "Prop Ref: " << t2 << "ms" << std::endl;
+}
+
+void testBatch()
+{
+	// Create example data and batcher
+	tbml::Tensor input{ std::vector<std::vector<float>>{ { 1, 0 }, { 0, 1 }, { 1, 1 }, { 0, 0 } } };
+	tbml::Tensor expected{ std::vector<std::vector<float>>{ { 1 }, { 1 }, { 0 }, { 0 } } };
+	tbml::nn::TensorBatcher batcher(input, expected, 3, true, true);
+
+	// Print out batches
+	size_t batchCount = batcher.getBatchCount();
+	std::cout << "Batch Count: " << batchCount << std::endl;
+	for (size_t i = 0; i < batchCount; i++)
+	{
+		batcher.getBatchInput(i).print("Batch " + std::to_string(i) + " Input: ");
+		batcher.getBatchExpected(i).print("Batch " + std::to_string(i) + " Expected: ");
+	}
 }
 
 void testTraining()
@@ -110,19 +128,19 @@ void testMNIST()
 	std::cout << "Training Image Count: " << trainImageCount << std::endl;
 	trainInput.print("Training Input: ");
 	trainExpected.print("Training Expected: ");
-	std::cout << "Test Image Count: " << testImageCount << std::endl;
+	std::cout << "\nTest Image Count: " << testImageCount << std::endl;
 	testInput.print("Test Input: ");
 	testExpected.print("Test Expected: ");
 
 	// Create network and train
-	// Timing: (Batch: ~12ms, Epoch: ~9200ms) @ 12 matmul threads, Fitness: (15 epochs = 89.32%)
+	// Timing (Batch: ~12ms, Epoch: ~7800ms @ 12 matmul threads) Fitness (10 epochs = 94.72%)
 	tbml::nn::NeuralNetwork network({
 		std::make_unique<tbml::nn::Layer::Dense>(784, 100),
 		std::make_unique<tbml::nn::Layer::ReLU>(),
 		std::make_unique<tbml::nn::Layer::Dense>(100, 10),
 		std::make_unique<tbml::nn::Layer::Softmax>() });
-	std::cout << "Parameters: " << network.getParameterCount() << std::endl;
-	network.train(trainInput, trainExpected, std::make_shared<tbml::fn::CrossEntropy>(), { 15, 100, 0.02f, 0.8f, 0.01f, 3 });
+	std::cout << "\nParameters: " << network.getParameterCount() << std::endl << std::endl;
+	network.train(trainInput, trainExpected, std::make_shared<tbml::fn::CrossEntropy>(), { 10, 100, 0.02f, 0.9f, 0.01f, 3, 100 });
 
 	// Test network against test data
 	tbml::Tensor testPredicted = network.propogate(testInput);
