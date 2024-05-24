@@ -8,17 +8,20 @@ VectorListTargetAgent::VectorListTargetAgent(
 	sf::Vector2f startPos, float radius, float moveAcc)
 	: Agent(std::move(genome)), genepool(genepool),
 	pos(startPos), radius(radius), moveAcc(moveAcc), currentIndex(0)
-{
-	if (global::showVisuals) initVisual();
-}
+{}
 
 void VectorListTargetAgent::initVisual()
 {
+	if (isVisualInit) return;
+
+	// Set up shape
 	shape.setRadius(radius);
 	shape.setOrigin(radius, radius);
 	shape.setFillColor(sf::Color::Transparent);
 	shape.setOutlineColor(sf::Color::White);
 	shape.setOutlineThickness(1.0f);
+
+	isVisualInit = true;
 }
 
 bool VectorListTargetAgent::evaluate()
@@ -43,6 +46,8 @@ bool VectorListTargetAgent::evaluate()
 
 void VectorListTargetAgent::render(sf::RenderWindow* window)
 {
+	if (!isVisualInit) initVisual();
+
 	// Update shape position and colour
 	shape.setPosition(pos.x, pos.y);
 
@@ -82,7 +87,7 @@ float VectorListTargetAgent::calculateFitness()
 VectorListTargetGenepool::VectorListTargetGenepool(sf::Vector2f targetPos, float targetRadius)
 	: targetPos(targetPos), targetRadius(targetRadius)
 {
-	if (global::showVisuals) initVisual();
+	initVisual();
 }
 
 void VectorListTargetGenepool::initVisual()

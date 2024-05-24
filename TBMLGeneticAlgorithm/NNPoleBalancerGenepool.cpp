@@ -10,12 +10,13 @@ NNPoleBalancerAgent::NNPoleBalancerAgent(
 	cartMass(cartMass), poleMass(poleMass), poleLength(poleLength), force(force),
 	trackLimit(trackLimit), angleLimit(angleLimit), timeLimit(timeLimit),
 	netInput({ 1, 4 }, 0), poleAngle(0.1f)
-{
-	if (global::showVisuals) this->initVisual();
-}
+{}
 
 void NNPoleBalancerAgent::initVisual()
 {
+	if (isVisualInit) return;
+
+	// Set up shapes
 	cartShape.setSize({ 0.3f * METRE_TO_UNIT, 0.22f * METRE_TO_UNIT });
 	cartShape.setOrigin(0.5f * (0.3f * METRE_TO_UNIT), 0.5f * (0.32f * METRE_TO_UNIT));
 	cartShape.setFillColor(sf::Color::Transparent);
@@ -26,6 +27,8 @@ void NNPoleBalancerAgent::initVisual()
 	poleShape.setFillColor(sf::Color::Transparent);
 	poleShape.setOutlineColor(sf::Color::White);
 	poleShape.setOutlineThickness(1.0f);
+
+	isVisualInit = true;
 }
 
 bool NNPoleBalancerAgent::evaluate()
@@ -69,6 +72,8 @@ bool NNPoleBalancerAgent::evaluate()
 
 void NNPoleBalancerAgent::render(sf::RenderWindow* window)
 {
+	if (!isVisualInit) initVisual();
+
 	// Update shape positions and rotations
 	cartShape.setPosition(700.0f + cartPosition * METRE_TO_UNIT, 700.0f);
 	poleShape.setPosition(700.0f + cartPosition * METRE_TO_UNIT, 700.0f);

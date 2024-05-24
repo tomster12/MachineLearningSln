@@ -11,17 +11,20 @@ NNTargetAgent::NNTargetAgent(
 	: Agent(std::move(genome)), genepool(genepool),
 	pos(startPos), radius(radius), moveAcc(moveAcc), moveDrag(moveDrag), maxIterations(maxIterations),
 	currentIteration(0), currentTarget(0), vel(), anger(0.0f), netInput({ 1, 6 }, 0.0f)
-{
-	if (global::showVisuals) initVisual();
-}
+{}
 
 void NNTargetAgent::initVisual()
 {
+	if (isVisualInit) return;
+
+	// Set up shape
 	shape.setRadius(radius);
 	shape.setOrigin(radius, radius);
 	shape.setFillColor(sf::Color::Transparent);
 	shape.setOutlineColor(sf::Color::White);
 	shape.setOutlineThickness(1.0f);
+
+	isVisualInit = true;
 }
 
 bool NNTargetAgent::evaluate()
@@ -61,8 +64,12 @@ bool NNTargetAgent::evaluate()
 
 void NNTargetAgent::render(sf::RenderWindow* window)
 {
+	if (!isVisualInit) initVisual();
+
+	// Update shape to position
 	shape.setPosition(pos.x, pos.y);
 
+	// Set color based on fitness
 	this->calculateFitness();
 	int v = static_cast<int>(255.0f * (0.3f + 0.7f * (fitness / 30.0f)));
 	shape.setOutlineColor(sf::Color(v, v, v));
@@ -83,10 +90,12 @@ float NNTargetAgent::calculateDist()
 
 float NNTargetAgent::calculateFitness()
 {
+	/*
 	// Calculate fitness (anger)
-	/*fitness = std::min(1000000.0f / anger, 15.0f);
+	fitness = std::min(1000000.0f / anger, 15.0f);
 	fitness -= currentTarget * 2.0f;
-	fitness = fitness > 0.0f ? fitness : 0.0f;*/
+	fitness = fitness > 0.0f ? fitness : 0.0f;
+	*/
 
 	// Calculate fitness (speed)
 	fitness = currentTarget + 1.0f - 1.0f / calculateDist();
@@ -97,7 +106,7 @@ float NNTargetAgent::calculateFitness()
 NNTargetGenepool::NNTargetGenepool(std::vector<sf::Vector2f> targets, float targetRadius)
 	: targetPos(targets), targetRadius(targetRadius)
 {
-	if (global::showVisuals) initVisual();
+	this->initVisual();
 };
 
 void NNTargetGenepool::initVisual()
@@ -120,6 +129,7 @@ void NNTargetGenepool::initVisual()
 void NNTargetGenepool::render(sf::RenderWindow* window)
 {
 	Genepool::render(window);
+	if (!this->showVisuals) return;
 	for (auto& shape : targetShapes) window->draw(shape);
 }
 

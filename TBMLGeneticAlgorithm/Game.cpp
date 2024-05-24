@@ -48,12 +48,12 @@ void Game::initialize()
 		return std::make_unique<VectorListTargetAgent>(std::move(data), genepool, sf::Vector2f{ 700.0f, 600.0f }, 4.0f, 4.0f);
 	});
 	#elif GENEPOOL_TYPE == 1
-	auto genepool = new NNTargetGenepool({ { 300.0f, 150.0f }, { 1100.0f, 400.0f }, { 450.0f, 850.0f }, { 700.0f, 320.0f } }, 4.0f);
+	NNTargetGenepool* genepool = new NNTargetGenepool({ { 300.0f, 150.0f }, { 1100.0f, 400.0f }, { 450.0f, 850.0f }, { 700.0f, 320.0f } }, 4.0f);
 	genepool->setCreateGenomeFn([]()
 	{
 		return std::make_shared<NNGenome>(tbml::nn::NeuralNetwork({ std::make_shared<tbml::nn::Layer::Dense>(4, 2), std::make_shared<tbml::nn::Layer::TanH>() }));
 	});
-	genepool->setCreateAgentFn([=](NNTargetGenepool::GenomeCPtr data)
+	genepool->setCreateAgentFn([=](NNTargetGenepool::GenomeCnPtr data)
 	{
 		return std::make_unique<NNTargetAgent>(std::move(data), genepool, sf::Vector2f{ 700.0f, 850.0f }, 2.0f, 400.0f, 0.99f, 3000);
 	});
@@ -79,22 +79,16 @@ void Game::initialize()
 	float osp = 6.0f;
 	float sp = 6.0f;
 	float sz = 30.0f;
-	this->uiManager->addElement(std::shared_ptr<UIElement>(new UIButton(
-		this->window, { osp + sp + 0 * (sp + sz), osp + sp + 0 * (sp + sz) }, { sz, sz }, "assets/startStepping.png", [&]() { this->genepoolController->setRunning(true); })));
-	this->uiManager->addElement(std::shared_ptr<UIElement>(new UIButton(
-		this->window, { osp + sp + 1 * (sp + sz), osp + sp + 0 * (sp + sz) }, { sz, sz }, "assets/stopStepping.png", [&]() { this->genepoolController->setRunning(false); })));
-	this->uiManager->addElement(std::shared_ptr<UIElement>(new UIButton(
-		this->window, { osp + sp + 2 * (sp + sz), osp + sp + 0 * (sp + sz) }, { sz, sz }, "assets/evaluate.png", [&]() { this->genepoolController->evaluateGeneration(); })));
-	this->uiManager->addElement(std::shared_ptr<UIElement>(new UIButton(
-		this->window, { osp + sp + 3 * (sp + sz), osp + sp + 0 * (sp + sz) }, { sz, sz }, "assets/iterate.png", [&]() { this->genepoolController->iterateGeneration(); })));
 	this->uiManager->addElement(std::shared_ptr<UIElement>(new UIToggleButton(
-		this->window, { osp + sp + 4 * (sp + sz), osp + sp + 0 * (sp + sz) }, { sz, sz }, "assets/show.png", false, [&](bool toggled) { global::showVisuals = !toggled; })));
+		this->window, { osp + sp + 0 * (sp + sz), osp + sp + 0 * (sp + sz) }, { sz, sz }, "assets/autoEvaluate.png", false, [&](bool toggled) { this->genepoolController->setEvaluate(toggled); })));
 	this->uiManager->addElement(std::shared_ptr<UIElement>(new UIToggleButton(
-		this->window, { osp + sp + 0 * (sp + sz), osp + sp + 1 * (sp + sz) }, { sz, sz }, "assets/autoStartStepping.png", false, [&](bool toggled) { this->genepoolController->setAutoStepEvaluate(toggled); })));
+		this->window, { osp + sp + 0 * (sp + sz), osp + sp + 1 * (sp + sz) }, { sz, sz }, "assets/autoFullEvaluate.png", false, [&](bool toggled) { this->genepoolController->setFullEvaluate(toggled); })));
+	this->uiManager->addElement(std::shared_ptr<UIElement>(new UIButton(
+		this->window, { osp + sp + 1 * (sp + sz), osp + sp + 0 * (sp + sz) }, { sz, sz }, "assets/iterate.png", [&]() { this->genepoolController->iterateGeneration(); })));
 	this->uiManager->addElement(std::shared_ptr<UIElement>(new UIToggleButton(
-		this->window, { osp + sp + 2 * (sp + sz), osp + sp + 1 * (sp + sz) }, { sz, sz }, "assets/autoEvaluate.png", false, [&](bool toggled) { this->genepoolController->setAutoFullEvaluate(toggled); })));
+		this->window, { osp + sp + 1 * (sp + sz), osp + sp + 1 * (sp + sz) }, { sz, sz }, "assets/autoIterate.png", false, [&](bool toggled) { this->genepoolController->setAutoIterate(toggled); })));
 	this->uiManager->addElement(std::shared_ptr<UIElement>(new UIToggleButton(
-		this->window, { osp + sp + 3 * (sp + sz), osp + sp + 1 * (sp + sz) }, { sz, sz }, "assets/autoIterate.png", false, [&](bool toggled) { this->genepoolController->setAutoIterate(toggled); })));
+		this->window, { osp + sp + 2 * (sp + sz), osp + sp + 0 * (sp + sz) }, { sz, sz }, "assets/show.png", true, [&](bool toggled) { this->genepoolController->setShowVisuals(toggled); })));
 	this->uiManager->addElement(std::shared_ptr<UIElement>(new UIDynamicText(
 		this->window, { osp + sp * 1.2f, osp + sp + osp + 2 * (sp + sz) + 0 }, 15, [&]() { return std::string("Generation: ") + std::to_string(this->genepoolController->getGenepool()->getGenerationNumber()); })));
 	this->uiManager->addElement(std::shared_ptr<UIElement>(new UIDynamicText(
@@ -134,7 +128,7 @@ void Game::render()
 {
 	window->clear();
 
-	if (global::showVisuals) this->genepoolController->render(window);
+	this->genepoolController->render(window);
 	this->uiManager->render(window);
 
 	window->display();

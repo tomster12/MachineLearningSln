@@ -18,6 +18,7 @@ public:
 
 private:
 	const VectorListTargetGenepool* genepool = nullptr;
+	bool isVisualInit = false;
 	sf::CircleShape shape;
 	sf::Vector2f startPos;
 	sf::Vector2f pos;

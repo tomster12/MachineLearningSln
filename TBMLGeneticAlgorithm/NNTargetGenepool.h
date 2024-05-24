@@ -20,6 +20,7 @@ public:
 
 private:
 	const NNTargetGenepool* genepool = nullptr;
+	bool isVisualInit = false;
 	sf::CircleShape shape;
 	sf::Vector2f startPos;
 	float radius = 0;

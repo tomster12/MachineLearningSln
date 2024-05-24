@@ -17,13 +17,13 @@ public:
 	void initVisual();
 	bool evaluate() override;
 	void render(sf::RenderWindow* window) override;
-	float calculateFitness();
 
 private:
 	const float G = 9.81f;
 	const float TIME_STEP = 0.02f;
 	const float METRE_TO_UNIT = 200.0f;
 
+	bool isVisualInit = false;
 	sf::RectangleShape cartShape;
 	sf::RectangleShape poleShape;
 	float cartMass = 1.0f;
