@@ -38,5 +38,8 @@
     <ClCompile Include="Utility.cpp">
       <Filter>Library</Filter>
     </ClCompile>
+    <ClCompile Include="GenepoolSimulation.cpp">
+      <Filter>Library</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

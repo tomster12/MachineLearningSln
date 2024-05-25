@@ -9,6 +9,8 @@ namespace tbml
 	{
 		float getRandomFloat();
 
+		int getRandomInt(int min, int max);
+
 		size_t argmax(const tbml::Tensor& tensor, size_t row);
 
 		float classificationAccuracy(const tbml::Tensor& output, const tbml::Tensor& expected);

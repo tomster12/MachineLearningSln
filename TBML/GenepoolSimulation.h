@@ -1,5 +1,6 @@
 #pragma once
 
+#include <numeric>
 #include "Utility.h"
 #include "ThreadPool.h"
 
@@ -83,7 +84,7 @@ namespace tbml
 		{
 		public:
 			using GenomeCnPtr = std::shared_ptr<const TGenome>;
-			using AgentPtr = std::unique_ptr<TAgent>;
+			using AgentPtr = std::shared_ptr<TAgent>;
 
 			Genepool(std::function<GenomeCnPtr(void)> createGenomeFn, std::function<AgentPtr(GenomeCnPtr)> createAgentFn)
 				: createGenomeFn(createGenomeFn), createAgentFn(createAgentFn)
@@ -165,6 +166,11 @@ namespace tbml
 						if (singleStep) break;
 					}
 				}
+
+				if (this->isGenerationEvaluated)
+				{
+					std::cout << "Generation " << this->currentGeneration << " finished evaluating." << std::endl;
+				}
 			}
 
 			void iterateGeneration()
@@ -175,40 +181,28 @@ namespace tbml
 				// Sort generation and extract best agent
 				std::sort(this->agentPopulation.begin(), this->agentPopulation.end(), [this](const auto& a, const auto& b) { return a->getFitness() > b->getFitness(); });
 				const AgentPtr& bestInstance = this->agentPopulation[0];
-				this->bestData = GenomeCnPtr(bestInstance->getGenome());
+				this->bestGenome = GenomeCnPtr(bestInstance->getGenome());
 				this->bestFitness = bestInstance->getFitness();
-				std::cout << "Generation: " << this->currentGeneration << ", best fitness: " << this->bestFitness << std::endl;
+				std::cout << "Generation " << this->currentGeneration << " iterating, best fitness: " << this->bestFitness << std::endl;
 
-				// Initialize next generation with previous best
+				// Initialize next generation with previous best (Elitism)
 				std::vector<AgentPtr> nextGeneration;
-				nextGeneration.push_back(std::move(createAgentFn(std::move(this->bestData))));
+				nextGeneration.push_back(std::move(createAgentFn(std::move(this->bestGenome))));
 
-				// Setup selection for fitness proportional roulette selection
-				int selectAmount = static_cast<int>(ceil(this->agentPopulation.size() / 2.0f));
-				auto transformFitness = [](float f) { return f * f; };
-				float totalFitness = 0.0f;
-				for (int i = 0; i < selectAmount; i++) totalFitness += transformFitness(this->agentPopulation[i]->getFitness());
-				const auto& pickWeightedParent = [&]()
+				// [SELECTION] Select all parents to use
+				size_t reproduceCount = this->populationSize - 1;
+				std::vector<AgentPtr> parentData = selectRoulette(this->agentPopulation, reproduceCount * 2);
+				//std::vector<AgentPtr> parentData = selectTournament(this->agentPopulation, reproduceCount * 2, 3);
+
+				for (size_t i = 0; i < reproduceCount; i++)
 				{
-					float r = fn::getRandomFloat() * totalFitness;
-					float cumSum = 0.0f;
-					for (int i = 0; i < selectAmount; i++)
-					{
-						cumSum += transformFitness(this->agentPopulation[i]->getFitness());
-						if (r <= cumSum) return this->agentPopulation[i]->getGenome();
-					}
-					return this->agentPopulation[selectAmount - 1]->getGenome();
-				};
+					// Grab the 2 parents from the selection
+					const GenomeCnPtr& parentDataA = parentData[i * 2 + 0]->getGenome();
+					const GenomeCnPtr& parentDataB = parentData[i * 2 + 1]->getGenome();
 
-				for (int i = 0; i < this->populationSize - 1; i++)
-				{
-					// [SELECTION] Pick 2 parents from previous generation
-					const GenomeCnPtr& parentDataA = pickWeightedParent();
-					const GenomeCnPtr& parentDataB = pickWeightedParent();
-
-					// [CROSSOVER], [MUTATION] Crossover and mutate new child data
-					GenomeCnPtr childData = parentDataA->crossover(parentDataB, this->mutationRate);
-					nextGeneration.push_back(createAgentFn(std::move(childData)));
+					// [CROSSOVER], [MUTATION] Crossover and mutate new child genome
+					GenomeCnPtr childGenome = parentDataA->crossover(parentDataB, this->mutationRate);
+					nextGeneration.push_back(createAgentFn(std::move(childGenome)));
 				}
 
 				// Set to new generation and update variables
@@ -241,7 +235,7 @@ namespace tbml
 
 			int getGenerationNumber() const { return this->currentGeneration; }
 
-			GenomeCnPtr getBestData() const { return this->bestData; }
+			GenomeCnPtr getBestData() const { return this->bestGenome; }
 
 			float getBestFitness() const { return this->bestFitness; }
 
@@ -269,10 +263,57 @@ namespace tbml
 			bool isGenerationEvaluated = false;
 			int currentGeneration = 0;
 			int currentStep = 0;
-			GenomeCnPtr bestData = nullptr;
+			GenomeCnPtr bestGenome = nullptr;
 			float bestFitness = 0.0f;
 			ThreadPool evaluateThreadPool;
 			std::vector<AgentPtr> agentPopulation;
+
+			static std::vector<AgentPtr> selectRoulette(const std::vector<AgentPtr>& agentPopulation, int selectAmount)
+			{
+				std::vector<float> fitnessValues;
+				for (const auto& agent : agentPopulation) fitnessValues.push_back(agent->getFitness());
+				float totalFitness = std::accumulate(fitnessValues.begin(), fitnessValues.end(), 0.0f);
+
+				std::vector<float> fitnessProportions;
+				for (const auto& fitness : fitnessValues) fitnessProportions.push_back(fitness / totalFitness);
+
+				std::vector<AgentPtr> selectedAgents;
+				for (int i = 0; i < selectAmount; i++)
+				{
+					float r = fn::getRandomFloat() * totalFitness;
+					float cumSum = 0.0f;
+					for (size_t j = 0; j < agentPopulation.size(); j++)
+					{
+						cumSum += fitnessValues[j];
+						if (r <= cumSum)
+						{
+							selectedAgents.push_back(agentPopulation[j]);
+							break;
+						}
+					}
+				}
+
+				return selectedAgents;
+			}
+
+			static std::vector<AgentPtr> selectTournament(const std::vector<AgentPtr>& agentPopulation, int selectAmount, int tournamentSize)
+			{
+				std::vector<AgentPtr> selectedAgents;
+				for (int i = 0; i < selectAmount; i++)
+				{
+					std::vector<AgentPtr> tournament;
+					for (int j = 0; j < tournamentSize; j++)
+					{
+						int r = tbml::fn::getRandomInt(0, agentPopulation.size() - 1);
+						tournament.push_back(agentPopulation[r]);
+					}
+
+					std::sort(tournament.begin(), tournament.end(), [](const auto& a, const auto& b) { return a->getFitness() > b->getFitness(); });
+					selectedAgents.push_back(tournament[0]);
+				}
+
+				return selectedAgents;
+			}
 		};
 	}
 }

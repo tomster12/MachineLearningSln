@@ -28,7 +28,7 @@ namespace tbml
 				virtual void serialize(std::ostream& os) const = 0;
 				virtual std::vector<size_t> getInputShape() const = 0;
 				virtual std::vector<size_t> getOutputShape() const = 0;
-				virtual int getParameterCount() const { return 0; };
+				virtual size_t getParameterCount() const { return 0; };
 				const Tensor* getOutputPtr() const { return &output; };
 				const Tensor* getGradInputPtr() const { return &gradInput; };
 
@@ -57,7 +57,7 @@ namespace tbml
 				virtual BasePtr clone() const override;
 				std::vector<size_t> getInputShape() const override { return { weights.getShape(0) }; }
 				std::vector<size_t> getOutputShape() const override { return { weights.getShape(1) }; }
-				int getParameterCount() const override { return weights.getSize() + bias.getSize(); }
+				size_t getParameterCount() const override { return weights.getSize() + bias.getSize(); }
 				const Tensor& getWeights() const { return weights; }
 				const Tensor& getBias() const { return bias; }
 				virtual void serialize(std::ostream& os) const override;
@@ -213,7 +213,7 @@ namespace tbml
 			std::vector<size_t> getInputShape() const { return layers[0]->getInputShape(); }
 			std::vector<size_t> getOutputShape() const { return layers[layers.size() - 1]->getOutputShape(); }
 			const std::vector<Layer::BasePtr>& getLayers() const { return layers; }
-			int getParameterCount() const;
+			size_t getParameterCount() const;
 
 		private:
 			std::vector<Layer::BasePtr> layers;
