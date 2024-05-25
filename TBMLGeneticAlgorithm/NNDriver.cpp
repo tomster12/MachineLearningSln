@@ -3,102 +3,191 @@
 #include "CommonImpl.h"
 #include "Tensor.h"
 
+void Body::updateShape(sf::RectangleShape& shape) const
+{
+	shape.setPosition(pos);
+	shape.setRotation(rot * (180.0f / 3.14159265f));
+}
+
+void Body::recalculateVertices()
+{
+	float c = std::cos(rot);
+	float s = std::sin(rot);
+	float w = size.x / 2.0f;
+	float h = size.y / 2.0f;
+	vertices = {
+		{ pos.x + w * c - h * s, pos.y + w * s + h * c },
+		{ pos.x - w * c - h * s, pos.y - w * s + h * c },
+		{ pos.x - w * c + h * s, pos.y - w * s - h * c },
+		{ pos.x + w * c + h * s, pos.y + w * s - h * c }
+	};
+}
+
+std::pair<float, float> Body::projectVerticesOnAxis(const std::vector<sf::Vector2f>& vertices, const sf::Vector2f& axis)
+{
+	// Find min and max projection of all vertices on axis
+	float min = (vertices[0].x * axis.x + vertices[0].y * axis.y);
+	float max = min;
+	for (const auto& vertex : vertices)
+	{
+		float projection = (vertex.x * axis.x + vertex.y * axis.y);
+		if (projection < min) min = projection;
+		if (projection > max) max = projection;
+	}
+	return { min, max };
+}
+
+bool Body::overlapOnAxis(const std::vector<sf::Vector2f>& vertices1, const std::vector<sf::Vector2f>& vertices2, const sf::Vector2f& axis)
+{
+	// Overlap on axis if projection min and max overlap
+	auto pair1 = projectVerticesOnAxis(vertices1, axis);
+	auto pair2 = projectVerticesOnAxis(vertices2, axis);
+	return !(pair1.second < pair2.first || pair2.second < pair1.first);
+}
+
+bool Body::isColliding(const Body& other) const
+{
+	// Get all axes as all edges from both rectangles
+	std::vector<sf::Vector2f> axes;
+	for (size_t i = 0; i < 4; ++i)
+	{
+		sf::Vector2f edge1 = vertices[i] - vertices[(i + 1) % 4];
+		sf::Vector2f edge2 = other.vertices[i] - other.vertices[(i + 1) % 4];
+		axes.push_back(sf::Vector2f(-edge1.y, edge1.x));
+		axes.push_back(sf::Vector2f(-edge2.y, edge2.x));
+	}
+
+	// Collision if there is no axis of separation
+	for (const auto& axis : axes)
+	{
+		if (!overlapOnAxis(vertices, other.vertices, axis)) return false;
+	}
+	return true;
+}
+
 NNDriverAgent::NNDriverAgent(
 	NNDriverAgent::GenomeCPtr&& genome, const NNDriverGenepool* genepool,
-	sf::Vector2f startPos, float maxDrivingSpeed, float drivingAcc, float steeringAcc, float moveDrag, float eyeLength, int maxIterations)
+	sf::Vector2f startPos, float maxDrivingSpeed, float drivingAcc, float steeringSpeed, float moveDrag, float eyeLength, int maxIterations)
 	: Agent(std::move(genome)), genepool(genepool),
-	pos(startPos), maxDrivingSpeed(maxDrivingSpeed), drivingAcc(drivingAcc), steeringAcc(steeringAcc), moveDrag(moveDrag), eyeLength(eyeLength),
-	maxIterations(maxIterations)
+	maxDrivingSpeed(maxDrivingSpeed), drivingAcc(drivingAcc), steeringSpeed(steeringSpeed), moveDrag(moveDrag), eyeLength(eyeLength), maxIterations(maxIterations)
 {
-	this->initVisual();
+	// Initialize bodies
+	mainBody = Body(startPos, sf::Vector2f(40.0f, 20.0f), 1.5f * 3.14159265f);
+	for (int i = 0; i < 5; i++)
+	{
+		float angle = mainBody.rot + (i - 2) * 0.2f * 3.14159265f;
+		sf::Vector2f eyeStartPos = mainBody.pos
+			+ sf::Vector2f(20.0f * std::cos(mainBody.rot), 20.0f * std::sin(mainBody.rot))
+			+ sf::Vector2f(0.5f * eyeLength * std::cos(angle), 0.5f * eyeLength * std::sin(angle));
+		eyeBodies.push_back(Body(eyeStartPos, sf::Vector2f(eyeLength, 3.0f), angle));
+	}
 }
 
 void NNDriverAgent::initVisual()
 {
+	if (isVisualInit) return;
+
+	// Initialize eye colors
+	eyeColourHit = sf::Color(200, 100, 100, 120);
+	eyeColourMiss = sf::Color(100, 100, 100, 120);
+
 	// Set up body shape
-	bodyShape.setSize(sf::Vector2f(40.0f, 20.0f));
-	bodyShape.setOrigin(20.0f, 10.0f);
-	bodyShape.setOutlineColor(sf::Color::White);
-	bodyShape.setOutlineThickness(1.0f);
-	bodyShape.setFillColor(sf::Color::Transparent);
-	bodyShape.setPosition(pos);
-	bodyShape.setRotation(drivingAngle * (180.0f / 3.14159265f));
+	mainShape.setFillColor(sf::Color::Transparent);
+	mainShape.setOutlineColor(sf::Color(255, 255, 255, 120));
+	mainShape.setOutlineThickness(1.0f);
+	mainShape.setSize(mainBody.size);
+	mainShape.setOrigin(mainBody.size.x / 2.0f, mainBody.size.y / 2.0f);
 
 	// Set up eye shapes
 	for (int i = 0; i < 5; i++)
 	{
-		float angle = drivingAngle + (i - 2) * 0.2f * 3.14159265f;
-
+		float angle = mainBody.rot + (i - 2) * 0.2f * 3.14159265f;
 		sf::RectangleShape eyeShape;
-		eyeShape.setSize(sf::Vector2f(eyeLength, 2.0f));
-		eyeShape.setOrigin(0.0f, 1.0f);
-		eyeShape.setPosition(pos);
-		eyeShape.setRotation(angle * (180.0f / 3.14159265f));
-		eyeShape.setOutlineColor(sf::Color::Green);
-		eyeShape.setOutlineThickness(1.0f);
-		eyeShape.setFillColor(sf::Color::Transparent);
+		eyeShape.setFillColor(eyeColourMiss);
+		eyeShape.setSize(eyeBodies[i].size);
+		eyeShape.setOrigin(eyeBodies[i].size.x / 2.0f, eyeBodies[i].size.y / 2.0f);
 		eyeShapes.push_back(eyeShape);
 	}
+
+	if (isFinished) this->setFinishedVisual();
+
+	isVisualInit = true;
+}
+
+void NNDriverAgent::setFinishedVisual()
+{
+	if (!isVisualInit) return;
+
+	// Set main shape based on finish type
+	// 0: Collided, 1: Max iterations, 2: Reached target
+	if (finishType == 0) mainShape.setOutlineColor(sf::Color(200, 100, 100, 60));
+	else if (finishType == 1) mainShape.setOutlineColor(sf::Color(200, 200, 100, 60));
+	else if (finishType == 2) mainShape.setOutlineColor(sf::Color(100, 200, 100, 60));
+
+	// Set eye shapes to transparent
+	for (auto& eyeShape : eyeShapes) eyeShape.setFillColor(sf::Color::Transparent);
 }
 
 bool NNDriverAgent::evaluate()
 {
 	if (isFinished) return true;
 
-	// Stop if colliding
-	if (genepool->isColliding(bodyShape))
+	// Finish 0: Collided with world
+	mainBody.recalculateVertices();
+	if (genepool->isColliding(mainBody))
 	{
 		isFinished = true;
+		finishType = 0;
 		this->calculateFitness();
-		bodyShape.setOutlineColor(sf::Color::Red);
-		for (auto& eyeShape : eyeShapes) eyeShape.setOutlineColor(sf::Color::Transparent);
+		setFinishedVisual();
 		return true;
 	}
 
 	// Raycast with eye shapes (-45, -20, 0, 20, 45)
 	for (int i = 0; i < 5; i++)
 	{
-		float angle = drivingAngle + (i - 2) * 0.2f * 3.14159265f;
-		eyeShapes[i].setPosition(pos);
-		eyeShapes[i].setRotation(angle * (180.0f / 3.14159265f));
-		eyeHits[i] = genepool->isColliding(eyeShapes[i]) ? 1.0f : 0.0f;
-		eyeShapes[i].setOutlineColor(eyeHits[i] > 0.5f ? sf::Color::Red : sf::Color::Green);
+		float angle = mainBody.rot + (i - 2) * 0.2f * 3.14159265f;
+		sf::Vector2f eyeStartPos = mainBody.pos
+			+ sf::Vector2f(20.0f * std::cos(mainBody.rot), 20.0f * std::sin(mainBody.rot))
+			+ sf::Vector2f(0.5f * eyeLength * std::cos(angle), 0.5f * eyeLength * std::sin(angle));
+		eyeBodies[i].pos = eyeStartPos;
+		eyeBodies[i].rot = angle;
+		eyeBodies[i].recalculateVertices();
+		eyeHits[i] = genepool->isColliding(eyeBodies[i]) ? 1.0f : 0.0f;
 	}
 
-	// Calculate with brain
-	float targetDir = genepool->getTargetDir(pos);
-	netInput.setData({ 1, 8 }, { eyeHits[0], eyeHits[1], eyeHits[2], eyeHits[3], eyeHits[4], drivingSpeed, drivingAngle, targetDir });
+	// Calculate with brain (bias, eyes, speed, angle, angle diff)
+	float rotDiff = genepool->getTargetDir(mainBody.pos) - mainBody.rot;
+	netInput.setData({ 1, 9 }, { 1.0f, eyeHits[0], eyeHits[1], eyeHits[2], eyeHits[3], eyeHits[4], drivingSpeed, mainBody.rot, rotDiff });
 	genome->getNetwork().propogateMut(netInput);
 
 	// Update position, angle, speed
-	drivingAngle += netInput(0, 0) * steeringAcc;
-	drivingAngle = std::fmod(drivingAngle + 2.0f * 3.14159265f, 2.0f * 3.14159265f);
+	mainBody.rot += netInput(0, 0) * steeringSpeed;
 	drivingSpeed += netInput(0, 1) * drivingAcc;
-	drivingSpeed = std::max(0.0f, std::min(maxDrivingSpeed, drivingSpeed));
-	drivingSpeed *= moveDrag;
-	pos.x += std::cos(drivingAngle) * drivingSpeed * (1.0f / 60.0f);
-	pos.y += std::sin(drivingAngle) * drivingSpeed * (1.0f / 60.0f);
+	mainBody.rot = std::fmod(mainBody.rot + 2.0f * 3.14159265f, 2.0f * 3.14159265f);
+	drivingSpeed = std::max(0.0f, std::min(maxDrivingSpeed, drivingSpeed * moveDrag));
+	mainBody.pos.x += std::cos(mainBody.rot) * drivingSpeed * (1.0f / 60.0f);
+	mainBody.pos.y += std::sin(mainBody.rot) * drivingSpeed * (1.0f / 60.0f);
 	currentIteration++;
 
-	// Update shape
-	bodyShape.setPosition(pos);
-	bodyShape.setRotation(drivingAngle * (180.0f / 3.14159265f));
-
-	// Check finish conditions
+	// Finish 1: Max iterations
 	if (currentIteration == maxIterations)
 	{
 		isFinished = true;
+		finishType = 1;
 		this->calculateFitness();
-		bodyShape.setOutlineColor(sf::Color::Yellow);
-		for (auto& eyeShape : eyeShapes) eyeShape.setOutlineColor(sf::Color::Transparent);
+		setFinishedVisual();
+		return true;
 	}
-	else if (genepool->getTargetDist(pos) < 10.0f)
+
+	// Finish 2: Reached target
+	if (genepool->getTargetDist(mainBody.pos) < genepool->getTargetRadius())
 	{
 		isFinished = true;
-		hasReachedTarget = true;
+		finishType = 2;
 		this->calculateFitness();
-		bodyShape.setOutlineColor(sf::Color::Green);
-		for (auto& eyeShape : eyeShapes) eyeShape.setOutlineColor(sf::Color::Transparent);
+		setFinishedVisual();
+		return true;
 	}
 
 	return isFinished;
@@ -106,34 +195,51 @@ bool NNDriverAgent::evaluate()
 
 void NNDriverAgent::render(sf::RenderWindow* window)
 {
-	// Draw shape
-	window->draw(bodyShape);
+	if (!isVisualInit) this->initVisual();
 
-	// Draw eyes
+	// Update shapes
+	mainBody.updateShape(mainShape);
+
+	// Update eye shapes
+	for (int i = 0; i < 5; i++)
+	{
+		if (!isFinished) eyeShapes[i].setFillColor(eyeHits[i] > 0.5f ? eyeColourHit : eyeColourMiss);
+		eyeBodies[i].updateShape(eyeShapes[i]);
+	}
+
+	// Draw shapes
+	window->draw(mainShape);
 	for (const auto& eyeShape : eyeShapes) window->draw(eyeShape);
 }
 
 void NNDriverAgent::calculateFitness()
 {
-	// Reward reaching, punish dying, reward quickness
-	fitness = 0.0f;
-	if (hasReachedTarget)
+	// Punish collision with world with distance / 2
+	if (finishType == 0)
 	{
-		fitness = 10.0f;
-		fitness += 20.0f * (1.0f - (float)currentIteration / (float)maxIterations);
+		float dist = genepool->getTargetDist(mainBody.pos);
+		fitness = 5.0f / std::max(1.0f, dist / 20.0f);
 	}
-	else
+
+	// Punish distance from target if not reached
+	else if (finishType == 1)
 	{
-		float dist = genepool->getTargetDist(pos);
-		fitness = std::max(10.0f - dist / 10.0f, 0.0f);
+		float dist = genepool->getTargetDist(mainBody.pos);
+		fitness = 10.0f / std::max(1.0f, dist / 20.0f);
+	}
+
+	// Reward reaching target in as little time as possible
+	else if (finishType == 2)
+	{
+		fitness = 10.0f + 20.0f / std::max(1.0f, (float)currentIteration / 20.0f);
 	}
 }
 
 NNDriverGenepool::NNDriverGenepool(
 	std::function<GenomeCnPtr(void)> createGenomeFn, std::function<AgentPtr(GenomeCnPtr)> createAgentFn,
-	sf::Vector2f targetPos, float targetRadius, std::vector<sf::RectangleShape> worldShapes)
+	sf::Vector2f targetPos, float targetRadius, std::vector<Body> worldBodies)
 	: Genepool(createGenomeFn, createAgentFn),
-	targetPos(targetPos), targetRadius(targetRadius), worldShapes(worldShapes)
+	targetPos(targetPos), targetRadius(targetRadius), worldBodies(worldBodies)
 {
 	this->initVisual();
 }
@@ -141,10 +247,26 @@ NNDriverGenepool::NNDriverGenepool(
 void NNDriverGenepool::initVisual()
 {
 	// Set up target shape
+	targetShape.setPosition(targetPos);
+	targetShape.setFillColor(sf::Color::Transparent);
+	targetShape.setOutlineColor(sf::Color::Green);
+	targetShape.setOutlineThickness(1.0f);
 	targetShape.setRadius(targetRadius);
 	targetShape.setOrigin(targetRadius, targetRadius);
-	targetShape.setOutlineColor(sf::Color::Green);
-	targetShape.setPosition(targetPos);
+
+	// Set up world shapes
+	for (auto& body : worldBodies)
+	{
+		sf::RectangleShape shape;
+		shape.setFillColor(sf::Color::Transparent);
+		shape.setOutlineColor(sf::Color::White);
+		shape.setOutlineThickness(1.0f);
+		shape.setSize(body.size);
+		shape.setOrigin(body.size.x / 2.0f, body.size.y / 2.0f);
+		body.updateShape(shape);
+		body.recalculateVertices();
+		worldShapes.push_back(shape);
+	}
 }
 
 void NNDriverGenepool::render(sf::RenderWindow* window)
@@ -159,11 +281,11 @@ void NNDriverGenepool::render(sf::RenderWindow* window)
 	for (const auto& shape : worldShapes) window->draw(shape);
 }
 
-bool NNDriverGenepool::isColliding(sf::RectangleShape& shape) const
+bool NNDriverGenepool::isColliding(Body& body) const
 {
-	for (const auto& worldShape : worldShapes)
+	for (const auto& other : worldBodies)
 	{
-		if (isColliding(shape, worldShape)) return true;
+		if (body.isColliding(other)) return true;
 	}
 	return false;
 }
@@ -180,12 +302,4 @@ float NNDriverGenepool::getTargetDir(sf::Vector2f pos) const
 	float dx = targetPos.x - pos.x;
 	float dy = targetPos.y - pos.y;
 	return atan2(dy, dx);
-}
-
-bool NNDriverGenepool::isColliding(const sf::RectangleShape& shape1, const sf::RectangleShape& shape2)
-{
-	// Check exact collision between two rectangles with rotation
-	sf::FloatRect rect1 = shape1.getGlobalBounds();
-	sf::FloatRect rect2 = shape2.getGlobalBounds();
-	return rect1.intersects(rect2);
 }

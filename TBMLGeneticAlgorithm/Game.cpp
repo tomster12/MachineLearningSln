@@ -64,46 +64,40 @@ void Game::initialize()
 
 	#elif GENEPOOL_TYPE == 3
 
-	auto createWorldShape = [](sf::Vector2f pos, sf::Vector2f size) -> sf::RectangleShape
-	{
-		sf::RectangleShape shape(size);
-		shape.setOrigin(size.x / 2.0f, size.y / 2.0f);
-		shape.setPosition(pos);
-		shape.setOutlineColor(sf::Color::Red);
-		shape.setOutlineThickness(1.0f);
-		shape.setFillColor(sf::Color::Transparent);
-		return shape;
-	};
+	//std::vector<sf::RectangleShape> worldShapes;
+	//worldShapes.push_back(createWorldShape({ 600.0f, 500.0f }, { 50.0f, 400.0f }));
+	//worldShapes.push_back(createWorldShape({ 800.0f, 500.0f }, { 50.0f, 400.0f }));
+	//worldShapes.push_back(createWorldShape({ 750.0f, 150.0f }, { 400.0f, 50.0f }));
 
-	std::vector<sf::RectangleShape> worldShapes;
-	worldShapes.push_back(createWorldShape({ 600.0f, 500.0f }, { 50.0f, 400.0f }));
-	worldShapes.push_back(createWorldShape({ 800.0f, 500.0f }, { 50.0f, 400.0f }));
-	worldShapes.push_back(createWorldShape({ 750.0f, 150.0f }, { 400.0f, 50.0f }));
+	std::vector<Body> worldBodies;
+	worldBodies.push_back(Body({ 600.0f, 500.0f }, { 50.0f, 400.0f }));
+	worldBodies.push_back(Body({ 800.0f, 500.0f }, { 50.0f, 400.0f }));
+	worldBodies.push_back(Body({ 750.0f, 150.0f }, { 400.0f, 50.0f }));
 
 	auto genepool = new NNDriverGenepool(
 		[]()
 	{
 		return std::make_shared<NNGenome>(tbml::nn::NeuralNetwork({
-			std::make_shared<tbml::nn::Layer::Dense>(8, 5),
-			std::make_shared<tbml::nn::Layer::TanH>(),
+			std::make_shared<tbml::nn::Layer::Dense>(9, 5),
+			std::make_shared<tbml::nn::Layer::ReLU>(),
 			std::make_shared<tbml::nn::Layer::Dense>(5, 2),
 			std::make_shared <tbml::nn::Layer::TanH>() }));
 	},
-		nullptr, { 920.0f, 250.0f }, 20.0f, worldShapes);
+		nullptr, { 920.0f, 250.0f }, 20.0f, worldBodies);
 
 	genepool->setCreateAgentFn(
 		[=](NNDriverGenepool::GenomeCnPtr data)
 	{
 		return std::make_unique<NNDriverAgent>(
 			std::move(data), genepool,
-			sf::Vector2f{ 700.0f, 600.0f }, 200.0f, 20.0f, 0.1f, 0.99f, 50.0f, 3000);
+			sf::Vector2f{ 700.0f, 600.0f }, 400.0f, 40.0f, 0.1f, 0.97f, 50.0f, 2000);
 	});
 
 	#endif
 
 	// Reset genepool generation, initialize controller
 	genepool->configThreading(false, true, false);
-	genepool->resetGenepool(2000, 0.05f);
+	genepool->resetGenepool(1500, 0.05f);
 	this->genepoolController = std::make_unique<GenepoolController>(tbml::ga::IGenepoolPtr(genepool));
 
 	// Initialize UI using spacing constants
