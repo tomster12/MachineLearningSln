@@ -13,5 +13,3 @@
 #include <cassert>
 #include <fstream>
 #include <numeric>
-
-#include "GenepoolSimulation.h"

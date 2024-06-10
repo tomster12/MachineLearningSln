@@ -6,6 +6,11 @@ float tbml::fn::getRandomFloat()
 	return (float)rand() / (float)RAND_MAX;
 }
 
+int tbml::fn::getRandomInt(int min, int max)
+{
+	return min + (rand() % (max - min + 1));
+}
+
 size_t tbml::fn::argmax(const tbml::Tensor& tensor, size_t row)
 {
 	assert(tensor.getDims() == 2);

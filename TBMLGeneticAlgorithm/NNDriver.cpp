@@ -45,7 +45,7 @@ bool Body::overlapOnAxis(const std::vector<sf::Vector2f>& vertices1, const std::
 	return !(pair1.second < pair2.first || pair2.second < pair1.first);
 }
 
-bool Body::isColliding(const Body& other) const
+bool Body::intersectBody(const Body& other) const
 {
 	// Get all axes as all edges from both rectangles
 	std::vector<sf::Vector2f> axes;
@@ -65,22 +65,32 @@ bool Body::isColliding(const Body& other) const
 	return true;
 }
 
+bool Body::intersectRaycast(sf::Vector2f start, sf::Vector2f end) const
+{
+	// Check if ray intersects any edge of the body
+	for (size_t i = 0; i < 4; ++i)
+	{
+		sf::Vector2f edge = vertices[(i + 1) % 4] - vertices[i];
+		sf::Vector2f normal = sf::Vector2f(-edge.y, edge.x);
+		float startProj = (start.x * normal.x + start.y * normal.y);
+		float endProj = (end.x * normal.x + end.y * normal.y);
+		float minProj = std::min(startProj, endProj);
+		float maxProj = std::max(startProj, endProj);
+		auto pair = projectVerticesOnAxis(vertices, normal);
+		if (pair.second < minProj || pair.first > maxProj) return false;
+	}
+	return true;
+}
+
 NNDriverAgent::NNDriverAgent(
 	NNDriverAgent::GenomeCPtr&& genome, const NNDriverGenepool* genepool,
-	sf::Vector2f startPos, float maxDrivingSpeed, float drivingAcc, float steeringSpeed, float moveDrag, float eyeLength, int maxIterations)
+	sf::Vector2f startPos, float maxDrivingSpeed, float drivingAcc, float steeringSpeed, float moveDrag, float eyeLength, int iterationsPerTarget)
 	: Agent(std::move(genome)), genepool(genepool),
-	maxDrivingSpeed(maxDrivingSpeed), drivingAcc(drivingAcc), steeringSpeed(steeringSpeed), moveDrag(moveDrag), eyeLength(eyeLength), maxIterations(maxIterations)
+	maxDrivingSpeed(maxDrivingSpeed), drivingAcc(drivingAcc), steeringSpeed(steeringSpeed), moveDrag(moveDrag), eyeLength(eyeLength), iterationsPerTarget(iterationsPerTarget),
+	maxIterations(iterationsPerTarget)
 {
-	// Initialize bodies
+	// Initialize body
 	mainBody = Body(startPos, sf::Vector2f(40.0f, 20.0f), 1.5f * 3.14159265f);
-	for (int i = 0; i < 5; i++)
-	{
-		float angle = mainBody.rot + (i - 2) * 0.2f * 3.14159265f;
-		sf::Vector2f eyeStartPos = mainBody.pos
-			+ sf::Vector2f(20.0f * std::cos(mainBody.rot), 20.0f * std::sin(mainBody.rot))
-			+ sf::Vector2f(0.5f * eyeLength * std::cos(angle), 0.5f * eyeLength * std::sin(angle));
-		eyeBodies.push_back(Body(eyeStartPos, sf::Vector2f(eyeLength, 3.0f), angle));
-	}
 }
 
 void NNDriverAgent::initVisual()
@@ -98,16 +108,10 @@ void NNDriverAgent::initVisual()
 	mainShape.setSize(mainBody.size);
 	mainShape.setOrigin(mainBody.size.x / 2.0f, mainBody.size.y / 2.0f);
 
-	// Set up eye shapes
-	for (int i = 0; i < 5; i++)
-	{
-		float angle = mainBody.rot + (i - 2) * 0.2f * 3.14159265f;
-		sf::RectangleShape eyeShape;
-		eyeShape.setFillColor(eyeColourMiss);
-		eyeShape.setSize(eyeBodies[i].size);
-		eyeShape.setOrigin(eyeBodies[i].size.x / 2.0f, eyeBodies[i].size.y / 2.0f);
-		eyeShapes.push_back(eyeShape);
-	}
+	// Set up eye shape
+	eyeShape.setFillColor(eyeColourMiss);
+	eyeShape.setSize(sf::Vector2f(eyeLength, 3.0f));
+	eyeShape.setOrigin(0, 1.5f);
 
 	if (isFinished) this->setFinishedVisual();
 
@@ -125,7 +129,7 @@ void NNDriverAgent::setFinishedVisual()
 	else if (finishType == 2) mainShape.setOutlineColor(sf::Color(100, 200, 100, 60));
 
 	// Set eye shapes to transparent
-	for (auto& eyeShape : eyeShapes) eyeShape.setFillColor(sf::Color::Transparent);
+	eyeShape.setFillColor(sf::Color::Transparent);
 }
 
 bool NNDriverAgent::evaluate()
@@ -134,7 +138,7 @@ bool NNDriverAgent::evaluate()
 
 	// Finish 0: Collided with world
 	mainBody.recalculateVertices();
-	if (genepool->isColliding(mainBody))
+	if (genepool->checkWorldIntersectBody(mainBody))
 	{
 		isFinished = true;
 		finishType = 0;
@@ -144,21 +148,16 @@ bool NNDriverAgent::evaluate()
 	}
 
 	// Raycast with eye shapes (-45, -20, 0, 20, 45)
+	sf::Vector2f pos = mainBody.pos + sf::Vector2f(20.0f * std::cos(mainBody.rot), 20.0f * std::sin(mainBody.rot));
 	for (int i = 0; i < 5; i++)
 	{
 		float angle = mainBody.rot + (i - 2) * 0.2f * 3.14159265f;
-		sf::Vector2f eyeStartPos = mainBody.pos
-			+ sf::Vector2f(20.0f * std::cos(mainBody.rot), 20.0f * std::sin(mainBody.rot))
-			+ sf::Vector2f(0.5f * eyeLength * std::cos(angle), 0.5f * eyeLength * std::sin(angle));
-		eyeBodies[i].pos = eyeStartPos;
-		eyeBodies[i].rot = angle;
-		eyeBodies[i].recalculateVertices();
-		eyeHits[i] = genepool->isColliding(eyeBodies[i]) ? 1.0f : 0.0f;
+		eyeHits[i] = genepool->checkWorldIntersectRaycast(pos, angle, eyeLength) ? 1.0f : 0.0f;
 	}
 
 	// Calculate with brain (bias, eyes, speed, angle, angle diff)
-	float rotDiff = genepool->getTargetDir(mainBody.pos) - mainBody.rot;
-	netInput.setData({ 1, 9 }, { 1.0f, eyeHits[0], eyeHits[1], eyeHits[2], eyeHits[3], eyeHits[4], drivingSpeed, mainBody.rot, rotDiff });
+	float rotDiff = genepool->getTargetDir(mainBody.pos, currentTarget) - mainBody.rot;
+	netInput.setData({ 1, 8 }, { eyeHits[0], eyeHits[1], eyeHits[2], eyeHits[3], eyeHits[4], drivingSpeed, mainBody.rot, rotDiff });
 	genome->getNetwork().propogateMut(netInput);
 
 	// Update position, angle, speed
@@ -171,7 +170,7 @@ bool NNDriverAgent::evaluate()
 	currentIteration++;
 
 	// Finish 1: Max iterations
-	if (currentIteration == maxIterations)
+	if (currentIteration >= maxIterations)
 	{
 		isFinished = true;
 		finishType = 1;
@@ -181,13 +180,20 @@ bool NNDriverAgent::evaluate()
 	}
 
 	// Finish 2: Reached target
-	if (genepool->getTargetDist(mainBody.pos) < genepool->getTargetRadius())
+	if (genepool->getTargetDist(mainBody.pos, currentTarget) < genepool->getTargetRadius())
 	{
-		isFinished = true;
-		finishType = 2;
-		this->calculateFitness();
-		setFinishedVisual();
-		return true;
+		currentTarget++;
+		maxIterations += iterationsPerTarget;
+		markedIteration = currentIteration;
+
+		if (currentTarget == genepool->getTargetCount())
+		{
+			isFinished = true;
+			finishType = 2;
+			this->calculateFitness();
+			setFinishedVisual();
+			return true;
+		}
 	}
 
 	return isFinished;
@@ -197,62 +203,68 @@ void NNDriverAgent::render(sf::RenderWindow* window)
 {
 	if (!isVisualInit) this->initVisual();
 
-	// Update shapes
+	// Draw main shape
 	mainBody.updateShape(mainShape);
-
-	// Update eye shapes
-	for (int i = 0; i < 5; i++)
-	{
-		if (!isFinished) eyeShapes[i].setFillColor(eyeHits[i] > 0.5f ? eyeColourHit : eyeColourMiss);
-		eyeBodies[i].updateShape(eyeShapes[i]);
-	}
-
-	// Draw shapes
 	window->draw(mainShape);
-	for (const auto& eyeShape : eyeShapes) window->draw(eyeShape);
+
+	// Draw eye shape for each eye
+	if (!isFinished)
+	{
+		sf::Vector2f pos = mainBody.pos + sf::Vector2f(20.0f * std::cos(mainBody.rot), 20.0f * std::sin(mainBody.rot));
+		for (int i = 0; i < 5; i++)
+		{
+			float angle = mainBody.rot + (i - 2) * 0.2f * 3.14159265f;
+			eyeShape.setPosition(pos);
+			eyeShape.setRotation(angle * (180.0f / 3.14159265f));
+			eyeShape.setFillColor(eyeHits[i] > 0.5f ? eyeColourHit : eyeColourMiss);
+			window->draw(eyeShape);
+		}
+	}
 }
 
 void NNDriverAgent::calculateFitness()
 {
-	// Punish collision with world with distance / 2
-	if (finishType == 0)
+	// Reward targets reached (2 points)
+	fitness = currentTarget * 2.0f;
+
+	// Reward speed (up to 1 points)
+	// Expect each target to be reached in 100 iterations
+	if (currentTarget > 0)
 	{
-		float dist = genepool->getTargetDist(mainBody.pos);
-		fitness = 5.0f / std::max(1.0f, dist / 20.0f);
+		fitness += std::min(1.0f, 1.0f / std::max(1.0f, markedIteration / (currentTarget * 100.0f)));
 	}
 
-	// Punish distance from target if not reached
-	else if (finishType == 1)
+	// Reward distance to next target (up to 1 point)
+	if (currentTarget < genepool->getTargetCount())
 	{
-		float dist = genepool->getTargetDist(mainBody.pos);
-		fitness = 10.0f / std::max(1.0f, dist / 20.0f);
-	}
-
-	// Reward reaching target in as little time as possible
-	else if (finishType == 2)
-	{
-		fitness = 10.0f + 20.0f / std::max(1.0f, (float)currentIteration / 20.0f);
+		float dist = genepool->getTargetDist(mainBody.pos, currentTarget);
+		fitness += 1.0f / std::max(1.0f, dist / 20.0f);
 	}
 }
 
 NNDriverGenepool::NNDriverGenepool(
 	std::function<GenomeCnPtr(void)> createGenomeFn, std::function<AgentPtr(GenomeCnPtr)> createAgentFn,
-	sf::Vector2f targetPos, float targetRadius, std::vector<Body> worldBodies)
+	std::vector<sf::Vector2f> targets, float targetRadius, std::vector<Body> worldBodies)
 	: Genepool(createGenomeFn, createAgentFn),
-	targetPos(targetPos), targetRadius(targetRadius), worldBodies(worldBodies)
+	targets(targets), targetRadius(targetRadius), worldBodies(worldBodies)
 {
 	this->initVisual();
 }
 
 void NNDriverGenepool::initVisual()
 {
-	// Set up target shape
-	targetShape.setPosition(targetPos);
-	targetShape.setFillColor(sf::Color::Transparent);
-	targetShape.setOutlineColor(sf::Color::Green);
-	targetShape.setOutlineThickness(1.0f);
-	targetShape.setRadius(targetRadius);
-	targetShape.setOrigin(targetRadius, targetRadius);
+	// Set up target shapes
+	for (const auto& target : targets)
+	{
+		sf::CircleShape shape;
+		shape.setPosition(target);
+		shape.setFillColor(sf::Color::Transparent);
+		shape.setOutlineColor(sf::Color::Green);
+		shape.setOutlineThickness(1.0f);
+		shape.setRadius(targetRadius);
+		shape.setOrigin(targetRadius, targetRadius);
+		targetShapes.push_back(shape);
+	}
 
 	// Set up world shapes
 	for (auto& body : worldBodies)
@@ -274,32 +286,46 @@ void NNDriverGenepool::render(sf::RenderWindow* window)
 	Genepool::render(window);
 	if (!this->showVisuals) return;
 
-	// Draw target
-	window->draw(targetShape);
+	// Draw target shapes
+	for (const auto& shape : targetShapes) window->draw(shape);
 
 	// Draw world shapes
 	for (const auto& shape : worldShapes) window->draw(shape);
 }
 
-bool NNDriverGenepool::isColliding(Body& body) const
+bool NNDriverGenepool::checkWorldIntersectBody(Body& body) const
 {
+	// Check if body intersects any other body
 	for (const auto& other : worldBodies)
 	{
-		if (body.isColliding(other)) return true;
+		if (body.intersectBody(other)) return true;
 	}
 	return false;
 }
 
-float NNDriverGenepool::getTargetDist(sf::Vector2f pos) const
+bool NNDriverGenepool::checkWorldIntersectRaycast(sf::Vector2f start, float angle, float length) const
 {
-	float dx = targetPos.x - pos.x;
-	float dy = targetPos.y - pos.y;
+	// Get end point of raycast
+	sf::Vector2f end = start + sf::Vector2f(std::cos(angle), std::sin(angle)) * length;
+
+	// Check if ray intersects any body
+	for (const auto& body : worldBodies)
+	{
+		if (body.intersectRaycast(start, end)) return true;
+	}
+	return false;
+}
+
+float NNDriverGenepool::getTargetDist(sf::Vector2f pos, size_t target) const
+{
+	float dx = targets[target].x - pos.x;
+	float dy = targets[target].y - pos.y;
 	return sqrt(dx * dx + dy * dy) - targetRadius;
 }
 
-float NNDriverGenepool::getTargetDir(sf::Vector2f pos) const
+float NNDriverGenepool::getTargetDir(sf::Vector2f pos, size_t target) const
 {
-	float dx = targetPos.x - pos.x;
-	float dy = targetPos.y - pos.y;
+	float dx = targets[target].x - pos.x;
+	float dy = targets[target].y - pos.y;
 	return atan2(dy, dx);
 }

@@ -105,7 +105,7 @@ namespace tbml
 				int n = (int)weights.getShape(1);
 				gradWeights = Tensor(weights.getShape(), 0);
 				gradBias = Tensor(bias.getShape(), 0);
-				#pragma omp parallel for num_threads(12)
+#pragma omp parallel for num_threads(12)
 				for (int batchRow = 0; batchRow < batchSize; batchRow++)
 				{
 					for (int i = 0; i < m; i++)
@@ -437,13 +437,13 @@ namespace tbml
 			size_t maxBatch = batcher.getBatchCount();
 
 			// Train for each batch for each epoch
-			int maxEpoch = config.maxEpoch == -1 ? MAX_EPOCHS : config.maxEpoch;
-			if (config.logLevel > 0) printf("Training started for %d epochs\n", maxEpoch);
+			size_t maxEpoch = config.maxEpoch == -1 ? MAX_EPOCHS : config.maxEpoch;
+			if (config.logLevel > 0) printf("Training started for %zd epochs\n", maxEpoch);
 			std::chrono::steady_clock::time_point tTrainStart = std::chrono::steady_clock::now();
 			std::chrono::steady_clock::time_point tEpochStart = tTrainStart;
 			std::chrono::steady_clock::time_point tBatchStart = tTrainStart;
 
-			int epoch = 0;
+			size_t epoch = 0;
 			for (; epoch < maxEpoch; epoch++)
 			{
 				batcher.shuffleAndLoad();
@@ -479,7 +479,7 @@ namespace tbml
 						{
 							std::chrono::steady_clock::time_point tBatchEnd = std::chrono::steady_clock::now();
 							auto us = std::chrono::duration_cast<std::chrono::microseconds>(tBatchEnd - tBatchStart);
-							printf("Epoch [%d / %d], Batch [%d / %d]: Loss: %.3f, Time: %.3fms\n", (epoch + 1), maxEpoch, (int)(batch + 1), maxBatch, batchLoss, us.count() / 1000.0f);
+							printf("Epoch [%zd / %zd], Batch [%zd / %zd]: Loss: %.3f, Time: %.3fms\n", epoch + 1, maxEpoch, batch + 1, maxBatch, batchLoss, us.count() / 1000.0f);
 							tBatchStart = tBatchEnd;
 						}
 					}
@@ -489,7 +489,7 @@ namespace tbml
 				{
 					std::chrono::steady_clock::time_point tEpochEnd = std::chrono::steady_clock::now();
 					auto us = std::chrono::duration_cast<std::chrono::microseconds>(tEpochEnd - tEpochStart);
-					printf("Epoch [%d / %d]: Average Loss: %.3f, Total Time: %.3fms\n", (epoch + 1), maxEpoch, epochLoss, us.count() / 1000.0f);
+					printf("Epoch [%zd / %zd]: Average Loss: %.3f, Total Time: %.3fms\n", epoch + 1, maxEpoch, epochLoss, us.count() / 1000.0f);
 					tEpochStart = tEpochEnd;
 					tBatchStart = tEpochEnd;
 				}
@@ -502,13 +502,13 @@ namespace tbml
 			{
 				std::chrono::steady_clock::time_point tTrainEnd = std::chrono::steady_clock::now();
 				auto us = std::chrono::duration_cast<std::chrono::microseconds>(tTrainEnd - tTrainStart);
-				printf("Training complete for %d epochs, Time taken: %.3fms\n\n", epoch, us.count() / 1000.0f);
+				printf("Training complete for %zd epochs, Time taken: %.3fms\n\n", epoch, us.count() / 1000.0f);
 			}
 		}
 
-		int NeuralNetwork::getParameterCount() const
+		size_t NeuralNetwork::getParameterCount() const
 		{
-			int count = 0;
+			size_t count = 0;
 			for (const auto& layer : layers) count += layer->getParameterCount();
 			return count;
 		}
