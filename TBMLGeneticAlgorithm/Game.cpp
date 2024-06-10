@@ -8,7 +8,7 @@
 #include "NNPoleBalancer.h"
 #include "NNDriver.h"
 
-#define GENEPOOL_TYPE 3
+#define GENEPOOL_TYPE 2
 
 Game::Game()
 	: window(NULL), dt(0)
@@ -60,7 +60,7 @@ void Game::initialize()
 
 	auto genepool = new tbml::ga::Genepool<NNGenome, NNPoleBalancerAgent>(
 		[]() { return std::make_shared<NNGenome>(tbml::nn::NeuralNetwork({ std::make_shared<tbml::nn::Layer::Dense>(4, 1), std::make_shared<tbml::nn::Layer::TanH>() })); },
-		[](std::shared_ptr<const NNGenome> genome) { return std::make_unique<NNPoleBalancerAgent>(std::move(genome), 1.0f, 0.1f, 0.5f, 2.0f, 0.3f, 0.25f, 15.0f); });
+		[](std::shared_ptr<const NNGenome> genome) { return std::make_unique<NNPoleBalancerAgent>(std::move(genome), 1.0f, 0.1f, 0.7f, 1.0f, 1.0f, 0.4f, 20.0f); });
 
 	#elif GENEPOOL_TYPE == 3
 

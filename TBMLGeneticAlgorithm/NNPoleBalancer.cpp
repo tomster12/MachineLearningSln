@@ -51,22 +51,33 @@ bool NNPoleBalancerAgent::evaluate()
 	// Update dynamics
 	cartPosition = cartPosition + cartVelocity * TIME_STEP;
 	poleAngle = poleAngle + poleVelocity * TIME_STEP;
+	poleAngle = fmod(poleAngle + 3.141592653f, 2.0f * 3.141592653f) - 3.141592653f;
 	cartVelocity += cartAcceleration * TIME_STEP;
 	poleVelocity += poleAcceleration * TIME_STEP;
 	this->time += TIME_STEP;
 
+	// Add score if angle upright
+	if (abs(poleAngle) < angleLimit)
+	{
+		fitness += 1.0f;
+	}
+
 	// Check finish conditions
 	bool done = false;
-	done |= abs(poleAngle) > angleLimit;
 	done |= abs(cartPosition) > trackLimit;
 	done |= time > timeLimit;
 	if (done)
 	{
 		isFinished = true;
-		fitness = time;
-		cartShape.setOutlineColor(sf::Color(100, 100, 140, 10));
-		poleShape.setOutlineColor(sf::Color(100, 100, 140, 10));
+
+		// Set final visual state
+		cartShape.setOutlineColor(sf::Color(100, 100, 140, 5));
+		poleShape.setOutlineColor(sf::Color(100, 100, 140, 5));
+		cartShape.setPosition(700.0f + cartPosition * METRE_TO_UNIT, 700.0f);
+		poleShape.setPosition(700.0f + cartPosition * METRE_TO_UNIT, 700.0f);
+		poleShape.setRotation(poleAngle * (180.0f / 3.141592653f));
 	}
+
 	return isFinished;
 }
 
@@ -74,10 +85,25 @@ void NNPoleBalancerAgent::render(sf::RenderWindow* window)
 {
 	if (!isVisualInit) initVisual();
 
-	// Update shape positions and rotations
-	cartShape.setPosition(700.0f + cartPosition * METRE_TO_UNIT, 700.0f);
-	poleShape.setPosition(700.0f + cartPosition * METRE_TO_UNIT, 700.0f);
-	poleShape.setRotation(poleAngle * (180.0f / 3.141592653f));
+	if (!isFinished)
+	{
+		// Transparent if not in threshold
+		if (abs(poleAngle) > angleLimit)
+		{
+			cartShape.setOutlineColor(sf::Color(140, 100, 100, 40));
+			poleShape.setOutlineColor(sf::Color(140, 100, 100, 40));
+		}
+		else
+		{
+			cartShape.setOutlineColor(sf::Color(255, 255, 255, 220));
+			poleShape.setOutlineColor(sf::Color(255, 255, 255, 220));
+		}
+
+		// Update shape positions and rotations
+		cartShape.setPosition(700.0f + cartPosition * METRE_TO_UNIT, 700.0f);
+		poleShape.setPosition(700.0f + cartPosition * METRE_TO_UNIT, 700.0f);
+		poleShape.setRotation(poleAngle * (180.0f / 3.141592653f));
+	}
 
 	// Draw both to screen
 	window->draw(this->cartShape);
