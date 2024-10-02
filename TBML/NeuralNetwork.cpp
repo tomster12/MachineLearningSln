@@ -105,7 +105,8 @@ namespace tbml
 				int n = (int)weights.getShape(1);
 				gradWeights = Tensor(weights.getShape(), 0);
 				gradBias = Tensor(bias.getShape(), 0);
-#pragma omp parallel for num_threads(12)
+
+				#pragma omp parallel for num_threads(12)
 				for (int batchRow = 0; batchRow < batchSize; batchRow++)
 				{
 					for (int i = 0; i < m; i++)

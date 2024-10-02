@@ -148,7 +148,7 @@ void testMNIST()
 	std::cout << "t10k Accuracy = " << (accuracy * 100) << "%" << std::endl;
 
 	// Save network to file
-	network.saveToFile("MNIST.nn");
+	// network.saveToFile("MNIST.nn");
 }
 
 void testMNISTSerialization()

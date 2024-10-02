@@ -1,27 +1,11 @@
 # Machine Learning
 
-Machine learning library and implementation in C++ in VS 22.
+Machine learning implementation in C++. Includes tensors, neural network, backpropogation, genetic algorithms, and more.
 
-TBMLGeneticAlgorithm and TBMLMNISTDrawer both use 32-bit SFML, see below for setup.
+By default `install_dependencies.bat` is set to install 32-bit SFML, due to the MNIST data set in use being 32-bit.
 
-TBMLNeuralNetwork MNIST examples only work in 32-bit.
+## Build
 
-## Setup
+To build first run `install_dependencies.bat` to install SFML.
 
-1. Download 32-bit SFML from [the website](https://www.sfml-dev.org/).
-
-2. Place **/include** and **/lib** libraries here:
-
-   - `dependencies/SFML/include/SFML`
-   - `dependencies/SFML/lib`
-
-3. Place **/bin/X-2.dll** here:
-
-   - `bin/TBMLMNISTDrawer/output/Release`
-   - `bin/TBMLGeneticAlgorithm/output/Release`
-
-
-3. Place **/bin/X-d-2.dll** here:
-
-   - `bin/TBMLMNISTDrawer/output/Debug`
-   - `bin/TBMLGeneticAlgorithm/output/Debug`
+This will install the **lib** and **include** directories to `dependencies/SFML`, as well as the **DLLs** into the `bin/PROJECT/PLATFORM/output/CONFIGS` folders.

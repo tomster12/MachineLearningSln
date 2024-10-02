@@ -8,7 +8,7 @@
 #include "NNPoleBalancer.h"
 #include "NNDriver.h"
 
-#define GENEPOOL_TYPE 2
+#define GENEPOOL_TYPE 1
 
 Game::Game()
 	: window(NULL), dt(0)
@@ -38,7 +38,7 @@ void Game::initialize()
 	this->window->setFramerateLimit(framerateLimit);
 	this->window->setVerticalSyncEnabled(verticalSyncEnabled);
 
-#if GENEPOOL_TYPE == 0
+	#if GENEPOOL_TYPE == 0
 
 	VectorListTargetGenepool* genepool = new VectorListTargetGenepool(
 		[]() { return std::make_shared<VectorListGenome>(500); },
@@ -47,7 +47,7 @@ void Game::initialize()
 	genepool->setCreateAgentFn(
 		[=](VectorListTargetGenepool::GenomeCnPtr data) { return std::make_unique<VectorListTargetAgent>(std::move(data), genepool, sf::Vector2f{ 700.0f, 600.0f }, 4.0f, 4.0f); });
 
-#elif GENEPOOL_TYPE == 1
+	#elif GENEPOOL_TYPE == 1
 
 	NNTargetGenepool* genepool = new NNTargetGenepool(
 		[]() { return std::make_shared<NNGenome>(tbml::nn::NeuralNetwork({ std::make_shared<tbml::nn::Layer::Dense>(4, 2), std::make_shared<tbml::nn::Layer::TanH>() })); },
@@ -56,13 +56,13 @@ void Game::initialize()
 	genepool->setCreateAgentFn(
 		[=](NNTargetGenepool::GenomeCnPtr data) { return std::make_unique<NNTargetAgent>(std::move(data), genepool, sf::Vector2f{ 700.0f, 850.0f }, 2.0f, 400.0f, 0.99f, 3000); });
 
-#elif GENEPOOL_TYPE == 2
+	#elif GENEPOOL_TYPE == 2
 
 	auto genepool = new tbml::ga::Genepool<NNGenome, NNPoleBalancerAgent>(
 		[]() { return std::make_shared<NNGenome>(tbml::nn::NeuralNetwork({ std::make_shared<tbml::nn::Layer::Dense>(4, 1), std::make_shared<tbml::nn::Layer::TanH>() })); },
 		[](std::shared_ptr<const NNGenome> genome) { return std::make_unique<NNPoleBalancerAgent>(std::move(genome), 1.0f, 0.1f, 0.7f, 1.0f, 1.0f, 0.4f, 20.0f); });
 
-#elif GENEPOOL_TYPE == 3
+	#elif GENEPOOL_TYPE == 3
 
 	float PI = 3.14159265359f;
 	std::vector<Body> worldBodies;
@@ -101,7 +101,7 @@ void Game::initialize()
 			sf::Vector2f{ 380.0f, 780.0f }, 500.0f, 20.0f, 0.3f, 0.98f, 120.0f, 300);
 	});
 
-#endif
+	#endif
 
 	// Reset genepool generation, initialize controller
 	genepool->configThreading(false, true, false);
